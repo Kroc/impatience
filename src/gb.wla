@@ -1,0 +1,73 @@
+; because <github.com/kroc/because> copyright (c) Kroc Camen 2020:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt;===============================================================================
+; GameBoy memory map:
+;===============================================================================
+; adapted from the example provided by WLA-DX
+;
+.MEMORYMAP
+        DEFAULTSLOT     0
+        SLOT 0  START $0000 SIZE $4000 NAME "ROM-0"     ; 16KB ROM Bank 0
+        SLOT 1  START $4000 SIZE $4000 NAME "ROM-1+"    ; 16KB ROM Bank 1-N
+        SLOT 2  START $8000 SIZE $2000 NAME "VRAM"      ; 8KB VRAM
+        SLOT 3  START $A000 SIZE $2000 NAME "ERAM"      ; 8KB External RAM
+        SLOT 4  START $C000 SIZE $1000 NAME "WRAM-0"    ; 4KB WRAM Bank 0
+        SLOT 5  START $D000 SIZE $1000 NAME "WRAM-1+"   ; 4KB WRAM Bank 1-N
+.ENDME
+
+.ROMBANKSIZE $4000
+.ROMBANKS 2
+
+;===============================================================================
+; GameBoy ROM header:
+;===============================================================================
+.NINTENDOLOGO                   ; insert required Nintendo logo at $104-$133
+.NAME   "BECAUSE"               ; game title (in ROM header), at $134-$143
+
+.LICENSEECODENEW        "CD"    ; two-digit manufacturer code at $144-$145
+                                ; (required for Super GameBoy compatibility)
+                                ; BTW "CD" is for "Camen Design"
+
+.ROMDMG                         ; Super GameBoy flag at $146; DMG or SGB
+
+.CARTRIDGETYPE	        $03     ; select MBC1+RAM+Battery
+
+.RAMSIZE	        $01     ; 2KB SRAM
+
+.DESTINATIONCODE        $01     ; non-Japanese
+
+.VERSION                $00     ; "ROM version"
+
+.COMPUTEGBCOMPLEMENTCHECK       ; checksum byte at $14D
+.COMPUTEGBCHECKSUM              ; checksum bytes at $14E/F
+
+;===============================================================================
+; GameBoy reset vector:
+;===============================================================================
+; after displaying the Nintendo logo, the GameBoy jumps to $0100 where a
+; standard piece of code is expacted to jump to the actual game initialisation
+;
+.BANK   0       SLOT 0
+.ORG    $0100
+
+.SECTION        "gb_boot"       FORCE
+
+gb_boot:
+        ;-----------------------------------------------------------------------
+        nop
+        jp init
+
+.ENDS
+
+;
+; HARDWARE DEFINES
+;
+.DEF    LCDC    $ff40
+.DEF    STAT    $ff41
+.DEF    SCY     $ff42
+.DEF    SCX     $ff43
+.DEF    LY      $ff44
+.DEF    LYC     $ff45
+
+.DEF    BGP     $ff47
+.DEF    OBP0    $ff48
+.DEF    OBP1    $ff49

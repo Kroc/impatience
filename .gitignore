@@ -1,0 +1,15 @@
+# ignore anything beginning with "__"
+# (used to hide stuff from the repository)
+__*
+**/__*
+
+# don't include the generated files in "build"
+build/**
+
+# don't include generated ROMs
+*.gb
+*.gbc
+*.bin
+
+# WLA-DX crash files
+.wla*
