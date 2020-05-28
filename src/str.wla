@@ -1,0 +1,92 @@
+; because <github.com/kroc/because> copyright (c) Kroc Camen 2020:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+
+; define the conversion from ASCII to the tile-numbers in our tileset:
+;
+.ASCIITABLE
+        MAP     " "     = $81
+        MAP     "0"     = $86
+        MAP     "1"     = $87
+        MAP     "2"     = $88
+        MAP     "3"     = $89
+        MAP     "4"     = $8a
+        MAP     "5"     = $8b
+        MAP     "6"     = $8c
+        MAP     "7"     = $8d
+        MAP     "8"     = $8e
+        MAP     "9"     = $8f
+        MAP     "a"     = $90
+        MAP     "b"     = $91
+        MAP     "c"     = $92
+        MAP     "d"     = $93
+        MAP     "e"     = $94
+        MAP     "f"     = $95
+        MAP     "g"     = $96
+        MAP     "h"     = $97
+        MAP     "i"     = $98
+        MAP     "j"     = $99
+        MAP     "k"     = $9a
+        MAP     "l"     = $9b
+        MAP     "m"     = $9c
+        MAP     "n"     = $9d
+        MAP     "o"     = $9e
+        MAP     "p"     = $9f
+        MAP     "q"     = $ad
+        MAP     "r"     = $ae
+        MAP     "s"     = $af
+        MAP     "t"     = $bd
+        MAP     "u"     = $be
+        MAP     "v"     = $bf
+        MAP     "w"     = $cd
+        MAP     "x"     = $ce
+        MAP     "y"     = $cf
+        MAP     "z"     = $dd
+        MAP     "A"     = $de          ; GameBoy button "A"
+        MAP     "B"     = $df          ; GameBoy button "B"
+        MAP     "!"     = $ed
+        MAP     ","     = $ee
+        MAP     "."     = $ef
+        MAP     "S"     = $82          ; spades symbol
+        MAP     "C"     = $83          ; clubs symbol
+        MAP     "H"     = $84          ; hearts symbol
+        MAP     "D"     = $85          ; diamonds symbol
+.ENDA
+
+.SECTION        "str_stuff"
+
+print_str:
+;===============================================================================
+; print a null-terminated string:
+;
+; in:   DE      string address
+;       HL      VRAM (tile-map) address
+;-------------------------------------------------------------------------------
+        ; backup the VRAM address so that when we encounter a new-line
+        ; character, we add 32 to where we started to get to the next row
+        ld      B,      H
+        ld      C,      L
+        
+@char:  ld      A,      [DE]            ; read a character in
+        and     A                       ; populate flags!
+        ret     z                       ; if null-terminator, finished
+        
+        cp      13                      ; new-line character?
+        jr      nz,     +               ; no, skip over
+
+        ; move to next line:
+        ;-----------------------------------------------------------------------
+        ld      HL,     32              ; width of tile-map
+        add     HL,     BC              ; add to start-of-line address
+        ld      B,      H               ; set as next start-of-line address
+        ld      C,      L               ; ...
+        
+        inc     DE                      ; skip over the next-line character
+        jr      @char                   ; read next character...
+
+        ; print character:
+        ;-----------------------------------------------------------------------
++       ld      [HL+],  A               ; write the character to display
+        inc     DE                      ; move to the next character
+        jr      @char                   ; continue...
+
+.ENDS

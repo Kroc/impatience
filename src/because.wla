@@ -1,7 +1,11 @@
 ; because <github.com/kroc/because> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ; 
-.INCLUDE        "gb.wla"
+.INC	"gb.wla"			; hardware definitions
+.INC	"interrupts.wla"		; interrupts (RSTs / IRQs)
+.INC	"str.wla"			; string & text routines
+.INC	"cards.wla"			; card data structures & routines
+.INC	"gfx.wla"			; gfx data & routines
 
 .SECTION        "game_init"
 
@@ -12,51 +16,46 @@
 init:
 ;-------------------------------------------------------------------------------
         ; Usual setup
-	di                      ; disable interrupts
-	ld sp, $DFF0
+	di                      	; disable interrupts
+	ld 	SP,	$dff0		; locate the stack
 
-	; Set up LCDC
-	ld a, (LCDC)
-	and %10000000
-	or  %00000001
-	ld (LCDC), a
+	; configure LCD:
+	ld 	A, 	[LCDC]		; read the current LCD config
+
+	; we *MUST NOT* disable the LCD (bit7=1) outside of vblank!
+	; even though we want the screen off during initialisation,
+	; we must set the LCD enable bit to 1 at this time and instead
+	; rely on a vblank routine to turn it on & off when desired
+	;
+	and 	LCDC.lcd_enable		; enable LCD
+	or	LCDC.window_select	; use $9C00 for the window-map
+	or  	LCDC.bg_display		; turn background on
+	ld 	[LCDC],	A
 
 	; Turn screen off
 	call screen_off
 
 	; Clear VRAM
-	ld hl, $8000
-	xor a
-	-:
-		ld (hl), a
-		inc hl
-		bit 5, h
-		jp z, -
+	ld 	HL, 	VRAM
+	xor 	A
+-	ld 	[HL], 	A
+	inc 	HL
+	bit 	5,	H
+	jp 	z, -
 
-	; Test tile
-	ld hl, $9000
-	ld de, %0000111100110011
-	ld b, 8
-	-:
-		ld (hl), e
-		inc l
-		ld (hl), d
-		inc l
-		rlc e
-		rlc d
-		dec b
-		jp nz, -
+	call	copy_main_tileset	; copy the main tileset to VRAM
+	call	clear_playfield		; clear the playfield background
+	call    clear_menu		; clear and draw the menu
 
 	; Set palettes
-	;ld a, %11100100
-	ld a, %00011011
-	ld (BGP), a
+	ld	A,	%00110010
+	ld 	[BGP], 	A
 
 	; Turn screen on
 	call screen_on
 
 	; TODO!
-	-: jr -
+-	jr -
 
 	; screen_on: Turns the screen on.
 	;
@@ -64,11 +63,13 @@ init:
 	; Output: -
 	; Clobbers: -
 screen_on:
-	push af
-	ld a, (LCDC)
-	set 7, a
-	ld (LCDC), a
-	+: pop af
+	;-----------------------------------------------------------------------
+	push	AF
+	ld 	A,	[LCDC]
+	set 	7,	A
+	ld 	[LCDC], A
+
++	pop	AF
 	ret
 
 	; screen_off: Turns the screen off safely (waits for vblank).
@@ -77,20 +78,21 @@ screen_on:
 	; Output: -
 	; Clobbers: -
 screen_off:
-	push af
-	ld a, (LCDC)
-	bit 7, a
-	jr z, +
+	;-----------------------------------------------------------------------
+	push 	AF
+	ld 	A,	[LCDC]
+	bit 	7,	A
+	jr 	z, +
 	
 	; Wait for vblank
-	-:
-		ld a, (LY)
-		cp 145
-		jr nz, -
+-	ld	A,	[LY]
+	cp	145
+	jr 	nz, -
 
-	ld a, (LCDC)
-	res 7, a
-	ld (LCDC), a
-	+: pop af
+	ld	A,	[LCDC]
+	res	7, 	A
+	ld	[LCDC], A
+
++	pop 	AF
 	ret
 .ENDS

@@ -1,0 +1,138 @@
+; because <github.com/kroc/because> copyright (c) Kroc Camen 2020:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+;
+; VRAM layout:
+;
+;    $8000            $8800            $9000           $9800    $9C00    $A000
+;    +----------------+--------------------------------+--------+--------+
+;    | SPRITES        | TILES                          | BG     | WINDOW |
+;    +----------------+--------------------------------+--------+--------+
+;      (128 tiles)      (256 tiles)
+;
+.SECTION        "gfx_tiles"
+
+tiles_main:
+;-------------------------------------------------------------------------------
+.INCBIN         "build\tiles_even.2bpp" FSIZE tiles_main__size
+
+.ENDS
+
+.SECTION        "gfx_code"
+
+copy_main_tileset:
+;===============================================================================
+; copy the main tileset used throughout the game:
+;
+;-------------------------------------------------------------------------------
+        ld      HL,     tiles_main      ; set source address
+        ld      DE,     VRAM_TILES2     ; set destination VRAM position
+
+        ; number of tiles to copy, 0-based
+        ; (each tile is 16-bytes)
+        ld      B,      (tiles_main__size / 16) - 1
+
+
+copy_tiles:
+;===============================================================================
+; copy a number of graphic tiles to VRAM:
+;
+; in:   HL      starting address of tiles
+;       DE      VRAM destination, e.g. $8000
+;       B       number of tiles to copy, 1-based
+;               use "0" for 256 tiles
+;
+; TODO: on GBC we could do this using DMA?
+;-------------------------------------------------------------------------------
+@copy:  .REPEAT 16
+                ld      A,      [HL+]
+                ld      [DE],   A
+                inc     DE
+        .ENDR
+
+        dec     B
+        jr      nz, @copy
+        
+        ret
+
+
+clear_menu:
+;===============================================================================
+; clears the menu, setting it back to its default display:
+;
+;-------------------------------------------------------------------------------
+        ; "2nd" tile (the menu background)
+        ld      A,      $81
+        ; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32
+        ; playfield. for our purposes we place the menu on the left of
+        ; the playfield
+        ld      HL,     VRAM_MAP1
+        ; number of tiles to skip to next row
+        ld      DE,     32-12
+
+        ;-----------------------------------------------------------------------
+        ld      C,      32      ; 32 rows
+@row:   ld      B,      12      ; 12 columns
+@col:   ld      [HL+],  A       ; set cell to menu background tile
+        dec     B
+        jr      nz, @col
+        
+        ; we only clear 12 out of 32 tiles,
+        ; so move to the next row by skipping some
+        add     HL,     DE
+
+        dec     C
+        jr      nz, @row
+
+        ; print the title:
+        ld      HL,     VRAM_MAP1 + 32 + 1
+        ld      DE,     @because
+        call    print_str
+
+        ; TODO: print the menu:
+
+        ret
+
+@because:
+        .ASC    "because", 13, 13, 13,
+        .ASC    "new game", 13, 13,
+        .ASC    "restart", 13, 13,
+        .ASC    "rules", 13, 13
+        .ASC    "game", 13,
+        .ASC    "aces up", 13, 13
+        .ASC    "", 13
+        .ASC    "controls", 13, 13
+        .ASC    "options", 0
+
+
+clear_playfield:
+;===============================================================================
+; clears the playfield area, i.e. where cards are played:
+;
+;-------------------------------------------------------------------------------
+        ; the background tile indices are 'signed', so what we think of as
+        ; the first tile, tile "0", is tile # "-128", i.e $80
+        ld      A,      $80
+        ; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32
+        ; playfield. for our purposes we place the menu on the left and
+        ; the playfield next to it, therefore the playfield begins at
+        ; X = 12 and not the top-left (X = 0)
+        ld      HL,     VRAM_MAP1 + 12
+        ; number of tiles to skip to next row
+        ld      DE,     32-20
+
+        ;-----------------------------------------------------------------------
+        ld      C,      32      ; 32 rows
+@row:   ld      B,      20      ; 20 columns (13...32)
+@col:   ld      [HL+],  A       ; set cell to empty background tile
+        dec     B
+        jr      nz, @col
+        
+        ; we only clear 20 out of 32 tiles,
+        ; so move to the next row by skipping some
+        add     HL,     DE
+
+        dec     C
+        jr      nz, @row
+
+        ret
+.ENDS

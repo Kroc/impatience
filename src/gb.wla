@@ -1,17 +1,19 @@
 ; because <github.com/kroc/because> copyright (c) Kroc Camen 2020:
-; creative commons attribution (cc-by) 4.0, see LICENSE.txt;===============================================================================
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+;===============================================================================
 ; GameBoy memory map:
 ;===============================================================================
 ; adapted from the example provided by WLA-DX
 ;
 .MEMORYMAP
         DEFAULTSLOT     0
-        SLOT 0  START $0000 SIZE $4000 NAME "ROM-0"     ; 16KB ROM Bank 0
-        SLOT 1  START $4000 SIZE $4000 NAME "ROM-1+"    ; 16KB ROM Bank 1-N
-        SLOT 2  START $8000 SIZE $2000 NAME "VRAM"      ; 8KB VRAM
-        SLOT 3  START $A000 SIZE $2000 NAME "ERAM"      ; 8KB External RAM
-        SLOT 4  START $C000 SIZE $1000 NAME "WRAM-0"    ; 4KB WRAM Bank 0
-        SLOT 5  START $D000 SIZE $1000 NAME "WRAM-1+"   ; 4KB WRAM Bank 1-N
+        SLOT 0  START $0000 SIZE $4000  NAME "ROMLO"    ; 16KB ROM (bank 0)
+        SLOT 1  START $4000 SIZE $4000  NAME "ROMHI"    ; 16KB ROM (bank 1+)
+        SLOT 2  START $8000 SIZE $2000  NAME "VRAM"     ; 8KB VRAM
+        SLOT 3  START $a000 SIZE $2000  NAME "SRAM"     ; 8KB cartridge RAM
+        SLOT 4  START $c000 SIZE $1000  NAME "WRAMLO"   ; 4KB WRAM 
+        SLOT 5  START $d000 SIZE $1000  NAME "WRAMHI"   ; 4KB WRAM (banked)
+        SLOT 6  START $ff80 SIZE $7f    NAME "HRAM"     ; embedded CPU RAM
 .ENDME
 
 .ROMBANKSIZE $4000
@@ -58,10 +60,66 @@ gb_boot:
 
 .ENDS
 
+;===============================================================================
+; hardware registers:
+;===============================================================================
+; <https://bgb.bircd.org/pandocs.htm>
 ;
-; HARDWARE DEFINES
-;
+; LCD control register:
+;-------------------------------------------------------------------------------
 .DEF    LCDC    $ff40
+;
+; bit 7 LCD display enable              (0=Off, 1=On)
+.DEF    LCDC.lcd_enable         %10000000
+
+; "CAUTION: Stopping LCD operation (Bit 7 from 1 to 0) may be performed during
+; V-Blank ONLY, disabeling the display outside of the V-Blank period may damage
+; the hardware. This appears to be a serious issue, Nintendo is reported to
+; reject any games that do not follow this rule.
+;
+; V-blank can be confirmed when the value of LY is greater than or equal to
+; 144. When the display is disabled the screen is blank (white), and VRAM
+; and OAM can be accessed freely."
+
+; bit 6 window tile-map display select  (0=$9800-$9BFF, 1=$9C00-$9FFF)
+.DEF    LCDC.window_select      %01000000
+; bit 5 window display enable           (0=Off, 1=On)
+.DEF    LCDC.window_enable      %00100000
+; bit 4 BG & window tile-gfx select     (0=$8800-$97FF, 1=$8000-$8FFF)
+.DEF    LCDC.data_select        %00010000
+; bit 3 BG tile-map display select      (0=$9800-$9BFF, 1=$9C00-$9FFF)
+.DEF    LCDC.bg_select          %00001000
+; bit 2 OBJ (sprite) size               (0=8x8, 1=8x16)
+.DEF    LCDC.sprite_size        %00000100
+; bit 1 OBJ (sprite) display enable     (0=Off, 1=On)
+.DEF    LCDC.sprite_enable      %00000010
+
+; NOTE: the exact behaviour of bit 0 varies by hardware:
+;
+; DMG & SGB:
+;       "When Bit 0 is cleared, the background becomes blank (white).
+;        Window and Sprites may still be displayed (if enabled in Bit 1
+;        and/or Bit 5)"
+;
+; CGB in CGB mode:
+;       "When Bit 0 is cleared, the background and window lose their priority -
+;        the sprites will be always displayed on top of background and window,
+;        independently of the priority flags in OAM and BG Map attributes"
+;
+; CGB in DMG mode:
+;       "When Bit 0 is cleared, both background and window become blank (white)
+;        ie. the Window Display Bit (Bit 5) is ignored in that case. Only
+;        Sprites may still be displayed (if enabled in Bit 1).
+;
+;        This is a possible compatibility problem - any monochrome games
+;        (if any) that disable the background, but still want to display
+;        the window wouldn't work properly on CGBs"
+;
+; bit 0 BG display                      (0=Off, 1=On)
+.DEF    LCDC.bg_display         %00000001
+
+; LCD status register:
+;-------------------------------------------------------------------------------
 .DEF    STAT    $ff41
 .DEF    SCY     $ff42
 .DEF    SCX     $ff43
@@ -71,3 +129,10 @@ gb_boot:
 .DEF    BGP     $ff47
 .DEF    OBP0    $ff48
 .DEF    OBP1    $ff49
+
+.DEF    VRAM                    $8000
+.DEF    VRAM_TILES1             $8000   ; $8000-$8FFF
+.DEF    VRAM_TILES2             $8800   ; $8800-$97FF (note the overlap)
+.DEF    VRAM_MAP1               $9800
+.DEF    VRAM_MAP2               $9c00
+.DEF    VRAM_OAM                $fe00

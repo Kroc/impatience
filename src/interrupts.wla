@@ -1,0 +1,68 @@
+; because <github.com/kroc/because> copyright (c) Kroc Camen 2020:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+
+.BANK 0 SLOT 0
+.ORG    $00
+
+rst_00:
+        reti
+
+.ORG    $08
+
+rst_08:
+        reti
+
+.ORG    $10
+
+rst_10:
+        reti
+
+.ORG    $18
+
+rst_18:
+        reti
+
+.ORG    $20
+
+rst_20:
+        reti
+
+.ORG    $28
+
+rst_28:
+        reti
+
+.ORG    $30
+
+rst_30:
+        reti
+
+.ORG    $38
+
+rst_38:
+        reti
+
+.ORG    $40
+
+irq_40:
+        reti
+
+.ORG    $48
+
+irq_48:
+        reti
+
+.ORG    $50
+
+irq_50:
+        reti
+
+.ORG    $58
+
+irq_58:
+        reti
+
+.ORG    $60
+
+irq_60:
+        reti

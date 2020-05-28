@@ -1,0 +1,35 @@
+; because <github.com/kroc/because> copyright (c) Kroc Camen 2020:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+
+; cards:
+;-------------------------------------------------------------------------------
+; %bassnnnn	b     = "back" (back is visible)
+;               a     = "active", 0=active, 1=inactive (unplayable / blocked)
+;		ss    = suit, 0-3
+;		nnnn  = number, 1 (A), 2-9, 10 (J), 11 (Q), 12 (K),
+;			13-15 unused. 0 = no-card / null
+;
+.DEF	CARD_NONE	%00000000
+.DEF	CARD_BACK	%10000000
+.DEF    CARD_INACTIVE   %01000000
+
+;                       %--0----- = black
+.DEF	SUIT_SPADE	%00000000
+.DEF	SUIT_CLUB	%00010000
+;                       %--1----- = red
+.DEF	SUIT_HEART	%00100000
+.DEF	SUIT_DIAMOND	%00110000
+
+.DEF	CARD_A		%00000001
+.DEF	CARD_2		%00000010
+.DEF	CARD_3		%00000011
+.DEF	CARD_4		%00000100
+.DEF	CARD_5		%00000101
+.DEF	CARD_6		%00000110
+.DEF	CARD_7		%00000111
+.DEF	CARD_8		%00001000
+.DEF	CARD_9 		%00001001
+.DEF	CARD_X		%00001010
+.DEF	CARD_J		%00001011
+.DEF	CARD_Q		%00001100
+.DEF	CARD_K		%00001101
