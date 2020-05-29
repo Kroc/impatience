@@ -11,5 +11,8 @@ build/**
 *.gbc
 *.bin
 
+# ignore files from the included binaries
+**/bgb.ini
+
 # WLA-DX crash files
 .wla*
