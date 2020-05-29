@@ -12,6 +12,7 @@
 .DEF	CARD_NONE	%00000000
 .DEF	CARD_BACK	%10000000
 .DEF    CARD_INACTIVE   %01000000
+.DEF    CARD_PLACE      %11111111       ; a card placeholder, e.g. a foundation
 
 ;                       %--0----- = black
 .DEF	SUIT_SPADE	%00000000
