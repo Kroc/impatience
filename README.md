@@ -1,4 +1,4 @@
-# Because
+# Impatience
 ## A Patience / Solitaire Collection for Nintendo GameBoy
 
 In development. Mockup:

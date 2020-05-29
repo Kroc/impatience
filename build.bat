@@ -1,5 +1,5 @@
 @ECHO OFF
-CLS & TITLE Building Because...
+CLS & TITLE Building Impatience...
 CD %~dp0
 ECHO:
 
@@ -25,17 +25,17 @@ SET WLA_GB80="bin\wla-dx\wla-gb.exe"    -x -I "src"
 SET WLA_LINK="bin\wla-dx\wlalink.exe"   -A -S
 
 %WLA_GB80% -v ^
-    -o "build\because.o" ^
-       "because.wla"
+    -o "build\impatience.o" ^
+       "impatience.wla"
 
 IF ERRORLEVEL 1 EXIT /B 1
 
 %WLA_LINK% -v ^
     "link.ini" ^
-    "build\because.gb"
+    "build\impatience.gb"
 
 IF ERRORLEVEL 1 EXIT /B 1
 
 REM # start the emulator
 SET BGB="bin\bgb\bgb.exe"
-START "" %BGB% "build\because.gb"
+START "" %BGB% "build\impatience.gb"

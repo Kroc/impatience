@@ -1,4 +1,4 @@
-; because <github.com/kroc/because> copyright (c) Kroc Camen 2020:
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;===============================================================================
 ; GameBoy memory map:
@@ -23,7 +23,7 @@
 ; GameBoy ROM header:
 ;===============================================================================
 .NINTENDOLOGO                   ; insert required Nintendo logo at $104-$133
-.NAME   "BECAUSE"               ; game title (in ROM header), at $134-$143
+.NAME   "IMPATIENCE"            ; game title (in ROM header), at $134-$143
 
 .LICENSEECODENEW        "CD"    ; two-digit manufacturer code at $144-$145
                                 ; (required for Super GameBoy compatibility)

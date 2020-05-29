@@ -1,4 +1,4 @@
-; because <github.com/kroc/because> copyright (c) Kroc Camen 2020:
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
 ; VRAM layout:
@@ -164,15 +164,15 @@ clear_menu:
 
         ; print the title:
         ld      HL,     VRAM_MAP1 + 32 + 1
-        ld      DE,     @because
+        ld      DE,     @impatience
         call    print_str
 
         ; TODO: print the menu:
 
         ret
 
-@because:
-        .ASC    "because", 13, 13, 13,
+@impatience:
+        .ASC    "impatience", 13, 13, 13,
         .ASC    "new game", 13, 13,
         .ASC    "restart", 13, 13,
         .ASC    "rules", 13, 13
