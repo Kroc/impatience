@@ -19,6 +19,85 @@ tiles_main:
 
 .SECTION        "gfx_code"
 
+gfx_init:
+;===============================================================================
+;-------------------------------------------------------------------------------
+        ; configure LCD:
+	ld 	A, 	[LCDC]		; read the current LCD config
+
+	; we *MUST NOT* disable the LCD (bit7=1) outside of vblank!
+	; even though we want the screen off during initialisation,
+	; we must set the LCD enable bit to 1 at this time and instead
+	; rely on a vblank routine to turn it on / off when desired
+	;
+	and 	LCDC.lcd_enable		; enable LCD
+	or	LCDC.window_select	; use $9C00 for the window-map
+	or  	LCDC.bg_display		; turn background on
+	ld 	[LCDC],	A
+
+	; Turn screen off
+	call screen_off
+
+	; Clear VRAM
+	ld 	HL, 	VRAM
+	xor 	A
+-	ld 	[HL], 	A
+	inc 	HL
+	bit 	5,	H
+	jp 	z, -
+
+	call	copy_main_tileset	; copy the main tileset to VRAM
+	call	clear_playfield		; clear the playfield background
+	call    clear_menu		; clear and draw the menu
+
+	; Set palettes
+	ld	A,	%00110010
+	ld 	[BGP], 	A
+
+	; Turn screen on
+	call screen_on
+
+	ret
+
+	; screen_on: Turns the screen on.
+	;
+	; Input: -
+	; Output: -
+	; Clobbers: -
+screen_on:
+	;-----------------------------------------------------------------------
+	push	AF
+	ld 	A,	[LCDC]
+	set 	7,	A
+	ld 	[LCDC], A
+
++	pop	AF
+	ret
+
+	; screen_off: Turns the screen off safely (waits for vblank).
+	;
+	; Input: -
+	; Output: -
+	; Clobbers: -
+screen_off:
+	;-----------------------------------------------------------------------
+	push 	AF
+	ld 	A,	[LCDC]
+	bit 	7,	A
+	jr 	z, +
+	
+	; Wait for vblank
+-	ld	A,	[LY]
+	cp	145
+	jr 	nz, -
+
+	ld	A,	[LCDC]
+	res	7, 	A
+	ld	[LCDC], A
+
++	pop 	AF
+	ret
+
 copy_main_tileset:
 ;===============================================================================
 ; copy the main tileset used throughout the game:
