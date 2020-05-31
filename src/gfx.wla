@@ -19,7 +19,7 @@ tiles_main:
 
 .SECTION        "gfx_code"
 
-gfx_init:
+init:
 ;===============================================================================
 ;-------------------------------------------------------------------------------
         ; configure LCD:
@@ -35,10 +35,9 @@ gfx_init:
 	or  	LCDC.bg_display		; turn background on
 	ld 	[LCDC],	A
 
-	; Turn screen off
 	call screen_off
 
-	; Clear VRAM
+	; clear VRAM
 	ld 	HL, 	VRAM
 	xor 	A
 -	ld 	[HL], 	A
@@ -50,22 +49,32 @@ gfx_init:
 	call	clear_playfield		; clear the playfield background
 	call    clear_menu		; clear and draw the menu
 
-	; Set palettes
+	; set palette:
 	ld	A,	%00110010
 	ld 	[BGP], 	A
 
-	; Turn screen on
 	call screen_on
-
 	ret
 
-	; screen_on: Turns the screen on.
-	;
-	; Input: -
-	; Output: -
-	; Clobbers: -
+
+wait_for_vblank:
+;===============================================================================
+; TODO: this is battery draining, keeping the CPU in spinlock;
+;       replace this with a HALT & IRQ approach
+;-------------------------------------------------------------------------------
+-	ld	A,      [LY]
+	cp	145
+	jr 	nz, -
+
+        ret
+
+
 screen_on:
-	;-----------------------------------------------------------------------
+;===============================================================================
+; turns the screen on; we do not have to wait for vblank to do this
+;
+; out:  A       (preserved)
+;-------------------------------------------------------------------------------
 	push	AF
 	ld 	A,	[LCDC]
 	set 	7,	A
@@ -74,22 +83,20 @@ screen_on:
 +	pop	AF
 	ret
 
-	; screen_off: Turns the screen off safely (waits for vblank).
-	;
-	; Input: -
-	; Output: -
-	; Clobbers: -
+
 screen_off:
-	;-----------------------------------------------------------------------
+;===============================================================================
+; turns the screen off, holding execution until safe to do so
+;
+;
+; out:  A       (preserved)
+;-------------------------------------------------------------------------------
 	push 	AF
 	ld 	A,	[LCDC]
 	bit 	7,	A
 	jr 	z, +
 	
-	; Wait for vblank
--	ld	A,	[LY]
-	cp	145
-	jr 	nz, -
+	call    wait_for_vblank
 
 	ld	A,	[LCDC]
 	res	7, 	A
@@ -97,6 +104,7 @@ screen_off:
 
 +	pop 	AF
 	ret
+
 
 copy_main_tileset:
 ;===============================================================================
@@ -172,15 +180,7 @@ clear_menu:
         ret
 
 @impatience:
-        .ASC    "impatience", 13, 13, 13,
-        .ASC    "new game", 13, 13,
-        .ASC    "restart", 13, 13,
-        .ASC    "rules", 13, 13
-        .ASC    "game", 13,
-        .ASC    "aces up", 13, 13
-        .ASC    "", 13
-        .ASC    "controls", 13, 13
-        .ASC    "options", 0
+        .str    "impatience"
 
 
 clear_playfield:

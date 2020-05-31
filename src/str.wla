@@ -1,6 +1,14 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 
+; macro to write a length-prefixed string:
+;
+.MACRO  .str    ARGS    _str
+;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        .ASC    _str.length,    _str
+;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+.ENDM
+
 ; define the conversion from ASCII to the tile-numbers in our tileset:
 ;
 .ASCIITABLE
@@ -56,36 +64,22 @@
 
 print_str:
 ;===============================================================================
-; print a null-terminated string:
+; print a length-prefixed string:
 ;
 ; in:   DE      string address
 ;       HL      VRAM (tile-map) address
 ;-------------------------------------------------------------------------------
-        ; backup the VRAM address so that when we encounter a new-line
-        ; character, we add 32 to where we started to get to the next row
-        ld      B,      H
-        ld      C,      L
-        
+        ld      A,      [DE]            ; first byte is string length (1-based)
+        ld      C,      A               ; move this to C
+        inc     DE                      ; skip over this byte
+
+        ;-----------------------------------------------------------------------
 @char:  ld      A,      [DE]            ; read a character in
-        and     A                       ; populate flags!
-        ret     z                       ; if null-terminator, finished
-        
-        cp      13                      ; new-line character?
-        jr      nz,     +               ; no, skip over
+        ld      [HL+],  A               ; write the character to display
 
-        ; move to next line:
-        ;-----------------------------------------------------------------------
-        ld      HL,     32              ; width of tile-map
-        add     HL,     BC              ; add to start-of-line address
-        ld      B,      H               ; set as next start-of-line address
-        ld      C,      L               ; ...
-        
-        inc     DE                      ; skip over the next-line character
-        jr      @char                   ; read next character...
+        dec     C                       ; decrease remaining character count
+        ret     z                       ; when zero, exit
 
-        ; print character:
-        ;-----------------------------------------------------------------------
-+       ld      [HL+],  A               ; write the character to display
         inc     DE                      ; move to the next character
         jr      @char                   ; continue...
 

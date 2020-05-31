@@ -1,11 +1,15 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
-; 
+;
+.DEF	HI		$01
+.DEF	LO		$00
+
 .INC	"gb.wla"			; hardware definitions
 .INC	"interrupts.wla"		; interrupts (RSTs / IRQs)
 .INC	"str.wla"			; string & text routines
 .INC	"cards.wla"			; card data structures & routines
-.INC	"gfx.wla"			; gfx data & routines
+
+.INC	"gfx.wla"		NAMESPACE "gfx"
 
 .SECTION        "game_init"
 
@@ -18,7 +22,7 @@ init:
 	di                      	; disable interrupts
 	ld 	SP,	$dff0		; locate the stack
 
-	call	gfx_init
+	call	gfx.init
 
 	; TODO!
 -	jr -
