@@ -1,0 +1,96 @@
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+
+; reset vectors:
+;===============================================================================
+.BANK   0       SLOT "ROMLO"
+.ORG    $00
+
+rst_00:
+        reti
+
+.ORG    $08
+
+rst_08:
+        reti
+
+.ORG    $10
+
+rst_10:
+        reti
+
+.ORG    $18
+
+rst_18:
+        reti
+
+.ORG    $20
+
+rst_20:
+        reti
+
+.ORG    $28
+
+rst_28:
+        reti
+
+.ORG    $30
+
+rst_30:
+        reti
+
+.ORG    $38
+
+rst_38:
+        reti
+
+; interrupts:
+;===============================================================================
+
+.ORG    $40
+
+irq_vblank:
+        ;-----------------------------------------------------------------------
+        reti
+
+.ORG    $48
+
+irq_lcdstat:
+        ;-----------------------------------------------------------------------
+        reti
+
+.ORG    $50
+
+irq_timer:
+        ;-----------------------------------------------------------------------
+        reti
+
+.ORG    $58
+
+irq_serial:
+        ;-----------------------------------------------------------------------
+        reti
+
+.ORG    $60
+
+irq_joypad:
+        ;-----------------------------------------------------------------------
+        reti
+
+
+; GameBoy reset vector:
+;===============================================================================
+; after displaying the Nintendo logo, the GameBoy jumps to $0100 where a
+; standard piece of code is expacted to jump to the actual game initialisation
+;
+.BANK   0       SLOT "ROMLO"
+.ORG    $0100
+
+.SECTION        "gb_boot"       FORCE
+
+gb_boot:
+        ;-----------------------------------------------------------------------
+        nop
+        jp init
+
+.ENDS

@@ -31,7 +31,7 @@ SET WLA_LINK="bin\wla-dx\wlalink.exe"   -A -S
 IF ERRORLEVEL 1 EXIT /B 1
 
 %WLA_LINK% -v ^
-    "link.ini" ^
+    "link_gb.ini" ^
     "build\impatience.gb"
 
 IF ERRORLEVEL 1 EXIT /B 1

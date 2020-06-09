@@ -43,31 +43,13 @@
 .COMPUTEGBCHECKSUM              ; checksum bytes at $14E/F
 
 ;===============================================================================
-; GameBoy reset vector:
-;===============================================================================
-; after displaying the Nintendo logo, the GameBoy jumps to $0100 where a
-; standard piece of code is expacted to jump to the actual game initialisation
-;
-.BANK   0       SLOT 0
-.ORG    $0100
-
-.SECTION        "gb_boot"       FORCE
-
-gb_boot:
-        ;-----------------------------------------------------------------------
-        nop
-        jp init
-
-.ENDS
-
-;===============================================================================
 ; hardware registers:
 ;===============================================================================
 ; <https://bgb.bircd.org/pandocs.htm>
 ;
 ; LCD control register:
 ;-------------------------------------------------------------------------------
-.DEF    LCDC    $ff40
+.DEF    LCDC                    $ff40
 ;
 ; bit 7 LCD display enable              (0=Off, 1=On)
 .DEF    LCDC.lcd_enable         %10000000
@@ -81,17 +63,17 @@ gb_boot:
 ; 144. When the display is disabled the screen is blank (white), and VRAM
 ; and OAM can be accessed freely."
 
-; bit 6 window tile-map display select  (0=$9800-$9BFF, 1=$9C00-$9FFF)
+; bit 6 window tile-map select  (0=$9800-$9BFF, 1=$9C00-$9FFF)
 .DEF    LCDC.window_select      %01000000
-; bit 5 window display enable           (0=Off, 1=On)
+; bit 5 window display enable   (0=Off, 1=On)
 .DEF    LCDC.window_enable      %00100000
-; bit 4 BG & window tile-gfx select     (0=$8800-$97FF, 1=$8000-$8FFF)
+; bit 4 BG & window tile-gfx    (0=$8800-$97FF, 1=$8000-$8FFF)
 .DEF    LCDC.data_select        %00010000
-; bit 3 BG tile-map display select      (0=$9800-$9BFF, 1=$9C00-$9FFF)
+; bit 3 BG tile-map select      (0=$9800-$9BFF, 1=$9C00-$9FFF)
 .DEF    LCDC.bg_select          %00001000
-; bit 2 OBJ (sprite) size               (0=8x8, 1=8x16)
+; bit 2 OBJ (sprite) size       (0=8x8, 1=8x16)
 .DEF    LCDC.sprite_size        %00000100
-; bit 1 OBJ (sprite) display enable     (0=Off, 1=On)
+; bit 1 OBJ (sprite) enable     (0=Off, 1=On)
 .DEF    LCDC.sprite_enable      %00000010
 
 ; NOTE: the exact behaviour of bit 0 varies by hardware:
@@ -115,20 +97,20 @@ gb_boot:
 ;        (if any) that disable the background, but still want to display
 ;        the window wouldn't work properly on CGBs"
 ;
-; bit 0 BG display                      (0=Off, 1=On)
+; bit 0 BG display              (0=Off, 1=On)
 .DEF    LCDC.bg_display         %00000001
 
 ; LCD status register:
 ;-------------------------------------------------------------------------------
-.DEF    STAT    $ff41
-.DEF    SCY     $ff42
-.DEF    SCX     $ff43
-.DEF    LY      $ff44
-.DEF    LYC     $ff45
+.DEF    STAT                    $ff41
+.DEF    SCY                     $ff42
+.DEF    SCX                     $ff43
+.DEF    LY                      $ff44
+.DEF    LYC                     $ff45
 
-.DEF    BGP     $ff47
-.DEF    OBP0    $ff48
-.DEF    OBP1    $ff49
+.DEF    BGP                     $ff47
+.DEF    OBP0                    $ff48
+.DEF    OBP1                    $ff49
 
 .DEF    VRAM                    $8000
 .DEF    VRAM_TILES1             $8000   ; $8000-$8FFF
@@ -136,3 +118,6 @@ gb_boot:
 .DEF    VRAM_MAP1               $9800
 .DEF    VRAM_MAP2               $9c00
 .DEF    VRAM_OAM                $fe00
+
+.INC	"gb/gb_irqs.wla"        ; interrupts (RSTs / IRQs)
+.INC	"gb/gb_tiles.wla"       ; card graphics

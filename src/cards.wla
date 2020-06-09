@@ -1,17 +1,24 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 
-; cards:
+; card bytes:
 ;-------------------------------------------------------------------------------
-; %bassnnnn	b     = "back" (back is visible)
-;               a     = "active", 0=active, 1=inactive (unplayable / blocked)
-;		ss    = suit, 0-3
+; this section defines how we store cards in memory, one byte per card
+;
+; %bissnnnn	b     = "back" (back is visible)
+;               i     = "inactive", 0=active, 1=inactive (unplayable card)
+;		ss    = suit, 0-3,  0=spades, 1=clubs, 2=hearts, 3=diamonds
 ;		nnnn  = number, 1 (A), 2-9, 10 (J), 11 (Q), 12 (K),
 ;			13-15 unused. 0 = no-card / null
 ;
 .DEF	CARD_NONE	%00000000
+
+.DEF    CARD_FRONT      %00000000
 .DEF	CARD_BACK	%10000000
+
+.DEF    CARD_ACTIVE     %00000000
 .DEF    CARD_INACTIVE   %01000000
+
 .DEF    CARD_PLACE      %11111111       ; a card placeholder, e.g. a foundation
 
 ;                       %--0----- = black

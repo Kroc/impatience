@@ -1,26 +1,27 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
-;
-; VRAM layout:
-;
-;    $8000            $8800            $9000           $9800    $9C00    $A000
-;    +----------------+--------------------------------+--------+--------+
-;    | SPRITES        | TILES                          | BG     | WINDOW |
-;    +----------------+--------------------------------+--------+--------+
-;      (128 tiles)      (256 tiles)
-;
-.SECTION        "gfx_tiles"
 
-tiles_main:
-;-------------------------------------------------------------------------------
-.INCBIN         "build\tiles_even.2bpp" FSIZE tiles_main__size
-
+; since we cannot modify VRAM during the display period,
+; changes are queued up and then applied during vblank
+;
+.RAMSECTION     "tile_queue"    RETURNORG
+        tile_queue      DSB 126
 .ENDS
 
-.SECTION        "gfx_code"
+.RAMSECTION     "buffers"       ALIGN 256       RETURNORG
+        ;-----------------------------------------------------------------------
+        front_buffer    DSB 32*32
+        back_buffer     DSB 32*32
+.ENDS
+
+.SECTION        "code"
 
 init:
 ;===============================================================================
+; to get this project started, this sample code taken from:
+; https://gist.github.com/iamgreaser/9cccd24dd4519a0ae95240d8b8eeb252
+; (will be replaced soon)
+;
 ;-------------------------------------------------------------------------------
         ; configure LCD:
 	ld 	A, 	[LCDC]		; read the current LCD config
@@ -38,6 +39,7 @@ init:
 	call screen_off
 
 	; clear VRAM
+        ;-----------------------------------------------------------------------
 	ld 	HL, 	VRAM
 	xor 	A
 -	ld 	[HL], 	A
@@ -45,16 +47,38 @@ init:
 	bit 	5,	H
 	jp 	z, -
 
-	call	copy_main_tileset	; copy the main tileset to VRAM
+        ;-----------------------------------------------------------------------
+	call    clear_queue             ; clear the tile update queue
+        call	copy_main_tileset	; copy main tileset from ROM to VRAM
+        
 	call	clear_playfield		; clear the playfield background
 	call    clear_menu		; clear and draw the menu
 
+        call    refresh_vram
+
 	; set palette:
-	ld	A,	%00110010
+	ld	A,	%11000110
 	ld 	[BGP], 	A
 
 	call screen_on
 	ret
+
+
+clear_queue:
+;===============================================================================
+; empty the tile-update queue, used to defer VRAM changes to vblank:
+;
+;-------------------------------------------------------------------------------
+        ; starting address of tile queue
+        ld      C,      <tile_queue
+        ld      B,      _sizeof_tile_queue+1
+
+-       ldh     [C],    A               ; write 0 to queue
+        inc     C                       ; move to next byte in queue
+        dec     B                       ; one less byte to process
+        jr      nz, -                   ; keep going?
+        
+        ret
 
 
 wait_for_vblank:
@@ -109,6 +133,8 @@ screen_off:
 copy_main_tileset:
 ;===============================================================================
 ; copy the main tileset used throughout the game:
+; TODO: check vblank/lcd-stat for safety
+;       on CGB, we can use DMA to do this
 ;
 ;-------------------------------------------------------------------------------
         ld      HL,     tiles_main      ; set source address
@@ -150,9 +176,9 @@ clear_menu:
         ; "2nd" tile (the menu background)
         ld      A,      $81
         ; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32
-        ; playfield. for our purposes we place the menu on the left of
-        ; the playfield
-        ld      HL,     VRAM_MAP1
+        ; scrollable region. for our purposes we place the menu on
+        ; the left of the playfield
+        ld      HL,     front_buffer
         ; number of tiles to skip to next row
         ld      DE,     32-12
 
@@ -171,7 +197,7 @@ clear_menu:
         jr      nz, @row
 
         ; print the title:
-        ld      HL,     VRAM_MAP1 + 32 + 1
+        ld      HL,     front_buffer + 32 + 1
         ld      DE,     @impatience
         call    print_str
 
@@ -195,7 +221,7 @@ clear_playfield:
         ; playfield. for our purposes we place the menu on the left and
         ; the playfield next to it, therefore the playfield begins at
         ; X = 12 and not the top-left (X = 0)
-        ld      HL,     VRAM_MAP1 + 12
+        ld      HL,     front_buffer + 12
         ; number of tiles to skip to next row
         ld      DE,     32-20
 
@@ -214,4 +240,57 @@ clear_playfield:
         jr      nz, @row
 
         ret
+
+
+refresh_vram:
+;===============================================================================
+; forces a full update of VRAM:
+;
+; normally updates to VRAM are done partially -- only the tiles that have
+; changed between the front & back buffers are written during vblank
+;
+; a full update copies the current front buffer to the back buffer, then
+; the full back buffer is copied to VRAM in one go. the screen cannot be
+; on whilst this happens as writes to VRAM outside of vblank are ignored
+;-------------------------------------------------------------------------------
+        ; copy front buffer to back buffer:
+        ;
+        ld      HL,     front_buffer
+        ld      DE,     back_buffer
+        call    @copy
+
+        ; copy back buffer to VRAM:
+        ;
+        ; on the GameBoy, VRAM is memory-mapped,
+        ; though it is inaccessible outside of vblank
+        ;
+        ld      HL,     back_buffer
+        ld      DE,     VRAM_MAP1
+
+        ;-----------------------------------------------------------------------
+@copy:  ld      C,      0
+
+-       ld      A,      [HL+]
+        ld      [DE],   A
+        inc     E
+        ld      A,      [HL+]
+        ld      [DE],   A
+        inc     E
+        ld      A,      [HL+]
+        ld      [DE],   A
+        inc     E
+        ld      A,      [HL+]
+        ld      [DE],   A
+        inc     DE
+        dec     C
+        jr      nz, -
+
+        ret
+
+
+refresh_screen:
+;===============================================================================
+; compares the differences between the front & back buffers, and generates
+; the list of VRAM changes (tile queue) to make during vblank
+;
 .ENDS

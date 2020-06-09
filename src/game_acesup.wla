@@ -1,0 +1,202 @@
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+;
+.SECTION        "code"
+
+init:
+;===============================================================================
+        call    gfx.wait_for_vblank
+        
+        ; temp: set scroll offset to move menu off-screen
+        ld      A,      12 * 8
+        ld      [SCX],  A
+        xor     A
+        ld      [SCY],  A
+
+        ; configure the playfield
+        ;-----------------------------------------------------------------------
+        ; allocate from the start of the card pool
+        ld      DE,     playfield.cards
+        
+        ; allocate the deck:
+        ld      A,      12 + 1
+        ld      B,       1 + 1
+        call    playfield.alloc_deck
+
+        ; draw the foundations:
+        ;-----------------------------------------------------------------------
+        ; zeroth row
+        ld      HL,     gfx.front_buffer + 12 + (0 * 32) + 1
+        ld      A,      TILE3X4_DECK_1X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        
+        ; first row
+        ;
+        ld      HL,     gfx.front_buffer + 12 + (1 * 32) + 1
+        ld      A,      TILE3X4_DECK_2X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        inc     HL
+
+        ld      A,      TILE3X4_FNDT_1X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_1X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_1X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_1X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ; second row
+        ;
+        ld      HL,     gfx.front_buffer + 12 + (2 * 32) + 1
+        ld      A,      TILE3X4_DECK_3X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        inc     HL
+
+        ld      A,      TILE3X4_FNDT_2X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_2X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_2X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_2X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ; third row
+        ;
+        ld      HL,     gfx.front_buffer + 12 + (3 * 32) + 1
+        ld      A,      TILE3X4_DECK_4X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        inc     HL
+
+        ld      A,      TILE3X4_FNDT_3X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_3X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_3X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_3X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ; fourth row
+        ;
+        ld      HL,     gfx.front_buffer + 12 + (4 * 32) + 1
+        ld      A,      TILE3X4_DECK_5X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        inc     HL
+
+        ld      A,      TILE3X4_FNDT_4X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_4X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_4X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        ld      A,      TILE3X4_FNDT_4X1
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+        inc     A
+        ld      [HL+],  A
+
+        call    gfx.screen_off
+        call    gfx.refresh_vram
+        call    gfx.screen_on
+        ret
+
+.ENDS

@@ -5,13 +5,17 @@
 ;
 .MACRO  .str    ARGS    _str
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        .ASC    _str.length,    _str
+        .BYTE   _str.length     ; don't ASCII-map the string-length!!
+        .ASC    _str
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 .ENDM
 
 ; define the conversion from ASCII to the tile-numbers in our tileset:
 ;
 .ASCIITABLE
+        MAP   0 TO 127  = $80
+        MAP 128 TO 255  = $00
+        
         MAP     " "     = $81
         MAP     "0"     = $86
         MAP     "1"     = $87

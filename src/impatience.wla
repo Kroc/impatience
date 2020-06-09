@@ -4,8 +4,8 @@
 .DEF	HI		$01
 .DEF	LO		$00
 
-.INC	"gb.wla"			; hardware definitions
-.INC	"interrupts.wla"		; interrupts (RSTs / IRQs)
+.INC	"gb/gb.wla"			; GameBoy hardware definitions
+
 .INC	"str.wla"			; string & text routines
 .INC	"cards.wla"			; card data structures & routines
 
@@ -13,17 +13,18 @@
 
 .SECTION        "game_init"
 
-; to get this project started, this sample code taken from:
-; https://gist.github.com/iamgreaser/9cccd24dd4519a0ae95240d8b8eeb252
-; (will be replaced soon)
-;
 init:
 ;-------------------------------------------------------------------------------
 	di                      	; disable interrupts
 	ld 	SP,	$dff0		; locate the stack
 
 	call	gfx.init
+	
+	call	acesup.init
 
 	; TODO!
 -	jr -
 .ENDS
+
+.INC	"playfield.wla"		NAMESPACE "playfield"
+.INC	"game_acesup.wla"	NAMESPACE "acesup"
