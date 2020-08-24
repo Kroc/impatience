@@ -2,7 +2,7 @@
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 
 ; card bytes:
-;-------------------------------------------------------------------------------
+;===============================================================================
 ; this section defines how we store cards in memory, one byte per card
 ;
 ; %bissnnnn	b     = "back" (back is visible)
@@ -16,12 +16,12 @@
 .DEF    CARD_FRONT      %00000000
 .DEF	CARD_BACK	%10000000
 
-.DEF    CARD_ACTIVE     %00000000
-.DEF    CARD_INACTIVE   %01000000
+.DEF    CARD_ACTIVE     %00000000       ; card is playable
+.DEF    CARD_INACTIVE   %01000000       ; card is disabled
 
 .DEF    CARD_PLACE      %11111111       ; a card placeholder, e.g. a foundation
 
-;                       %--0----- = black
+; suits:                %--0----- = black
 .DEF	SUIT_SPADE	%00000000
 .DEF	SUIT_CLUB	%00010000
 ;                       %--1----- = red
@@ -41,3 +41,158 @@
 .DEF	CARD_J		%00001011
 .DEF	CARD_Q		%00001100
 .DEF	CARD_K		%00001101
+
+.STRUCT "Pile"
+        ;-----------------------------------------------------------------------
+        cards           WORD    ; address of storage for card pile
+        limit           BYTE    ; max.number of cards allowed in pile
+        x               BYTE    ; X-position on screen
+        y               BYTE    ; Y-position on screen
+.ENDST
+
+; define some RAM to hold cards during a game:
+;
+.RAMSECTION     "table" RETURNORG
+        ;-----------------------------------------------------------------------
+        ; a deck, where cards are drawn from
+        deck            INSTANCEOF Pile
+        ; a "discard" pile, where cards are thrown away
+        discard         INSTANCEOF Pile
+        ; a "hand" for cards to be played, e.g. three-card-draw
+        hand            INSTANCEOF Pile
+        ; up to four foundation piles, where cards are stacked in order
+        foundation1     INSTANCEOF Pile
+        foundation2     INSTANCEOF Pile
+        foundation3     INSTANCEOF Pile
+        foundation4     INSTANCEOF Pile
+        ; up to eight tableau piles, where cards are sorted
+        tableau1        INSTANCEOF Pile
+        tableau2        INSTANCEOF Pile
+        tableau3        INSTANCEOF Pile
+        tableau4        INSTANCEOF Pile
+        tableau5        INSTANCEOF Pile
+        tableau6        INSTANCEOF Pile
+        tableau7        INSTANCEOF Pile
+        tableau8        INSTANCEOF Pile
+
+        cards           DSB 1024
+.ENDS
+
+.CODE
+
+alloc_pile:
+;===============================================================================
+; allocates a pile where cards will be stored:
+; e.g. a deck, hand, foundation or tableau, etc.
+;
+; in:   HL      address of the `Pile` structure;
+;               this consists of a set of properties that will be filled out
+;
+;       A       X-position of the pile on-screen
+;       B       Y-position of the pile on-screen
+;
+;       C       maximum size (the limit) of the pile,
+;               i.e. how many cards the pile can hold
+;
+;       DE      address to set as the data-store for the pile,
+;               i.e. where the "cards", each a byte, will be stored
+;               this area will be cleared, according to the limit set
+;
+; out:  DE      the storage address is moved forward by the pile-size
+;               allocated. this is so that you can allocate one pile
+;               after another
+;
+;       HL      likewise, the structure address is moved forward over
+;               the `Pile` structure. useful if you are allocating
+;               multiple piles that directly follow each other in RAM
+;
+;       C       (preserved)
+;
+;       A, B    (clobbered)
+;-------------------------------------------------------------------------------
+        ; put aside the A-register as we'll need it to write to memory
+        push    AF
+
+        ; the first two bytes are the address to the card-storage
+        ld      A,      D
+        ld      [HL+],  A
+        ld      A,      E
+        ld      [HL+],  A
+
+        ; the next byte is the number of bytes reserved for storage
+        ld      A,      C
+        ld      [HL+],  A
+
+        ; next is the X/Y position on the screen
+        pop     AF
+        ld      [HL+],  A
+        ld      A,      B
+        ld      [HL+],  A
+
+        ; clear the allocated card storage
+        ;-----------------------------------------------------------------------
+        ld      B,      C
+        inc     B                       ; (account for 1-based count)
+        ld      A,      CARD_NONE       ; "fill" the pile with empty-slots
+-       ld      [DE],   A               ; clear one byte
+        inc     DE                      ; move to the next byte
+        dec     B                       ; one less byte to fill
+        jr      nz, -                   ; have we done all of them?
+
+        ret
+
+
+alloc_deck:
+;===============================================================================
+; allocates the deck: (this is always 52 cards in size)
+; the deck is populated with cards, but not shuffled
+;
+; in:   A       X-position of the pile on-screen
+;       B       Y-position of the pile on-screen
+;
+;       DE      address to set as the data-store for the pile,
+;               i.e. where the "cards", each a byte, will be stored
+;-------------------------------------------------------------------------------
+        ld      HL,     deck
+        ld      C,      52
+
+        ; backup our starting storage address, because after allocating,
+        ; we want to go back and populate the deck
+        push    DE
+
+        call    alloc_pile
+
+        ; backup whatever the allocation put into HL & BC,
+        ; we need to return registers as if we were `alloc_pile`
+        push    HL
+        push    BC
+
+        ; return to the starting storage address
+        ; (this time in HL, for auto-increment purposes)
+        pop     HL
+
+        ; fill the deck with cards:
+        ;-----------------------------------------------------------------------
+        ; C will be our suit counter; 0=spades, 1=clubs, 2=hearts, 3=diamonds
+        ld      C,      0
+
+@next:  ld      B,      1               ; B = our ordinal counter, 1 to 13
+-       ld      A,      B               ; begin with the suit 0-3
+        swap    A                       ; suit bits go in the upper nybble
+        add     C                       ; add the ordinal (1-13)
+        or      CARD_BACK               ; flip the card over!
+        ld      [HL+],  A               ; store card and move to next slot
+
+        inc     C                       ; move to the next ordinal
+        ld      A,      C               ; (need to use A for comparison)
+        cp      13                      ; have we gone past the king?
+        jr      nc,     -               ; no, continue adding cards
+
+        inc     C                       ; move to the next suit
+        and     %00000100               ; have we hit 4?
+        jr      z,      @next           ; no, do next suit
+
+        ;-----------------------------------------------------------------------
+        pop     BC
+        pop     HL
+        ret

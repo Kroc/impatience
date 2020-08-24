@@ -8,20 +8,34 @@ init:
         call    gfx.wait_for_vblank
         
         ; temp: set scroll offset to move menu off-screen
-        ld      A,      12 * 8
+        ld      A,      MENU_WIDTH * 8
         ld      [SCX],  A
         xor     A
         ld      [SCY],  A
 
-        ; configure the playfield
+        ; setup the playfield for the game
         ;-----------------------------------------------------------------------
-        ; allocate from the start of the card pool
-        ld      DE,     playfield.cards
-        
         ; allocate the deck:
         ld      A,      12 + 1
         ld      B,       1 + 1
-        call    playfield.alloc_deck
+        call    alloc_deck
+
+        ; allocate the tableau:
+        ld      HL,     tableau1
+        ld      A,      12 + 1
+        ld      B,       1 + 1
+        ld      C,      13
+
+        ; tableau 2, 3 & 4 all follow in order,
+        ; so we do not need to set HL again
+        ld      A,      12 + 5
+        ld      B,       1 + 1
+
+        ld      A,      12 + 8
+        ld      B,       1 + 1
+
+        ld      A,      12 + 11
+        ld      B,       1 + 1
 
         ; draw the foundations:
         ;-----------------------------------------------------------------------

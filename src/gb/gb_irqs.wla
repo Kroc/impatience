@@ -1,6 +1,24 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 
+; interrupt enable register:
+;-------------------------------------------------------------------------------
+.DEF    INTERRUPT_ENABLE        $ffff
+.DEF    IE.vblank               %00000001       ; RST $40
+.DEF    IE.lcd_stat             %00000010       ; RST $48
+.DEF    IE.timer                %00000100       ; RST $50
+.DEF    IE.serial               %00001000       ; RST $58
+.DEF    IE.joypad               %00010000       ; RST $60
+
+; interrupt flags register:
+;-------------------------------------------------------------------------------
+.DEF    INTERRUPT_FLAGS         $ff0f
+.DEF    IF.vblank               %00000001
+.DEF    IF.lcd_stat             %00000010
+.DEF    IF.timer                %00000100
+.DEF    IF.serial               %00001000
+.DEF    IF.joypad               %00010000
+
 ; reset vectors:
 ;===============================================================================
 .BANK   0       SLOT "ROMLO"
@@ -81,7 +99,7 @@ irq_joypad:
 ; GameBoy reset vector:
 ;===============================================================================
 ; after displaying the Nintendo logo, the GameBoy jumps to $0100 where a
-; standard piece of code is expacted to jump to the actual game initialisation
+; standard piece of code is expected to jump to the actual game initialisation
 ;
 .BANK   0       SLOT "ROMLO"
 .ORG    $0100

@@ -14,7 +14,7 @@
 .SECTION        "game_init"
 
 init:
-;-------------------------------------------------------------------------------
+;===============================================================================
 	di                      	; disable interrupts
 	ld 	SP,	$dff0		; locate the stack
 
@@ -26,5 +26,6 @@ init:
 -	jr -
 .ENDS
 
+.INC	"menu.wla"		NAMESPACE "menu"
 .INC	"playfield.wla"		NAMESPACE "playfield"
 .INC	"game_acesup.wla"	NAMESPACE "acesup"

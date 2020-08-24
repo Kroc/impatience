@@ -51,17 +51,16 @@
 ;-------------------------------------------------------------------------------
 .DEF    LCDC                    $ff40
 ;
-; bit 7 LCD display enable              (0=Off, 1=On)
+; bit 7 LCD display enable      (0=Off, 1=On)
 .DEF    LCDC.lcd_enable         %10000000
 
-; "CAUTION: Stopping LCD operation (Bit 7 from 1 to 0) may be performed during
-; V-Blank ONLY, disabeling the display outside of the V-Blank period may damage
-; the hardware. This appears to be a serious issue, Nintendo is reported to
-; reject any games that do not follow this rule.
+; CAUTION: stopping LCD operation (Bit 7 from 1 to 0) may be performed during
+; v-blank ONLY, disabling the display outside of the V-Blank period may damage
+; the hardware!
 ;
-; V-blank can be confirmed when the value of LY is greater than or equal to
+; v-blank can be confirmed when the value of LY is greater than or equal to
 ; 144. When the display is disabled the screen is blank (white), and VRAM
-; and OAM can be accessed freely."
+; and OAM can be accessed freely
 
 ; bit 6 window tile-map select  (0=$9800-$9BFF, 1=$9C00-$9FFF)
 .DEF    LCDC.window_select      %01000000
@@ -103,6 +102,7 @@
 ; LCD status register:
 ;-------------------------------------------------------------------------------
 .DEF    STAT                    $ff41
+
 .DEF    SCY                     $ff42
 .DEF    SCX                     $ff43
 .DEF    LY                      $ff44

@@ -6,7 +6,7 @@
 .MACRO  .str    ARGS    _str
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         .BYTE   _str.length     ; don't ASCII-map the string-length!!
-        .ASC    _str
+        .ASC    _str            ; convert string bytes to tilemap bytes
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 .ENDM
 
