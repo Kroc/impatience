@@ -44,10 +44,9 @@ init:
         ;-----------------------------------------------------------------------
 	ld 	HL, 	VRAM
 	xor 	A                       ; (set A to 0)
--	ld 	[HL], 	A
-	inc 	HL
+-	ld 	[HL+],  A
 	bit 	5,	H
-	jp 	z, -
+	jr 	z, -
 
         ;-----------------------------------------------------------------------
 	call    clear_queue             ; clear the tile update queue
@@ -136,9 +135,8 @@ screen_off:
 copy_main_tileset:
 ;===============================================================================
 ; copy the main tileset used throughout the game:
-; TODO: check vblank/lcd-stat for safety
-;       on CGB, we can use DMA to do this
 ;
+; TODO: check vblank/lcd-stat for safety on CGB, we can use DMA to do this
 ;-------------------------------------------------------------------------------
         ld      HL,     tiles_main      ; set source address
         ld      DE,     VRAM_TILES2     ; set destination VRAM position
@@ -171,6 +169,35 @@ copy_tiles:
         ret
 
 
+get_buffer_addr:
+;===============================================================================
+; given an X & Y co-ordinate, return an address in the front-buffer:
+;
+; in:   B       y-position (row) in the tile-map (32x32)
+;       C       x-position (column) in the tile-map (32x32)
+;
+; out:  HL      address within the front-buffer                         ;cycles
+;
+; TODO: use a lookup table of rows (just 64 bytes!)
+;-------------------------------------------------------------------------------
+        ; we need to multiply Y (row) by 32                             ;   =24
+        ld      H,      0               ; prepare HL,                   ;+ 8=32
+        ld      L,      B               ; with row-number only          ;+ 4=36
+
+        add     HL,     HL              ; x2                            ;+ 8=44
+        add     HL,     HL              ; x4                            ;+ 8=52
+        add     HL,     HL              ; x8                            ;+ 8=60
+        add     HL,     HL              ; x16                           ;+ 8=68
+        add     HL,     HL              ; x32                           ;+ 8=76
+        
+        ld      B,      0               ; prepare BC with column only   ;+ 8=84
+        add     HL,     BC              ; add the column                ;+ 8=92
+        ld      BC,     front_buffer    ; get front-buffer address      ;+12=104
+        add     HL,     BC              ; finally, add our offset       ;+ 8=112
+
+        ret                                                             ;+16=128
+
+
 refresh_vram:
 ;===============================================================================
 ; forces a full update of VRAM:
@@ -181,6 +208,8 @@ refresh_vram:
 ; a full update copies the current front buffer to the back buffer, then
 ; the full back buffer is copied to VRAM in one go. the screen cannot be
 ; on whilst this happens as writes to VRAM outside of vblank are ignored
+;
+; TODO: on GBC we can use DMA
 ;-------------------------------------------------------------------------------
         ; clear the update queue to prevent changes to VRAM during vblank
         call    clear_queue
@@ -198,6 +227,7 @@ refresh_vram:
         ld      HL,     back_buffer
         ld      DE,     VRAM_MAP1
 
+        ; copy 1'024 bytes:
         ;-----------------------------------------------------------------------
 @copy:  ld      C,      0
 
@@ -265,7 +295,7 @@ refresh_screen:
         ; the queue being emptied whilst we're writing to it!
         ;
         ld      A,      [INTERRUPT_ENABLE]
-        and     IE.vblank^$ff
+        and     IE.vblank^$ff           ; exclude the vblank bit
         ld      [INTERRUPT_ENABLE],     A
 
         ; get current update queue position:

@@ -1,7 +1,7 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-.SECTION        "code"
+.CODE
 
 init:
 ;===============================================================================
@@ -15,202 +15,36 @@ init:
 
         ; setup the playfield for the game
         ;-----------------------------------------------------------------------
+        ; completely clear the table of cards, both the piles and the storage
+        ; pool of all cards on the table. DE will be set to the beginning
+        ; of the storage pool, as needed by the allocation routines
+        ;
+        call    cards.clear
+
         ; allocate the deck:
-        ld      A,      12 + 1
-        ld      B,       1 + 1
-        call    alloc_deck
+        ld      B,      2               ; row
+        ld      C,      MENU_WIDTH + 1  ; column
+        call    cards.alloc_deck
 
         ; allocate the tableau:
-        ld      HL,     tableau1
-        ld      A,      12 + 1
-        ld      B,       1 + 1
-        ld      C,      13
+        ld      HL,     cards.tableau1
+        ld      C,      MENU_WIDTH + 5  ; column, row is re-used
+        ld      A,      13              ; max. number of cards
+        call    cards.alloc_pile
 
-        ; tableau 2, 3 & 4 all follow in order,
-        ; so we do not need to set HL again
-        ld      A,      12 + 5
-        ld      B,       1 + 1
+;;        ; tableau 2, 3 & 4 all follow in order,
+;;        ; so we do not need to set HL again
+;;        ld      C,      MENU_WIDTH + 5  ; column, row is re-used
+;;        call    cards.alloc_pile
+;;
+;;        ld      C,      MENU_WIDTH + 8  ; column, row is re-used
+;;        call    cards.alloc_pile
+;;
+;;        ld      C,      MENU_WIDTH + 11 ; column, row is re-used
+;;        call    cards.alloc_pile
 
-        ld      A,      12 + 8
-        ld      B,       1 + 1
-
-        ld      A,      12 + 11
-        ld      B,       1 + 1
-
-        ; draw the foundations:
-        ;-----------------------------------------------------------------------
-        ; zeroth row
-        ld      HL,     gfx.front_buffer + 12 + (0 * 32) + 1
-        ld      A,      TILE3X4_DECK_1X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        
-        ; first row
-        ;
-        ld      HL,     gfx.front_buffer + 12 + (1 * 32) + 1
-        ld      A,      TILE3X4_DECK_2X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        inc     HL
-
-        ld      A,      TILE3X4_FNDT_1X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_1X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_1X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_1X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ; second row
-        ;
-        ld      HL,     gfx.front_buffer + 12 + (2 * 32) + 1
-        ld      A,      TILE3X4_DECK_3X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        inc     HL
-
-        ld      A,      TILE3X4_FNDT_2X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_2X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_2X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_2X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ; third row
-        ;
-        ld      HL,     gfx.front_buffer + 12 + (3 * 32) + 1
-        ld      A,      TILE3X4_DECK_4X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        inc     HL
-
-        ld      A,      TILE3X4_FNDT_3X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_3X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_3X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_3X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ; fourth row
-        ;
-        ld      HL,     gfx.front_buffer + 12 + (4 * 32) + 1
-        ld      A,      TILE3X4_DECK_5X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        inc     HL
-
-        ld      A,      TILE3X4_FNDT_4X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_4X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_4X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
-        ld      A,      TILE3X4_FNDT_4X1
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-        inc     A
-        ld      [HL+],  A
-
+        call    cards.draw_deck
         call    gfx.screen_off
         call    gfx.refresh_vram
         call    gfx.screen_on
         ret
-
-.ENDS

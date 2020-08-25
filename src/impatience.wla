@@ -7,7 +7,6 @@
 .INC	"gb/gb.wla"			; GameBoy hardware definitions
 
 .INC	"str.wla"			; string & text routines
-.INC	"cards.wla"			; card data structures & routines
 
 .INC	"gfx.wla"		NAMESPACE "gfx"
 
@@ -26,6 +25,7 @@ init:
 -	jr -
 .ENDS
 
+.INC	"cards.wla"		NAMESPACE "cards"
 .INC	"menu.wla"		NAMESPACE "menu"
 .INC	"playfield.wla"		NAMESPACE "playfield"
 .INC	"game_acesup.wla"	NAMESPACE "acesup"

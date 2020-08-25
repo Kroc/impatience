@@ -43,26 +43,26 @@ tiles_main:
 ;-------------------------------------------------------------------------------
 ; a deck is a pile of face-down cards
 ;
-.DEF    TILE3X4_DECK_1X1        $80+$22 ; deck, top-left
-.DEF    TILE3X4_DECK_1X2        $80+$23 ; deck, top-centre
-.DEF    TILE3X4_DECK_1X3        $80+$24 ; deck, top-right
+.DEF    TILE3X4_DECK_0X1        $80+$22 ; deck, top-left
+.DEF    TILE3X4_DECK_0X2        $80+$23 ; deck, top-centre
+.DEF    TILE3X4_DECK_0X3        $80+$24 ; deck, top-right
 
 ; the middle three rows of the deck repeat
 ;
-.DEF    TILE3X4_DECK_2X1        $80+$42 ; deck, middle-left (row 2)
-.DEF    TILE3X4_DECK_2X2        $80+$43 ; deck, middle-centre (row 2)
-.DEF    TILE3X4_DECK_2X3        $80+$44 ; deck, middle-right (row 2)
-.DEF    TILE3X4_DECK_3X1        $80+$42 ; deck, middle-left (row 3)
-.DEF    TILE3X4_DECK_3X2        $80+$43 ; deck, middle-centre (row 3)
-.DEF    TILE3X4_DECK_3X3        $80+$44 ; deck, middle-right (row 3)
-.DEF    TILE3X4_DECK_4X1        $80+$42 ; deck, middle-left (row 4)
-.DEF    TILE3X4_DECK_4X2        $80+$43 ; deck, middle-centre (row 4)
-.DEF    TILE3X4_DECK_4X3        $80+$44 ; deck, middle-right (row 4)
+.DEF    TILE3X4_DECK_1X1        $80+$42 ; deck, middle-left (row 2)
+.DEF    TILE3X4_DECK_1X2        $80+$43 ; deck, middle-centre (row 2)
+.DEF    TILE3X4_DECK_1X3        $80+$44 ; deck, middle-right (row 2)
+.DEF    TILE3X4_DECK_2X1        $80+$42 ; deck, middle-left (row 3)
+.DEF    TILE3X4_DECK_2X2        $80+$43 ; deck, middle-centre (row 3)
+.DEF    TILE3X4_DECK_2X3        $80+$44 ; deck, middle-right (row 3)
+.DEF    TILE3X4_DECK_3X1        $80+$42 ; deck, middle-left (row 4)
+.DEF    TILE3X4_DECK_3X2        $80+$43 ; deck, middle-centre (row 4)
+.DEF    TILE3X4_DECK_3X3        $80+$44 ; deck, middle-right (row 4)
 
 ; bottom-row of the deck
-.DEF    TILE3X4_DECK_5X1        $80+$62 ; deck, bottom-left
-.DEF    TILE3X4_DECK_5X2        $80+$62 ; deck, bottom-centre
-.DEF    TILE3X4_DECK_5X3        $80+$62 ; deck, bottom-right
+.DEF    TILE3X4_DECK_4X1        $80+$62 ; deck, bottom-left
+.DEF    TILE3X4_DECK_4X2        $80+$63 ; deck, bottom-centre
+.DEF    TILE3X4_DECK_4X3        $80+$64 ; deck, bottom-right
 
 ; face-up:
 ;-------------------------------------------------------------------------------

@@ -44,15 +44,19 @@
 
 .STRUCT "Pile"
         ;-----------------------------------------------------------------------
-        cards           WORD    ; address of storage for card pile
+        ; we place the limit byte first so that when moving cards around,
+        ; we can validate the movement without having to skip over fields
+        ; that we will need to come back to
+        ;
         limit           BYTE    ; max.number of cards allowed in pile
+        addr            WORD    ; address of storage for card pile
         x               BYTE    ; X-position on screen
         y               BYTE    ; Y-position on screen
 .ENDST
 
 ; define some RAM to hold cards during a game:
 ;
-.RAMSECTION     "table" RETURNORG
+.RAMSECTION     "table" ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
         ; a deck, where cards are drawn from
         deck            INSTANCEOF Pile
@@ -75,70 +79,33 @@
         tableau7        INSTANCEOF Pile
         tableau8        INSTANCEOF Pile
 
-        cards           DSB 1024
+        storage         DSB 1024
 .ENDS
 
 .CODE
 
-alloc_pile:
+clear:
 ;===============================================================================
-; allocates a pile where cards will be stored:
-; e.g. a deck, hand, foundation or tableau, etc.
+; clear all piles, card storage:
 ;
-; in:   HL      address of the `Pile` structure;
-;               this consists of a set of properties that will be filled out
-;
-;       A       X-position of the pile on-screen
-;       B       Y-position of the pile on-screen
-;
-;       C       maximum size (the limit) of the pile,
-;               i.e. how many cards the pile can hold
-;
-;       DE      address to set as the data-store for the pile,
-;               i.e. where the "cards", each a byte, will be stored
-;               this area will be cleared, according to the limit set
-;
-; out:  DE      the storage address is moved forward by the pile-size
-;               allocated. this is so that you can allocate one pile
-;               after another
-;
-;       HL      likewise, the structure address is moved forward over
-;               the `Pile` structure. useful if you are allocating
-;               multiple piles that directly follow each other in RAM
-;
-;       C       (preserved)
-;
-;       A, B    (clobbered)
+; out:  DE      first address of the card storage pool
+;       A, BC   set to zero, by nature of looping
+;       HL      (clobbered)
 ;-------------------------------------------------------------------------------
-        ; put aside the A-register as we'll need it to write to memory
-        push    AF
-
-        ; the first two bytes are the address to the card-storage
-        ld      A,      D
-        ld      [HL+],  A
-        ld      A,      E
-        ld      [HL+],  A
-
-        ; the next byte is the number of bytes reserved for storage
-        ld      A,      C
-        ld      [HL+],  A
-
-        ; next is the X/Y position on the screen
-        pop     AF
-        ld      [HL+],  A
-        ld      A,      B
-        ld      [HL+],  A
-
-        ; clear the allocated card storage
-        ;-----------------------------------------------------------------------
-        ld      B,      C
-        inc     B                       ; (account for 1-based count)
-        ld      A,      CARD_NONE       ; "fill" the pile with empty-slots
--       ld      [DE],   A               ; clear one byte
-        inc     DE                      ; move to the next byte
-        dec     B                       ; one less byte to fill
-        jr      nz, -                   ; have we done all of them?
-
+        ld      HL,     SECTIONSTART_cards.table
+        ld      BC,     (SECTIONEND_cards.table - SECTIONSTART_cards.table)+1
+        xor     A                       ; (set A to zero)
+-       ld      [HL+],  A               ; clear a byte
+        
+        ; watch out! 16-bit decrement doesn't set flags!
+        dec     C
+        jr      nz,     -
+        dec     B
+        jr      nz,     -
+        
+        ; return the starting address of the card pool
+        ; (used for allocating piles)
+        ld      DE,     storage
         ret
 
 
@@ -147,29 +114,28 @@ alloc_deck:
 ; allocates the deck: (this is always 52 cards in size)
 ; the deck is populated with cards, but not shuffled
 ;
-; in:   A       X-position of the pile on-screen
-;       B       Y-position of the pile on-screen
+; in:   B       row (Y) of the pile on the tilemap
+;       C       column (X) of the pile on the tilemap
 ;
 ;       DE      address to set as the data-store for the pile,
 ;               i.e. where the "cards", each a byte, will be stored
 ;-------------------------------------------------------------------------------
-        ld      HL,     deck
-        ld      C,      52
+        ld      HL,     deck            ; address of deck structure
+        ld      A,      52              ; size-limit of deck
 
-        ; backup our starting storage address, because after allocating,
-        ; we want to go back and populate the deck
+        ; backup our starting storage address because after
+        ; allocating we want to go back and populate the deck
         push    DE
 
+        ; HL    address of pile structure (`deck`)
+        ; DE    address in storage pool
+        ; BC    row & column to draw the deck
+        ;  A    number of cards in deck
+        ;
         call    alloc_pile
 
-        ; backup whatever the allocation put into HL & BC,
-        ; we need to return registers as if we were `alloc_pile`
-        push    HL
-        push    BC
-
-        ; return to the starting storage address
-        ; (this time in HL, for auto-increment purposes)
-        pop     HL
+        pop     DE                      ; return to starting storage address
+        push    BC                      ; preserve B & C
 
         ; fill the deck with cards:
         ;-----------------------------------------------------------------------
@@ -177,22 +143,154 @@ alloc_deck:
         ld      C,      0
 
 @next:  ld      B,      1               ; B = our ordinal counter, 1 to 13
--       ld      A,      B               ; begin with the suit 0-3
+-       ld      A,      C               ; begin with the suit 0-3
         swap    A                       ; suit bits go in the upper nybble
-        add     C                       ; add the ordinal (1-13)
+        or      B                       ; add the ordinal (1-13)
         or      CARD_BACK               ; flip the card over!
-        ld      [HL+],  A               ; store card and move to next slot
+        ld      [DE],   A               ; store card and move to next slot
+        inc     DE
 
-        inc     C                       ; move to the next ordinal
-        ld      A,      C               ; (need to use A for comparison)
+        inc     B                       ; move to the next ordinal
+        ld      A,      B               ; (need to use A for comparison)
         cp      13                      ; have we gone past the king?
         jr      nc,     -               ; no, continue adding cards
 
         inc     C                       ; move to the next suit
-        and     %00000100               ; have we hit 4?
+        bit     3,      C               ; have we hit 4?
         jr      z,      @next           ; no, do next suit
 
         ;-----------------------------------------------------------------------
-        pop     BC
-        pop     HL
+        pop     BC                      ; restore original B & C
+        ld      A,      52              ; preserve size-limit of deck
+        ret
+
+
+alloc_pile:
+;===============================================================================
+; allocates a pile where cards will be stored:
+; e.g. a deck, hand, foundation or tableau, etc.
+;
+; in:   A       maximum size (the limit) of the pile,
+;               i.e. how many cards the pile can hold
+;
+;       HL      address of the `Pile` structure;
+;               this consists of a set of properties that will be filled out
+;
+;       DE      address to set as the data-store for the pile,
+;               i.e. where the "cards", each a byte, will be stored
+;               this area will be cleared, according to the limit set
+;
+;       B       y-position of the pile on-screen
+;       C       x-position of the pile on-screen
+;
+; out:  HL      the structure address is moved forward over the `Pile`
+;               structure. useful if you are allocating multiple piles
+;               that directly follow each other in RAM
+;
+;       DE      the storage address is moved forward by the pile-size
+;               allocated. this is so that you can allocate one pile
+;               after another
+;
+;       AF, BC  (preserved)
+;-------------------------------------------------------------------------------
+        push    AF                      ; preserve the A-register
+
+        ; the first byte is the number of bytes reserved for storage
+        ld      [HL+],  A
+
+        ; the next two bytes are the address to the card-storage:
+        ; (note that we can get away with only incrementing L
+        ;  as the pile structures all fit within 256 bytes)
+        ld      [HL],   E
+        inc     L
+        ld      [HL],   D
+        inc     L
+
+        ; next is the row/column position on the tilemap
+        ; (these are separate byte fields, so not little-endian order)
+        ld      [HL],   B               ; write row (Y)
+        inc     L
+        ld      [HL],   C               ; write column (X)
+        inc     L
+
+        ; clear the allocated card storage
+        ;-----------------------------------------------------------------------
+        push    BC                      ; (preserve B & C registers)
+
+        ld      B,      A               ; card-limit to counter
+        inc     B                       ; (account for 1-based count)
+        xor     A                       ; "fill" the pile with empty-slots
+-       ld      [DE],   A               ; clear one byte
+        inc     DE                      ; move to the next byte
+        dec     B                       ; one less byte to fill
+        jr      nz, -                   ; have we done all of them?
+
+        pop     BC                      ; restore original B & C registers
+        pop     AF                      ; restore original A register
+        ret
+
+
+draw_deck:
+;===============================================================================
+; draws the deck on the back-buffer:
+;
+;-------------------------------------------------------------------------------
+        ld      HL,     deck.addr       ; address of deck pile
+        ld      E,      [HL]            ; read cards-address, lo-byte
+        inc     L
+        ld      D,      [HL]            ; read cards-address, hi-byte
+        inc     L
+        ld      B,      [HL]            ; read row
+        inc     L
+        ld      C,      [HL]            ; read column
+
+        ; draw deck:
+        ;-----------------------------------------------------------------------
+        ; TODO: check if the deck is full or empty
+        ;
+        ; get an address in the front-buffer for the X/Y co-ords
+        dec     B
+        call    gfx.get_buffer_addr
+
+        ; TODO: we should store this as a data-stream
+        ld      BC,     32-3
+        ld      A,      TILE3X4_DECK_0X1
+        ld      [HL+],  A 
+        inc     A       ;=TILE3X4_DECK_1X2
+        ld      [HL+],  A
+        inc     A       ;=TILE3X4_DECK_1X3
+        ld      [HL+],  A
+        add     HL,     BC              ; move to next tilemap row
+
+        ld      A,      TILE3X4_DECK_1X1
+        ld      [HL+],  A
+        inc     A       ;=TILE3X4_DECK_2X2
+        ld      [HL+],  A
+        inc     A       ;=TILE3X4_DECK_2X3
+        ld      [HL+],  A
+        add     HL,     BC              ; move to next tilemap row
+        
+        ld      A,      TILE3X4_DECK_2X1
+        ld      [HL+],  A
+        inc     A       ;=TILE3X4_DECK_3X2
+        ld      [HL+],  A
+        inc     A       ;=TILE3X4_DECK_3X3
+        ld      [HL+],  A
+        add     HL,     BC              ; move to next tilemap row
+        
+        ld      A,      TILE3X4_DECK_3X1
+        ld      [HL+],  A
+        inc     A       ;=TILE3X4_DECK_4X2
+        ld      [HL+],  A
+        inc     A       ;=TILE3X4_DECK_4X3
+        ld      [HL+],  A
+        add     HL,     BC              ; move to next tilemap row
+
+        ld      A,      TILE3X4_DECK_4X1
+        ld      [HL+],  A
+        inc     A       ;=TILE3X4_DECK_5X2
+        ld      [HL+],  A
+        inc     A       ;=TILE3X4_DECK_5X3
+        ld      [HL+],  A
+
         ret
