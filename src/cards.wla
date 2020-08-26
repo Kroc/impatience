@@ -13,13 +13,11 @@
 ;
 .DEF	CARD_NONE	%00000000
 
-.DEF    CARD_FRONT      %00000000
-.DEF	CARD_BACK	%10000000
+.DEF    CARD_FRONT      %00000000       ; face-up card
+.DEF	CARD_BACK	%10000000       ; face-down card
 
 .DEF    CARD_ACTIVE     %00000000       ; card is playable
 .DEF    CARD_INACTIVE   %01000000       ; card is disabled
-
-.DEF    CARD_PLACE      %11111111       ; a card placeholder, e.g. a foundation
 
 ; suits:                %--0----- = black
 .DEF	SUIT_SPADE	%00000000
@@ -56,7 +54,7 @@
 
 ; define some RAM to hold cards during a game:
 ;
-.RAMSECTION     "table" ALIGN 256       RETURNORG
+.RAMSECTION     "table"         ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
         ; a deck, where cards are drawn from
         deck            INSTANCEOF Pile
@@ -217,14 +215,17 @@ alloc_pile:
         ;-----------------------------------------------------------------------
         push    BC                      ; (preserve B & C registers)
 
-        ld      B,      A               ; card-limit to counter
+        ld      B,      A               ; copy card-limit to counter
         inc     B                       ; (account for 1-based count)
-        xor     A                       ; "fill" the pile with empty-slots
+        inc     B                       ; first byte is number of cards... 
+        xor     A                       ; ...in the pile, i.e. zero
+        
 -       ld      [DE],   A               ; clear one byte
         inc     DE                      ; move to the next byte
         dec     B                       ; one less byte to fill
         jr      nz, -                   ; have we done all of them?
 
+        ;-----------------------------------------------------------------------
         pop     BC                      ; restore original B & C registers
         pop     AF                      ; restore original A register
         ret

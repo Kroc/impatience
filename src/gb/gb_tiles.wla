@@ -55,14 +55,31 @@ tiles_main:
 .DEF    TILE3X4_DECK_2X1        $80+$42 ; deck, middle-left (row 3)
 .DEF    TILE3X4_DECK_2X2        $80+$43 ; deck, middle-centre (row 3)
 .DEF    TILE3X4_DECK_2X3        $80+$44 ; deck, middle-right (row 3)
-.DEF    TILE3X4_DECK_3X1        $80+$42 ; deck, middle-left (row 4)
-.DEF    TILE3X4_DECK_3X2        $80+$43 ; deck, middle-centre (row 4)
-.DEF    TILE3X4_DECK_3X3        $80+$44 ; deck, middle-right (row 4)
+.DEF    TILE3X4_DECK_3X1        $80+$42 ; deck, bottom-left (row 4)
+.DEF    TILE3X4_DECK_3X2        $80+$43 ; deck, bottom-centre (row 4)
+.DEF    TILE3X4_DECK_3X3        $80+$44 ; deck, bottom-right (row 4)
 
 ; bottom-row of the deck
-.DEF    TILE3X4_DECK_4X1        $80+$62 ; deck, bottom-left
-.DEF    TILE3X4_DECK_4X2        $80+$63 ; deck, bottom-centre
-.DEF    TILE3X4_DECK_4X3        $80+$64 ; deck, bottom-right
+.DEF    TILE3X4_DECK_4X1        $80+$62 ; deck, pile-left
+.DEF    TILE3X4_DECK_4X2        $80+$63 ; deck, pile-centre
+.DEF    TILE3X4_DECK_4X3        $80+$64 ; deck, pile-right
+
+; back:
+;-------------------------------------------------------------------------------
+; a card, face-down:
+;
+.DEF    TILE3X4_BACK_1X1        $80+$32 ; back, top-left
+.DEF    TILE3X4_BACK_1X2        $80+$33 ; back, top-centre
+.DEF    TILE3X4_BACK_1X3        $80+$34 ; back, top-right
+.DEF    TILE3X4_BACK_2X1        $80+$42 ; back, middle-left (row 2)
+.DEF    TILE3X4_BACK_2X2        $80+$43 ; back, middle-centre (row 2)
+.DEF    TILE3X4_BACK_2X3        $80+$44 ; back, middle-right (row 2)
+.DEF    TILE3X4_BACK_3X1        $80+$42 ; back, middle-left (row 3)
+.DEF    TILE3X4_BACK_3X2        $80+$43 ; back, middle-centre (row 3)
+.DEF    TILE3X4_BACK_3X3        $80+$44 ; back, middle-right (row 3)
+.DEF    TILE3X4_BACK_4X1        $80+$52 ; back, bottom-left
+.DEF    TILE3X4_BACK_4X2        $80+$53 ; back, bottom-centre
+.DEF    TILE3X4_BACK_4X3        $80+$54 ; back, bottom-right
 
 ; face-up:
 ;-------------------------------------------------------------------------------
@@ -137,17 +154,28 @@ tilemap_empty:
         ; this is the dotted-outline used for showing an empty pile,
         ; such as the deck, hand, or foundation
         ;
-        .byte   TILE3X4_FNDT_1X1, TILE3X4_FNDT_1X2, TILE3X4_FNDT_1X3
-        .byte   TILE3X4_FNDT_2X1, TILE3X4_FNDT_2X2, TILE3X4_FNDT_2X3
-        .byte   TILE3X4_FNDT_3X1, TILE3X4_FNDT_3X2, TILE3X4_FNDT_3X3
-        .byte   TILE3X4_FNDT_4X1, TILE3X4_FNDT_4X2, TILE3X4_FNDT_4X3
+@row1:  .byte   TILE3X4_FNDT_1X1, TILE3X4_FNDT_1X2, TILE3X4_FNDT_1X3
+@row2:  .byte   TILE3X4_FNDT_2X1, TILE3X4_FNDT_2X2, TILE3X4_FNDT_2X3
+@row3:  .byte   TILE3X4_FNDT_3X1, TILE3X4_FNDT_3X2, TILE3X4_FNDT_3X3
+@row4:  .byte   TILE3X4_FNDT_4X1, TILE3X4_FNDT_4X2, TILE3X4_FNDT_4X3
 
 tilemap_deck:
         ;-----------------------------------------------------------------------
-        .byte   TILE3X4_DECK_0X1, TILE3X4_DECK_0X2, TILE3X4_DECK_0X3
-        .byte   TILE3X4_DECK_1X1, TILE3X4_DECK_1X2, TILE3X4_DECK_1X3
-        .byte   TILE3X4_DECK_2X1, TILE3X4_DECK_2X2, TILE3X4_DECK_2X3
-        .byte   TILE3X4_DECK_3X1, TILE3X4_DECK_3X2, TILE3X4_DECK_3X3
-        .byte   TILE3X4_DECK_4X1, TILE3X4_DECK_4X2, TILE3X4_DECK_4X3
+        ; a full deck
+        ;
+@row0:  .byte   TILE3X4_DECK_0X1, TILE3X4_DECK_0X2, TILE3X4_DECK_0X3
+@row1:  .byte   TILE3X4_DECK_1X1, TILE3X4_DECK_1X2, TILE3X4_DECK_1X3
+@row2:  .byte   TILE3X4_DECK_2X1, TILE3X4_DECK_2X2, TILE3X4_DECK_2X3
+@row3:  .byte   TILE3X4_DECK_3X1, TILE3X4_DECK_3X2, TILE3X4_DECK_3X3
+@row4:  .byte   TILE3X4_DECK_4X1, TILE3X4_DECK_4X2, TILE3X4_DECK_4X3
 
+
+tilemap_back:
+        ;-----------------------------------------------------------------------
+        ; the back of a card
+        ;
+@row1:  .byte   TILE3X4_BACK_1X1, TILE3X4_BACK_1X2, TILE3X4_BACK_1X3
+@row2:  .byte   TILE3X4_BACK_2X1, TILE3X4_BACK_2X2, TILE3X4_BACK_2X3
+@row3:  .byte   TILE3X4_BACK_3X1, TILE3X4_BACK_3X2, TILE3X4_BACK_3X3
+@row4:  .byte   TILE3X4_BACK_4X1, TILE3X4_BACK_4X2, TILE3X4_BACK_4X3
 .ENDS

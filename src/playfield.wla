@@ -50,20 +50,40 @@ draw_deck:
         inc     L
         ld      C,      [HL]            ; read column
 
+        ; NOTE: by incrementing L here, we have automatically moved onto the
+        ;       next Pile structure. by returning this HL value, the caller
+        ;       can draw multiple piles that follow one another (e.g tableau)
+        inc     L
+        push    HL
+
         ; draw deck:
         ;-----------------------------------------------------------------------
-        ; TODO: check if the deck is full or empty
-        ;
+        ; read the card-count from the first-byte in the pile's card pool.
+        ; if the deck is empty, draw its outline instead
+        ld      A,      [DE]
+        and     A,      A               ; set flags!
+        jr      z,      draw_empty
+        
         ; get an address in the front-buffer for the X/Y co-ords
         dec     B
         call    gfx.get_buffer_addr
-
         ld      DE,     tilemap_deck     
         call    gfx.write_tiles_3wide_5rows
 
         ;-----------------------------------------------------------------------
+        pop     HL
         ret
 
+
+draw_empty:
+;===============================================================================
+        call    gfx.get_buffer_addr
+        ld      DE,     tilemap_empty     
+        call    gfx.write_tiles_3wide_4rows
+
+        ;-----------------------------------------------------------------------
+        pop     HL
+        ret
 
 draw_pile:
 ;===============================================================================
@@ -91,12 +111,17 @@ draw_pile:
 
         ; draw pile:
         ;-----------------------------------------------------------------------
-        ; TODO: check if the deck is full or empty
-        ;
+        ; read the card-count from the first-byte in the pile's card pool.
+        ; if the pile is empty, draw its outline instead
+        ld      A,      [DE]
+        and     A,      A               ; set flags!
+        jr      z,      draw_empty
+
         ; get an address in the front-buffer for the X/Y co-ords
         call    gfx.get_buffer_addr
 
-        ld      DE,     tilemap_empty     
+        ; TODO: begin drawing cards
+        ld      DE,     tilemap_back
         call    gfx.write_tiles_3wide_4rows
         
         ;-----------------------------------------------------------------------

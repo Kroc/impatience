@@ -176,14 +176,16 @@ get_buffer_addr:
 ; in:   B       y-position (row) in the tile-map (32x32)
 ;       C       x-position (column) in the tile-map (32x32)
 ;
-; out:  HL      address within the front-buffer                         ;cycles
-;
-; TODO: use a lookup table of rows (just 64 bytes!)
+; out:  HL      address within the front-buffer                         
+;       A, DE   (preserved)                                             
+;       BC      (clobbered)                                             ;cycles
 ;-------------------------------------------------------------------------------
         ; we need to multiply Y (row) by 32                             ;   =24
         ld      H,      0               ; prepare HL,                   ;+ 8=32
         ld      L,      B               ; with row-number only          ;+ 4=36
 
+        ; TODO: use a lookup table of rows (just 64 bytes!)
+        ;
         add     HL,     HL              ; x2                            ;+ 8=44
         add     HL,     HL              ; x4                            ;+ 8=52
         add     HL,     HL              ; x8                            ;+ 8=60
