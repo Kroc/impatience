@@ -129,4 +129,25 @@ tiles_main:
 .DEF    TILE3X4_CARD_4X3_Q      $1b     ; Queen
 .DEF    TILE3X4_CARD_4X3_K      $1c     ; King
 
+
+; card tilemaps:
+;===============================================================================
+tilemap_empty:
+        ;-----------------------------------------------------------------------
+        ; this is the dotted-outline used for showing an empty pile,
+        ; such as the deck, hand, or foundation
+        ;
+        .byte   TILE3X4_FNDT_1X1, TILE3X4_FNDT_1X2, TILE3X4_FNDT_1X3
+        .byte   TILE3X4_FNDT_2X1, TILE3X4_FNDT_2X2, TILE3X4_FNDT_2X3
+        .byte   TILE3X4_FNDT_3X1, TILE3X4_FNDT_3X2, TILE3X4_FNDT_3X3
+        .byte   TILE3X4_FNDT_4X1, TILE3X4_FNDT_4X2, TILE3X4_FNDT_4X3
+
+tilemap_deck:
+        ;-----------------------------------------------------------------------
+        .byte   TILE3X4_DECK_0X1, TILE3X4_DECK_0X2, TILE3X4_DECK_0X3
+        .byte   TILE3X4_DECK_1X1, TILE3X4_DECK_1X2, TILE3X4_DECK_1X3
+        .byte   TILE3X4_DECK_2X1, TILE3X4_DECK_2X2, TILE3X4_DECK_2X3
+        .byte   TILE3X4_DECK_3X1, TILE3X4_DECK_3X2, TILE3X4_DECK_3X3
+        .byte   TILE3X4_DECK_4X1, TILE3X4_DECK_4X2, TILE3X4_DECK_4X3
+
 .ENDS

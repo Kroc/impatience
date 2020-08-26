@@ -198,6 +198,51 @@ get_buffer_addr:
         ret                                                             ;+16=128
 
 
+write_tiles_3wide_5rows:
+;===============================================================================
+        ld      BC,     29
+        call    write_tiles_3wide
+
+write_tiles_3wide_4rows:
+;===============================================================================
+        ld      BC,     29
+        call    write_tiles_3wide
+
+write_tiles_3wide_3rows:
+;===============================================================================
+        ld      BC,     29
+        call    write_tiles_3wide
+
+write_tiles_3wide_2rows:
+;===============================================================================
+        ld      BC,     29
+        call    write_tiles_3wide
+
+write_tiles_3wide_1row:
+;===============================================================================
+        ld      BC,     29
+
+write_tiles_3wide:
+;===============================================================================
+; in:   BC      number of tiles to skip for next row, should be set to 29
+;       DE      address with tiles to read from
+;       HL      address to write to, where 3 tiles are written and then
+;               the address is moved to the next row of the tilemap
+;-------------------------------------------------------------------------------
+        ld      A,      [DE]
+        inc     DE
+        ld      [HL+],  A
+        ld      A,      [DE]
+        inc     DE
+        ld      [HL+],  A
+        ld      A,      [DE]
+        inc     DE
+        ld      [HL+],  A
+        add     HL,     BC
+
+        ret
+
+
 refresh_vram:
 ;===============================================================================
 ; forces a full update of VRAM:
@@ -254,8 +299,6 @@ refresh_screen:
 ; compares the differences between the front & back buffers, and generates
 ; the list of VRAM changes (tile queue) to make during vblank
 ;
-; TODO: we must disable vblank IRQs during this otherwise we might be
-;       pushing to the queue at the same time it's being emptied
 ;-------------------------------------------------------------------------------
         ld      HL,     front_buffer
         ld      DE,     back_buffer

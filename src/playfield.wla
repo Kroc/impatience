@@ -1,8 +1,7 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-
-.SECTION        "playfield"
+.CODE
 
 clear:
 ;===============================================================================
@@ -36,4 +35,70 @@ clear:
 
         ret
 
-.ENDS
+
+draw_deck:
+;===============================================================================
+; draws the deck on the back-buffer:
+;
+;-------------------------------------------------------------------------------
+        ld      HL,     cards.deck.addr ; address of deck pile
+        ld      E,      [HL]            ; read cards-address, lo-byte
+        inc     L
+        ld      D,      [HL]            ; read cards-address, hi-byte
+        inc     L
+        ld      B,      [HL]            ; read row
+        inc     L
+        ld      C,      [HL]            ; read column
+
+        ; draw deck:
+        ;-----------------------------------------------------------------------
+        ; TODO: check if the deck is full or empty
+        ;
+        ; get an address in the front-buffer for the X/Y co-ords
+        dec     B
+        call    gfx.get_buffer_addr
+
+        ld      DE,     tilemap_deck     
+        call    gfx.write_tiles_3wide_5rows
+
+        ;-----------------------------------------------------------------------
+        ret
+
+
+draw_pile:
+;===============================================================================
+; draws a pile on the back-buffer:
+;
+; in:   HL      address of the Pile structure
+;
+; out:  HL      HL is moved forward on to the next Pile structure
+;       DE      the front-buffer address of the row *below* the pile drawn
+;-------------------------------------------------------------------------------
+        inc     HL                      ; skip over the max-cards byte
+        ld      E,      [HL]            ; read cards-address, lo-byte
+        inc     L
+        ld      D,      [HL]            ; read cards-address, hi-byte
+        inc     L
+        ld      B,      [HL]            ; read row
+        inc     L
+        ld      C,      [HL]            ; read column 
+
+        ; NOTE: by incrementing L here, we have automatically moved onto the
+        ;       next Pile structure. by returning this HL value, the caller
+        ;       can draw multiple piles that follow one another (e.g tableau)
+        inc     L
+        push    HL
+
+        ; draw pile:
+        ;-----------------------------------------------------------------------
+        ; TODO: check if the deck is full or empty
+        ;
+        ; get an address in the front-buffer for the X/Y co-ords
+        call    gfx.get_buffer_addr
+
+        ld      DE,     tilemap_empty     
+        call    gfx.write_tiles_3wide_4rows
+        
+        ;-----------------------------------------------------------------------
+        pop     HL                      ; return next Pile address
+        ret

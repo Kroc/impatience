@@ -32,18 +32,29 @@ init:
         ld      A,      13              ; max. number of cards
         call    cards.alloc_pile
 
-;;        ; tableau 2, 3 & 4 all follow in order,
-;;        ; so we do not need to set HL again
-;;        ld      C,      MENU_WIDTH + 5  ; column, row is re-used
-;;        call    cards.alloc_pile
-;;
-;;        ld      C,      MENU_WIDTH + 8  ; column, row is re-used
-;;        call    cards.alloc_pile
-;;
-;;        ld      C,      MENU_WIDTH + 11 ; column, row is re-used
-;;        call    cards.alloc_pile
+        ; tableau 2, 3 & 4 all follow in order,
+        ; so we do not need to set HL again
+        ld      C,      MENU_WIDTH + 8  ; column, row is re-used
+        call    cards.alloc_pile
 
-        call    cards.draw_deck
+        ld      C,      MENU_WIDTH + 11 ; column, row is re-used
+        call    cards.alloc_pile
+
+        ld      C,      MENU_WIDTH + 14 ; column, row is re-used
+        call    cards.alloc_pile
+
+        ;-----------------------------------------------------------------------
+        call    playfield.draw_deck
+        
+        ; NOTE: tableau 1, 2, 3 & 4 follow each other, so each call
+        ;       to `draw_pile` moves HL on to the next tableau pile
+        ld      HL,     cards.tableau1
+        call    playfield.draw_pile     ; draw tableau 1
+        call    playfield.draw_pile     ; draw tableau 2
+        call    playfield.draw_pile     ; draw tableau 3
+        call    playfield.draw_pile     ; draw tableau 4
+
+        ;-----------------------------------------------------------------------
         call    gfx.screen_off
         call    gfx.refresh_vram
         call    gfx.screen_on
