@@ -67,7 +67,7 @@ draw_deck:
         ; get an address in the front-buffer for the X/Y co-ords
         dec     B
         call    gfx.get_buffer_addr
-        ld      DE,     tilemap_deck     
+        ld      DE,     gfx.tilemap_deck     
         call    gfx.write_tiles_3wide_5rows
 
         ;-----------------------------------------------------------------------
@@ -78,7 +78,7 @@ draw_deck:
 draw_empty:
 ;===============================================================================
         call    gfx.get_buffer_addr
-        ld      DE,     tilemap_empty     
+        ld      DE,     gfx.tilemap_empty     
         call    gfx.write_tiles_3wide_4rows
 
         ;-----------------------------------------------------------------------
@@ -121,7 +121,7 @@ draw_pile:
         call    gfx.get_buffer_addr
 
         ; TODO: begin drawing cards
-        ld      DE,     tilemap_back
+        ld      DE,     gfx.tilemap_back
         call    gfx.write_tiles_3wide_4rows
         
         ;-----------------------------------------------------------------------

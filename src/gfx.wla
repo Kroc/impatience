@@ -16,6 +16,179 @@
         back_buffer     DSB 32*32
 .ENDS
 
+
+; include the tile graphics and map the various pieces of the card graphics
+; to some constants so that we don't have to tweak tile numbers throughout
+; the code-base. we want this aligned to one-tile (16-bytes) for some
+; tile-copying micro-optimisations
+;
+.SECTION        "card_tiles"    ALIGN 16
+
+tiles_main:
+;-------------------------------------------------------------------------------
+.INCBIN         "build\tiles_even.2bpp" FSIZE tiles_main__size
+
+; 3x4 cards:
+;===============================================================================
+; foundation:
+;-------------------------------------------------------------------------------
+; a foundation is a blank space on the playfield where cards are "played off",
+; into their final destination
+;
+.DEF    TILE3X4_FNDT_1X1        $80+$25 ; foundation, top-left
+.DEF    TILE3X4_FNDT_1X2        $80+$26 ; foundation, top-centre
+.DEF    TILE3X4_FNDT_1X3        $80+$27 ; foundation, top-right
+.DEF    TILE3X4_FNDT_2X1        $80+$35 ; foundation, upper-middle left
+.DEF    TILE3X4_FNDT_2X2        $80+$36 ; foundation, upper-middle centre
+.DEF    TILE3X4_FNDT_2X3        $80+$37 ; foundation, upper-middle right
+.DEF    TILE3X4_FNDT_3X1        $80+$45 ; foundation, lower-middle left
+.DEF    TILE3X4_FNDT_3X2        $80+$46 ; foundation, lower-middle centre
+.DEF    TILE3X4_FNDT_3X3        $80+$47 ; foundation, lower-middle right
+.DEF    TILE3X4_FNDT_4X1        $80+$55 ; foundation, bottom-left
+.DEF    TILE3X4_FNDT_4X2        $80+$56 ; foundation, bottom-centre
+.DEF    TILE3X4_FNDT_4X3        $80+$57 ; foundation, bottom-right
+
+; deck:
+;-------------------------------------------------------------------------------
+; a deck is a pile of face-down cards
+;
+.DEF    TILE3X4_DECK_0X1        $80+$22 ; deck, top-left
+.DEF    TILE3X4_DECK_0X2        $80+$23 ; deck, top-centre
+.DEF    TILE3X4_DECK_0X3        $80+$24 ; deck, top-right
+
+; the middle three rows of the deck repeat
+;
+.DEF    TILE3X4_DECK_1X1        $80+$42 ; deck, middle-left (row 2)
+.DEF    TILE3X4_DECK_1X2        $80+$43 ; deck, middle-centre (row 2)
+.DEF    TILE3X4_DECK_1X3        $80+$44 ; deck, middle-right (row 2)
+.DEF    TILE3X4_DECK_2X1        $80+$42 ; deck, middle-left (row 3)
+.DEF    TILE3X4_DECK_2X2        $80+$43 ; deck, middle-centre (row 3)
+.DEF    TILE3X4_DECK_2X3        $80+$44 ; deck, middle-right (row 3)
+.DEF    TILE3X4_DECK_3X1        $80+$42 ; deck, bottom-left (row 4)
+.DEF    TILE3X4_DECK_3X2        $80+$43 ; deck, bottom-centre (row 4)
+.DEF    TILE3X4_DECK_3X3        $80+$44 ; deck, bottom-right (row 4)
+
+; bottom-row of the deck
+.DEF    TILE3X4_DECK_4X1        $80+$62 ; deck, pile-left
+.DEF    TILE3X4_DECK_4X2        $80+$63 ; deck, pile-centre
+.DEF    TILE3X4_DECK_4X3        $80+$64 ; deck, pile-right
+
+; back:
+;-------------------------------------------------------------------------------
+; a card, face-down:
+;
+.DEF    TILE3X4_BACK_1X1        $80+$32 ; back, top-left
+.DEF    TILE3X4_BACK_1X2        $80+$33 ; back, top-centre
+.DEF    TILE3X4_BACK_1X3        $80+$34 ; back, top-right
+.DEF    TILE3X4_BACK_2X1        $80+$42 ; back, middle-left (row 2)
+.DEF    TILE3X4_BACK_2X2        $80+$43 ; back, middle-centre (row 2)
+.DEF    TILE3X4_BACK_2X3        $80+$44 ; back, middle-right (row 2)
+.DEF    TILE3X4_BACK_3X1        $80+$42 ; back, middle-left (row 3)
+.DEF    TILE3X4_BACK_3X2        $80+$43 ; back, middle-centre (row 3)
+.DEF    TILE3X4_BACK_3X3        $80+$44 ; back, middle-right (row 3)
+.DEF    TILE3X4_BACK_4X1        $80+$52 ; back, bottom-left
+.DEF    TILE3X4_BACK_4X2        $80+$53 ; back, bottom-centre
+.DEF    TILE3X4_BACK_4X3        $80+$54 ; back, bottom-right
+
+; face-up:
+;-------------------------------------------------------------------------------
+; the top-left corner of a face-up card has the
+; ordinal (number) of the card, Ace through King:
+;
+.DEF    TILE3X4_CARD_1X1_A      $00     ; Ace
+.DEF    TILE3X4_CARD_1X1_2      $01     ; Two
+.DEF    TILE3X4_CARD_1X1_3      $02     ; Three
+.DEF    TILE3X4_CARD_1X1_4      $03     ; Four
+.DEF    TILE3X4_CARD_1X1_5      $04     ; Five
+.DEF    TILE3X4_CARD_1X1_6      $05     ; Six
+.DEF    TILE3X4_CARD_1X1_7      $06     ; Seven
+.DEF    TILE3X4_CARD_1X1_8      $07     ; Eight
+.DEF    TILE3X4_CARD_1X1_9      $08     ; Nine
+.DEF    TILE3X4_CARD_1X1_10     $09     ; Ten
+.DEF    TILE3X4_CARD_1X1_J      $0a     ; Jack
+.DEF    TILE3X4_CARD_1X1_Q      $0b     ; Queen
+.DEF    TILE3X4_CARD_1X1_K      $0c     ; King
+
+; the top-centre of a face-up card is blank
+.DEF    TILE_3X4_CARD_1X2       $44
+
+; the top-right of a face-up card has the suit:
+;
+.DEF    TILE_3X4_CARD_1X3_SPD   $40     ; Spades
+.DEF    TILE_3X4_CARD_1X3_CLB   $41     ; Clubs
+.DEF    TILE_3X4_CARD_1X3_HRT   $42     ; Hearts
+.DEF    TILE_3X4_CARD_1X3_DMD   $43     ; Diamonds
+
+; the left, centre and right of the middle portion
+; of the card (two-rows) is blank:
+;
+.DEF    TILE_3X4_CARD_2X1       $54
+.DEF    TILE_3X4_CARD_2X2       $80+$01 ; (re-uses space from font)
+.DEF    TILE_3X4_CARD_2X3       $64
+.DEF    TILE_3X4_CARD_3X1       $54
+.DEF    TILE_3X4_CARD_3X2       $80+$01 ; (re-uses space from font)
+.DEF    TILE_3X4_CARD_3X3       $64
+
+; the bottom-left of a face-up card has the suit:
+;
+.DEF    TILE_3X4_CARD_4X1_SPD   $50     ; Spades
+.DEF    TILE_3X4_CARD_4X1_CLB   $51     ; Clubs
+.DEF    TILE_3X4_CARD_4X1_HRT   $52     ; Hearts
+.DEF    TILE_3X4_CARD_4X1_DMD   $53     ; Diamonds
+
+; the bottom-centre is blank
+.DEF    TILE_3X4_CARD_4X2       $74
+
+; the bottom-right of a face-up card has the ordinal:
+;
+.DEF    TILE3X4_CARD_4X3_A      $10     ; Ace
+.DEF    TILE3X4_CARD_4X3_2      $11     ; Two
+.DEF    TILE3X4_CARD_4X3_3      $12     ; Three
+.DEF    TILE3X4_CARD_4X3_4      $13     ; Four
+.DEF    TILE3X4_CARD_4X3_5      $14     ; Five
+.DEF    TILE3X4_CARD_4X3_6      $15     ; Six
+.DEF    TILE3X4_CARD_4X3_7      $16     ; Seven
+.DEF    TILE3X4_CARD_4X3_8      $17     ; Eight
+.DEF    TILE3X4_CARD_4X3_9      $18     ; Nine
+.DEF    TILE3X4_CARD_4X3_10     $19     ; Ten
+.DEF    TILE3X4_CARD_4X3_J      $1a     ; Jack
+.DEF    TILE3X4_CARD_4X3_Q      $1b     ; Queen
+.DEF    TILE3X4_CARD_4X3_K      $1c     ; King
+
+; card tilemaps:
+;===============================================================================
+tilemap_empty:
+        ;-----------------------------------------------------------------------
+        ; this is the dotted-outline used for showing an empty pile,
+        ; such as the deck, hand, or foundation
+        ;
+@row1:  .byte   TILE3X4_FNDT_1X1, TILE3X4_FNDT_1X2, TILE3X4_FNDT_1X3
+@row2:  .byte   TILE3X4_FNDT_2X1, TILE3X4_FNDT_2X2, TILE3X4_FNDT_2X3
+@row3:  .byte   TILE3X4_FNDT_3X1, TILE3X4_FNDT_3X2, TILE3X4_FNDT_3X3
+@row4:  .byte   TILE3X4_FNDT_4X1, TILE3X4_FNDT_4X2, TILE3X4_FNDT_4X3
+
+tilemap_deck:
+        ;-----------------------------------------------------------------------
+        ; a full deck
+        ;
+@row0:  .byte   TILE3X4_DECK_0X1, TILE3X4_DECK_0X2, TILE3X4_DECK_0X3
+@row1:  .byte   TILE3X4_DECK_1X1, TILE3X4_DECK_1X2, TILE3X4_DECK_1X3
+@row2:  .byte   TILE3X4_DECK_2X1, TILE3X4_DECK_2X2, TILE3X4_DECK_2X3
+@row3:  .byte   TILE3X4_DECK_3X1, TILE3X4_DECK_3X2, TILE3X4_DECK_3X3
+@row4:  .byte   TILE3X4_DECK_4X1, TILE3X4_DECK_4X2, TILE3X4_DECK_4X3
+
+
+tilemap_back:
+        ;-----------------------------------------------------------------------
+        ; the back of a card
+        ;
+@row1:  .byte   TILE3X4_BACK_1X1, TILE3X4_BACK_1X2, TILE3X4_BACK_1X3
+@row2:  .byte   TILE3X4_BACK_2X1, TILE3X4_BACK_2X2, TILE3X4_BACK_2X3
+@row3:  .byte   TILE3X4_BACK_3X1, TILE3X4_BACK_3X2, TILE3X4_BACK_3X3
+@row4:  .byte   TILE3X4_BACK_4X1, TILE3X4_BACK_4X2, TILE3X4_BACK_4X3
+
+.ENDS
+
 .CODE
 
 init:
@@ -45,8 +218,8 @@ init:
 	ld 	HL, 	VRAM
 	xor 	A                       ; (set A to 0)
 -	ld 	[HL+],  A
-	bit 	5,	H
-	jr 	z, -
+	bit 	5,	H               ; have we hit 8'192 bytes?
+	jr 	z, -                    ; i.e. %00010000_00000000
 
         ;-----------------------------------------------------------------------
 	call    clear_queue             ; clear the tile update queue

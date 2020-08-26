@@ -1,12 +1,8 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-.DEF	HI		$01
-.DEF	LO		$00
-
-.INC	"gb/gb.wla"			; GameBoy hardware definitions
-
-.INC	"str.wla"			; string & text routines
+.INC	"gb/gb_cpu.wla"		; GameBoy hardware definitions
+.INC	"str.wla"		; string & text routines
 
 .INC	"gfx.wla"		NAMESPACE "gfx"
 

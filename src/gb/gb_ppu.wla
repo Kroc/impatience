@@ -1,48 +1,15 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;===============================================================================
-; GameBoy memory map:
-;===============================================================================
-; adapted from the example provided by WLA-DX
+; VRAM layout:
 ;
-.MEMORYMAP
-        DEFAULTSLOT     0
-        SLOT 0  START $0000 SIZE $4000  NAME "ROMLO"    ; 16KB ROM (bank 0)
-        SLOT 1  START $4000 SIZE $4000  NAME "ROMHI"    ; 16KB ROM (bank 1+)
-        SLOT 2  START $8000 SIZE $2000  NAME "VRAM"     ; 8KB VRAM
-        SLOT 3  START $a000 SIZE $2000  NAME "SRAM"     ; 8KB cartridge RAM
-        SLOT 4  START $c000 SIZE $1000  NAME "WRAMLO"   ; 4KB WRAM 
-        SLOT 5  START $d000 SIZE $1000  NAME "WRAMHI"   ; 4KB WRAM (banked)
-        SLOT 6  START $ff80 SIZE $7f    NAME "HRAM"     ; embedded CPU RAM
-.ENDME
+;    $8000            $8800            $9000           $9800    $9C00    $A000
+;    +----------------+--------------------------------+--------+--------+
+;    | SPRITES        | TILES                          | BG     | WINDOW |
+;    +----------------+--------------------------------+--------+--------+
+;      (128 tiles)      (256 tiles)
+;
 
-.ROMBANKSIZE $4000
-.ROMBANKS 2
-
-;===============================================================================
-; GameBoy ROM header:
-;===============================================================================
-.NINTENDOLOGO                   ; insert required Nintendo logo at $104-$133
-.NAME   "IMPATIENCE"            ; game title (in ROM header), at $134-$143
-
-.LICENSEECODENEW        "CD"    ; two-digit manufacturer code at $144-$145
-                                ; (required for Super GameBoy compatibility)
-                                ; BTW "CD" is for "Camen Design"
-
-.ROMDMG                         ; Super GameBoy flag at $146; DMG or SGB
-
-.CARTRIDGETYPE	        $03     ; select MBC1+RAM+Battery
-
-.RAMSIZE	        $01     ; 2KB SRAM
-
-.DESTINATIONCODE        $01     ; non-Japanese
-
-.VERSION                $00     ; "ROM version"
-
-.COMPUTEGBCOMPLEMENTCHECK       ; checksum byte at $14D
-.COMPUTEGBCHECKSUM              ; checksum bytes at $14E/F
-
-;===============================================================================
 ; hardware registers:
 ;===============================================================================
 ; <https://bgb.bircd.org/pandocs.htm>
@@ -118,6 +85,3 @@
 .DEF    VRAM_MAP1               $9800
 .DEF    VRAM_MAP2               $9c00
 .DEF    VRAM_OAM                $fe00
-
-.INC	"gb/gb_irqs.wla"        ; interrupts (RSTs / IRQs)
-.INC	"gb/gb_tiles.wla"       ; card graphics
