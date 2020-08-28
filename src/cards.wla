@@ -229,3 +229,61 @@ alloc_pile:
         pop     BC                      ; restore original B & C registers
         pop     AF                      ; restore original A register
         ret
+
+
+add_card:
+;===============================================================================
+; add a card to a pile:
+;
+; in:   A       card to add (see CARD_* constants)
+;       HL      address to the Pile structure, *not* the Pile's storage
+;
+; out:  HL      preserved, to allow adding multiple cards in row
+;       carry   if the pile is full (card cannot be added), carry will be set
+;       A, BC   (clobbered)
+;-------------------------------------------------------------------------------
+        push    HL                      ; preserve original HL for return
+        ld      B,      A               ; put aside card to add for later
+
+        ; read the max. number of cards allowed in the pile:
+        ld      C,      [HL]
+        ; NOTE: we can get away with only incrementing L because the piles
+        ;       begin at an $xx00 address and don't exceed 256 bytes
+        inc     L
+        ; read the storage address:
+        ld      E,      [HL]
+        inc     L
+        ld      D,      [HL]
+
+        ; from that, read the first byte of the card pool
+        ; (the number of cards in the pile)
+        ld      A,      [DE]
+        ; compare number of cards in pile, with max (1-based)
+        cp      C
+        jr      nc,      @full
+
+        ; add card:
+        ;-----------------------------------------------------------------------
+@add:   inc     A                       ; increase number of cards in pile
+        ld      [DE],   A               ; write back updated card count
+        
+        ; move to the empty-slot at the end of the pile
+        add     A,      E               ; add number of cards to pile addr.
+        jr      nc,     +               ; E overflows?
+        inc     D                       ; ripple to D
++       ld      E,      A
+
+        ld      A,      B               ; retrieve card to add
+        ld      [DE],   A               ; write to pile
+        
+        ccf
+
+        pop     HL                      ; return original HL
+        ret
+
+        ; pile is full!
+        ;-----------------------------------------------------------------------
+@full:  scf
+
+        pop     HL                      ; return original HL
+        ret

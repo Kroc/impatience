@@ -22,7 +22,7 @@ init:
         call    cards.clear
 
         ; allocate the deck:
-        ld      B,      2               ; row
+        ld      B,      1               ; row
         ld      C,      MENU_WIDTH + 1  ; column
         call    cards.alloc_deck
 
@@ -42,6 +42,45 @@ init:
 
         ld      C,      MENU_WIDTH + 14 ; column, row is re-used
         call    cards.alloc_pile
+
+        ;-----------------------------------------------------------------------
+        ld      HL,     cards.tableau1
+        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
+        call    cards.add_card
+        ld      A,      CARD_Q | SUIT_HEART
+        call    cards.add_card
+        ld      A,      CARD_J | SUIT_CLUB
+        call    cards.add_card
+        ld      A,      CARD_X | SUIT_DIAMOND
+        call    cards.add_card
+        ld      A,      CARD_9 | SUIT_SPADE
+        call    cards.add_card
+        ld      A,      CARD_8 | SUIT_HEART
+        call    cards.add_card
+        ld      A,      CARD_7 | SUIT_CLUB
+        call    cards.add_card
+        ld      A,      CARD_6 | SUIT_DIAMOND
+        call    cards.add_card
+        ld      A,      CARD_5 | SUIT_SPADE
+        call    cards.add_card
+        ld      A,      CARD_4 | SUIT_HEART
+        call    cards.add_card
+        ld      A,      CARD_3 | SUIT_CLUB
+        call    cards.add_card
+        ld      A,      CARD_2 | SUIT_DIAMOND
+        call    cards.add_card
+        ld      A,      CARD_A | SUIT_SPADE
+        call    cards.add_card
+
+        ld      HL,     cards.tableau2
+        ld      A,      CARD_J | SUIT_HEART
+        call    cards.add_card
+        ld      HL,     cards.tableau3
+        ld      A,      CARD_Q | SUIT_CLUB
+        call    cards.add_card
+        ;;ld      HL,     cards.tableau4
+        ;;ld      A,      CARD_K | SUIT_DIAMOND
+        ;;call    cards.add_card
 
         ;-----------------------------------------------------------------------
         call    playfield.draw_deck

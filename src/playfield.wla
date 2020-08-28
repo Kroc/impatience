@@ -38,7 +38,7 @@ clear:
 
 draw_deck:
 ;===============================================================================
-; draws the deck on the back-buffer:
+; draws the deck on the front-buffer:
 ;
 ;-------------------------------------------------------------------------------
         ld      HL,     cards.deck.addr ; address of deck pile
@@ -60,17 +60,21 @@ draw_deck:
         ;-----------------------------------------------------------------------
         ; read the card-count from the first-byte in the pile's card pool.
         ; if the deck is empty, draw its outline instead
-        ld      A,      [DE]
-        and     A,      A               ; set flags!
-        jr      z,      draw_empty
+        ;
+        ld      A,      [DE]            ; number of cards in pile
+        and     A,      A               ; (set flags!)
+        jr      z,      draw_empty      ; if zero, draw a placeholder
         
-        ; get an address in the front-buffer for the X/Y co-ords
+        ; the deck extends a row upwards to give it that thicker appearance
         dec     B
+        ; get an address in the front-buffer for the X/Y co-ords
         call    gfx.get_buffer_addr
+        ; draw out the tiles for the deck
         ld      DE,     gfx.tilemap_deck     
         call    gfx.write_tiles_3wide_5rows
 
         ;-----------------------------------------------------------------------
+        ; return the beginning address of the next Pile structure
         pop     HL
         ret
 
@@ -85,6 +89,7 @@ draw_empty:
         pop     HL
         ret
 
+
 draw_pile:
 ;===============================================================================
 ; draws a pile on the back-buffer:
@@ -92,7 +97,6 @@ draw_pile:
 ; in:   HL      address of the Pile structure
 ;
 ; out:  HL      HL is moved forward on to the next Pile structure
-;       DE      the front-buffer address of the row *below* the pile drawn
 ;-------------------------------------------------------------------------------
         inc     HL                      ; skip over the max-cards byte
         ld      E,      [HL]            ; read cards-address, lo-byte
@@ -111,19 +115,129 @@ draw_pile:
 
         ; draw pile:
         ;-----------------------------------------------------------------------
-        ; read the card-count from the first-byte in the pile's card pool.
-        ; if the pile is empty, draw its outline instead
+        ; read the card-count from the first-byte in the pile's card pool
         ld      A,      [DE]
-        and     A,      A               ; set flags!
+        and     A,      A               ; (set flags!)
+        ; if the pile is empty, draw its outline instead
         jr      z,      draw_empty
-
-        ; get an address in the front-buffer for the X/Y co-ords
+        ; get front-buffer address for the X/Y co-ords. note that this returns
+        ; the address in HL, but clobbers BC. we depend upon it preserving A
+        ; (our card count) to be able to set BC afterwards!
         call    gfx.get_buffer_addr
+        ; retain the card-count for iterating through the pile
+        ld      C,      A
+        ; begin the pile at the first card
+        ld      B,      0
 
-        ; TODO: begin drawing cards
-        ld      DE,     gfx.tilemap_back
-        call    gfx.write_tiles_3wide_4rows
-        
+        ; when a pile has multiple cards, the cards below only have their
+        ; top row drawn, but the last card has to be drawn whole; the carry
+        ; flag indicates this to the `draw_card` routine
+        ;
+-       inc     B                       ; (pre-increment our counter)
+        ld      A,      B               ; compare current & total cards --
+        cp      C                       ; carry is set, except the last card!
+        push    BC                      ; (preserve when drawing)
+
+        inc     DE                      ; move to next card in pile
+                                        ; NOTE: does not change carry!
+        ld      A,      [DE]            ; read a card value
+        push    DE                      ; (preserve when drawing)
+
+        call    draw_card
+        pop     DE
+        pop     BC
+        jr      c,      -
+
         ;-----------------------------------------------------------------------
-        pop     HL                      ; return next Pile address
++       pop     HL                      ; return next Pile address
+        ret
+
+
+draw_card:
+;===============================================================================
+; draws a card, handling all of its different properties
+;
+; in:   HL      address in the front-buffer to draw the card
+;       A       the card to draw
+;       carry   if carry is set, only the first row will be drawn
+;               (this is for drawing down-stacking piles)
+;
+; out:  carry   (preserved)
+;       BC, DE  (clobbered)
+;
+; TODO: inactive
+;-------------------------------------------------------------------------------
+        bit     7,      A               ; is the card face-down?
+        jr      z,      @face           ; if not, skip onto drawing face-up
+
+        ; face-down:
+        ;-----------------------------------------------------------------------
+        ; face-down cards do not differ between active & inactive
+        ld      DE,     gfx.tilemap_back
+        ; if carry is set, we want to draw only one row
+        jp      c,      gfx.write_tiles_3wide_1row
+        ; otherwise draw the full card back
+        jp              gfx.write_tiles_3wide_4rows
+
+        ; face-up:
+        ;-----------------------------------------------------------------------
+        ; remember the state of the carry flag;
+        ; if set, we draw only the first row
+@face:  push    AF
+        ld      BC,     32-3            ; amount to skip to next row
+        
+        ; top-left corner: ordinal
+        ld      D,      A               ; make a copy of the original value
+        and     %00001111               ; trim out the other bits
+        add     TILE3X4_CARD_1X1-1      ; offset the tile with the ordinal
+        ld      [HL+],  A               ; write the tile and advance
+
+        ; top-middle:
+        ld      A,      TILE3X4_CARD_1X2
+        ld      [HL+],  A
+
+        ; top-right corner: suit
+        ld      A,      D
+        swap    A                       ; move the suit to the bottom nybble
+        and     %00000011               ; mask out the other bits
+        ld      E,      A               ; remember the suit for later too
+        add     TILE3X4_CARD_1X3
+        ld      [HL+],  A
+        add     HL,     BC              ; move to the next row
+
+        ; should we only draw the first row?
+        pop     AF                      ; restore carry
+        ret     c                       ; return now if carry-set
+
+        ; middle:
+        ld      A,      TILE3X4_CARD_2X1
+        ld      [HL+],  A
+        ld      A,      TILE3X4_CARD_2X2
+        ld      [HL+],  A
+        ld      A,      TILE3X4_CARD_2X3
+        ld      [HL+],  A
+        add     HL,     BC              ; move to the next row
+        ld      A,      TILE3X4_CARD_2X1
+        ld      [HL+],  A
+        ld      A,      TILE3X4_CARD_2X2
+        ld      [HL+],  A
+        ld      A,      TILE3X4_CARD_2X3
+        ld      [HL+],  A
+        add     HL,     BC              ; move to the next row
+
+        ; bottom-left: suit
+        ld      A,      E               ; retrieve suit from earlier
+        add     TILE3X4_CARD_4X1
+        ld      [HL+],  A
+
+        ; bottom-middle:
+        ld      A,      TILE3X4_CARD_4X2
+        ld      [HL+],  A
+
+        ; bottom-right: ordinal
+        ld      A,      D               ; retrieve ordinal from earlier
+        and     %00001111               ; trim out the other bits
+        add     TILE3X4_CARD_4X3-1      ; offset the tile with the ordinal
+        ld      [HL+],  A               ; write the tile and advance
+
         ret
