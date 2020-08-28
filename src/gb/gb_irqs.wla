@@ -104,11 +104,9 @@ irq_joypad:
 .BANK   0       SLOT "ROMLO"
 .ORG    $0100
 
-.SECTION        "gb_boot"       FORCE
-
 gb_boot:
         ;-----------------------------------------------------------------------
         nop
         jp init
 
-.ENDS
+.ORG    $0150

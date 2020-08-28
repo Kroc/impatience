@@ -4,24 +4,24 @@
 .INC	"gb/gb_cpu.wla"		; GameBoy hardware definitions
 .INC	"str.wla"		; string & text routines
 
-.INC	"gfx.wla"		NAMESPACE "gfx"
+.INC	"tilemap.wla"		NAMESPACE "tilemap"
 .INC	"sprites.wla"		NAMESPACE "sprites"
 
-.SECTION        "game_init"
 
 init:
 ;===============================================================================
 	di                      	; disable interrupts
 	ld 	SP,	$dff0		; locate the stack
 
-	call	gfx.init
+	call	tilemap.init
 	
 	call	acesup.init
 
 	; TODO!
 -	jr -
-.ENDS
 
+
+;===============================================================================
 .INC	"cards.wla"		NAMESPACE "cards"
 .INC	"menu.wla"		NAMESPACE "menu"
 .INC	"playfield.wla"		NAMESPACE "playfield"

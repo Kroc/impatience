@@ -9,7 +9,6 @@ tiles_sprites:
 
 .ENDS
 
-.CODE
 
 init:
 ;===============================================================================
@@ -19,7 +18,7 @@ init:
         ; number of tiles to copy, 0-based
         ; (each tile is 16-bytes)
         ld      B,      (tiles_sprites__size / 16) - 1
-        call    gfx.copy_tiles
+        call    tilemap.copy_tiles
 
         ; clear sprite registers (OAM)
         ld      HL,     $fe00

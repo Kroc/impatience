@@ -22,7 +22,7 @@
 ; the code-base. we want this aligned to one-tile (16-bytes) for some
 ; tile-copying micro-optimisations
 ;
-.SECTION        "tiles_cards"   ALIGN 16
+.SECTION        "tiles_cards"   ALIGN 16        RETURNORG
 
 tiles_main:
 ;-------------------------------------------------------------------------------
@@ -193,7 +193,6 @@ tilemap_back:
 
 .ENDS
 
-.CODE
 
 init:
 ;===============================================================================
@@ -233,7 +232,7 @@ init:
 	call	playfield.clear		; clear the playfield background
 	call    menu.clear		; clear and draw the menu
 
-        call    refresh_vram
+        call    refresh_tilemap
 
 	; set palette:
 	ld	A,	%11100100
@@ -260,54 +259,6 @@ clear_queue:
         jr      nz, -                   ; keep going?
         
         ret
-
-
-wait_for_vblank:
-;===============================================================================
-; TODO: this is battery draining, keeping the CPU in spinlock;
-;       replace this with a HALT & IRQ approach
-;-------------------------------------------------------------------------------
--	ld	A,      [LY]
-	cp	145
-	jr 	nz, -
-
-        ret
-
-
-screen_on:
-;===============================================================================
-; turns the screen on; we do not have to wait for vblank to do this
-;
-; out:  A       (preserved)
-;-------------------------------------------------------------------------------
-	push	AF
-	ld 	A,	[LCDC]
-	set 	7,	A
-	ld 	[LCDC], A
-
-+	pop	AF
-	ret
-
-
-screen_off:
-;===============================================================================
-; turns the screen off, holding execution until safe to do so
-;
-; out:  A       (preserved)
-;-------------------------------------------------------------------------------
-	push 	AF
-	ld 	A,	[LCDC]
-	bit 	7,	A
-	jr 	z, +
-	
-	call    wait_for_vblank
-
-	ld	A,	[LCDC]
-	res	7, 	A
-	ld	[LCDC], A
-
-+	pop 	AF
-	ret
 
 
 copy_main_tileset:
@@ -425,12 +376,12 @@ write_tiles_3wide:
         ret
 
 
-refresh_vram:
+refresh_tilemap:
 ;===============================================================================
-; forces a full update of VRAM:
+; forces a full update of the background tilemap:
 ;
-; normally updates to VRAM are done partially -- only the tiles that have
-; changed between the front & back buffers are written during vblank
+; normally updates to the tilemap are done partially -- only the tiles that
+; have changed between the front & back buffers are written during vblank
 ;
 ; a full update copies the current front buffer to the back buffer, then
 ; the full back buffer is copied to VRAM in one go. the screen cannot be

@@ -3,6 +3,7 @@
 
 .DEF    MENU_WIDTH              12
 
+
 clear:
 ;===============================================================================
 ; clears the menu, setting it back to its default display:
@@ -13,7 +14,7 @@ clear:
         ; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32
         ; scrollable region. for our purposes we place the menu on
         ; the left of the playfield
-        ld      HL,     gfx.front_buffer
+        ld      HL,     tilemap.front_buffer
         ; number of tiles to skip to next row
         ld      DE,     32-MENU_WIDTH
 
@@ -32,7 +33,7 @@ clear:
         jr      nz, @row
 
         ; print the title:
-        ld      HL,     gfx.front_buffer + 32 + 1
+        ld      HL,     tilemap.front_buffer + 32 + 1
         ld      DE,     @impatience
         call    print_str
 

@@ -85,3 +85,51 @@
 .DEF    VRAM_MAP1               $9800
 .DEF    VRAM_MAP2               $9c00
 .DEF    VRAM_OAM                $fe00
+
+
+wait_for_vblank:
+;===============================================================================
+; TODO: this is battery draining, keeping the CPU in spinlock;
+;       replace this with a HALT & IRQ approach
+;-------------------------------------------------------------------------------
+-	ld	A,      [LY]
+	cp	145
+	jr 	nz, -
+
+        ret
+
+
+screen_on:
+;===============================================================================
+; turns the screen on; we do not have to wait for vblank to do this
+;
+; out:  A       (preserved)
+;-------------------------------------------------------------------------------
+	push	AF
+	ld 	A,	[LCDC]
+	set 	7,	A
+	ld 	[LCDC], A
+
++	pop	AF
+	ret
+
+
+screen_off:
+;===============================================================================
+; turns the screen off, holding execution until safe to do so
+;
+; out:  A       (preserved)
+;-------------------------------------------------------------------------------
+	push 	AF
+	ld 	A,	[LCDC]
+	bit 	7,	A
+	jr 	z, +
+	
+	call    wait_for_vblank
+
+	ld	A,	[LCDC]
+	res	7, 	A
+	ld	[LCDC], A
+
++	pop 	AF
+	ret

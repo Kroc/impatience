@@ -1,7 +1,6 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-.CODE
 
 clear:
 ;===============================================================================
@@ -15,7 +14,7 @@ clear:
         ; playfield. for our purposes we place the menu on the left and
         ; the playfield next to it, therefore the playfield begins at
         ; X = 12 and not the top-left (X = 0)
-        ld      HL,     gfx.front_buffer + 12
+        ld      HL,     tilemap.front_buffer + MENU_WIDTH
         ; number of tiles to skip to next row
         ld      DE,     32-20
 
@@ -68,10 +67,10 @@ draw_deck:
         ; the deck extends a row upwards to give it that thicker appearance
         dec     B
         ; get an address in the front-buffer for the X/Y co-ords
-        call    gfx.get_buffer_addr
+        call    tilemap.get_buffer_addr
         ; draw out the tiles for the deck
-        ld      DE,     gfx.tilemap_deck     
-        call    gfx.write_tiles_3wide_5rows
+        ld      DE,     tilemap.tilemap_deck     
+        call    tilemap.write_tiles_3wide_5rows
 
         ;-----------------------------------------------------------------------
         ; return the beginning address of the next Pile structure
@@ -81,9 +80,9 @@ draw_deck:
 
 draw_empty:
 ;===============================================================================
-        call    gfx.get_buffer_addr
-        ld      DE,     gfx.tilemap_empty     
-        call    gfx.write_tiles_3wide_4rows
+        call    tilemap.get_buffer_addr
+        ld      DE,     tilemap.tilemap_empty     
+        call    tilemap.write_tiles_3wide_4rows
 
         ;-----------------------------------------------------------------------
         pop     HL
@@ -123,7 +122,7 @@ draw_pile:
         ; get front-buffer address for the X/Y co-ords. note that this returns
         ; the address in HL, but clobbers BC. we depend upon it preserving A
         ; (our card count) to be able to set BC afterwards!
-        call    gfx.get_buffer_addr
+        call    tilemap.get_buffer_addr
         ; retain the card-count for iterating through the pile
         ld      C,      A
         ; begin the pile at the first card
@@ -173,11 +172,11 @@ draw_card:
         ; face-down:
         ;-----------------------------------------------------------------------
         ; face-down cards do not differ between active & inactive
-        ld      DE,     gfx.tilemap_back
+        ld      DE,     tilemap.tilemap_back
         ; if carry is set, we want to draw only one row
-        jp      c,      gfx.write_tiles_3wide_1row
+        jp      c,      tilemap.write_tiles_3wide_1row
         ; otherwise draw the full card back
-        jp              gfx.write_tiles_3wide_4rows
+        jp              tilemap.write_tiles_3wide_4rows
 
         ; face-up:
         ;-----------------------------------------------------------------------

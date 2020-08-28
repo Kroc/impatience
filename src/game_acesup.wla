@@ -1,11 +1,10 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-.CODE
 
 init:
 ;===============================================================================
-        call    gfx.wait_for_vblank
+        call    wait_for_vblank
         
         ; temp: set scroll offset to move menu off-screen
         ld      A,      MENU_WIDTH * 8
@@ -107,7 +106,7 @@ init:
         call    playfield.draw_pile     ; draw tableau 4
 
         ;-----------------------------------------------------------------------
-        call    gfx.screen_off
-        call    gfx.refresh_vram
-        call    gfx.screen_on
+        call    screen_off
+        call    tilemap.refresh_tilemap
+        call    screen_on
         ret
