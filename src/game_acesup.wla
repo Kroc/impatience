@@ -47,6 +47,19 @@ init:
         ld      HL,     cards.tableau1
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
         call    cards.add_card
+        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
+        call    cards.add_card
+        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
+        call    cards.add_card
+        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
+        call    cards.add_card
+        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
+        call    cards.add_card
+        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
+        call    cards.add_card
+        
+        ld      A,      CARD_K | SUIT_SPADE
+        call    cards.add_card
         ld      A,      CARD_Q | SUIT_HEART
         call    cards.add_card
         ld      A,      CARD_J | SUIT_CLUB

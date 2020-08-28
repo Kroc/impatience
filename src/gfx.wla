@@ -22,7 +22,7 @@
 ; the code-base. we want this aligned to one-tile (16-bytes) for some
 ; tile-copying micro-optimisations
 ;
-.SECTION        "card_tiles"    ALIGN 16
+.SECTION        "tiles_cards"   ALIGN 16
 
 tiles_main:
 ;-------------------------------------------------------------------------------
@@ -228,6 +228,7 @@ init:
         ;-----------------------------------------------------------------------
 	call    clear_queue             ; clear the tile update queue
         call	copy_main_tileset	; copy main tileset from ROM to VRAM
+        call    sprites.init
         
 	call	playfield.clear		; clear the playfield background
 	call    menu.clear		; clear and draw the menu

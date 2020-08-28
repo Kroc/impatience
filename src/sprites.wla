@@ -1,0 +1,54 @@
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+
+.SECTION        "tiles_sprites" ALIGN 16
+
+tiles_sprites:
+;-------------------------------------------------------------------------------
+.INCBIN         "build\tiles_sprites.2bpp"      FSIZE tiles_sprites__size
+
+.ENDS
+
+.CODE
+
+init:
+;===============================================================================
+        ; copy the sprite tiles to VRAM:
+        ld      HL,     tiles_sprites   ; set source address
+        ld      DE,     VRAM_TILES1     ; set destination VRAM position
+        ; number of tiles to copy, 0-based
+        ; (each tile is 16-bytes)
+        ld      B,      (tiles_sprites__size / 16) - 1
+        call    gfx.copy_tiles
+
+        ; clear sprite registers (OAM)
+        ld      HL,     $fe00
+        ld      C,      40              ; number of sprites
+        xor     A                       ; (set A to zero)
+-       ld      [HL+],  A               ; set sprite Y to zero
+        ld      [HL+],  A               ; set sprite X to zero
+        ld      [HL+],  A               ; set sprite tile index to zero
+        ld      [HL+],  A               ; set sprite attributes to zero
+        dec     C
+        jr      nz,     -
+
+        ; configure the sprite:
+        ld      HL,     $fe00
+        ld      A,      72
+        ld      [HL+],  A
+        ld      A,      80
+        ld      [HL+],  A
+        ld      A,      0
+        ld      [HL+],  A
+        ld      A,      %0000000
+        ld      [HL+],  A
+
+        ; set sprite palettes:
+	ld	A,	%00011111
+	ld 	[$ff48],        A
+        ld 	[$ff49],        A
+
+        ; switch sprites on
+        ld      HL,     LCDC
+        set     1,      [HL]
+        ret

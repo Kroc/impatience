@@ -8,18 +8,25 @@ REM # we use "rgbfix" from the RGBDS assembler,
 REM # even though we won't be using RGBDS to assemble
 SET RGBGFX="bin\rgbds\rgbgfx.exe"
 
-%RGBGFX% -v ^
+%RGBGFX% -f ^
     -o "build\tiles_even.2bpp" ^
        "src\gfx\tiles_even.png"
 
 IF ERRORLEVEL 1 EXIT /B 1
 
-%RGBGFX% -v ^
+%RGBGFX% -f ^
     -o "build\tiles_odd.2bpp" ^
        "src\gfx\tiles_odd.png"
 
 IF ERRORLEVEL 1 EXIT /B 1
 
+%RGBGFX% -f ^
+    -o "build\tiles_sprites.2bpp" ^
+       "src\gfx\tiles_sprites.png"
+
+IF ERRORLEVEL 1 EXIT /B 1
+
+REM ============================================================================
 REM # the assembler and linker is WLA-DX
 SET WLA_GB80="bin\wla-dx\wla-gb.exe"    -x -I "src"
 SET WLA_LINK="bin\wla-dx\wlalink.exe"   -A -S

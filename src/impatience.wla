@@ -5,6 +5,7 @@
 .INC	"str.wla"		; string & text routines
 
 .INC	"gfx.wla"		NAMESPACE "gfx"
+.INC	"sprites.wla"		NAMESPACE "sprites"
 
 .SECTION        "game_init"
 
