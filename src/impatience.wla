@@ -2,7 +2,7 @@
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
 .INC	"gb/gb_cpu.wla"		; GameBoy hardware definitions
-.INC	"str.wla"		; string & text routines
+.INC	"strings.wla"		; string & text routines
 
 .INC	"tilemap.wla"		NAMESPACE "tilemap"
 .INC	"sprites.wla"		NAMESPACE "sprites"
@@ -17,8 +17,8 @@ init:
 	
 	call	acesup.init
 
-	; TODO!
--	jr -
+-	halt
+	jr	-
 
 
 ;===============================================================================

@@ -23,6 +23,7 @@
 ; tile-copying micro-optimisations
 ;
 .SECTION        "tiles_cards"   ALIGN 16        RETURNORG
+;///////////////////////////////////////////////////////////////////////////////
 
 tiles_main:
 ;-------------------------------------------------------------------------------
@@ -191,6 +192,7 @@ tilemap_back:
 @row3:  .byte   TILE3X4_BACK_3X1, TILE3X4_BACK_3X2, TILE3X4_BACK_3X3
 @row4:  .byte   TILE3X4_BACK_4X1, TILE3X4_BACK_4X2, TILE3X4_BACK_4X3
 
+;///////////////////////////////////////////////////////////////////////////////
 .ENDS
 
 
@@ -232,7 +234,7 @@ init:
 	call	playfield.clear		; clear the playfield background
 	call    menu.clear		; clear and draw the menu
 
-        call    refresh_tilemap
+        call    refresh
 
 	; set palette:
 	ld	A,	%11100100
@@ -286,14 +288,17 @@ copy_tiles:
 ;
 ; TODO: on GBC we could do this using DMA?
 ;-------------------------------------------------------------------------------
-@copy:  .REPEAT 16
-                ld      A,      [HL+]
-                ld      [DE],   A
-                inc     DE
-        .ENDR
-
+.REPEAT 15
+        ld      A,      [HL+]
+        ld      [DE],   A
+        inc     E   
+.ENDR
+        ld      A,      [HL+]
+        ld      [DE],   A
+        inc     DE
+        
         dec     B
-        jr      nz, @copy
+        jr      nz, copy_tiles
         
         ret
 
@@ -314,13 +319,16 @@ get_buffer_addr:
         ld      L,      B               ; with row-number only          ;+ 4=36
 
         ; TODO: use a lookup table of rows (just 64 bytes!)
+        ;       also, we could use SWAP to partially multiply by 4,
+        ;       but this requires the A register which we need to preserve
+        ;       <github.com/pret/pokecrystal/wiki/Optimizing-assembly-code>
         ;
         add     HL,     HL              ; x2                            ;+ 8=44
         add     HL,     HL              ; x4                            ;+ 8=52
         add     HL,     HL              ; x8                            ;+ 8=60
         add     HL,     HL              ; x16                           ;+ 8=68
         add     HL,     HL              ; x32                           ;+ 8=76
-        
+
         ld      B,      0               ; prepare BC with column only   ;+ 8=84
         add     HL,     BC              ; add the column                ;+ 8=92
         ld      BC,     front_buffer    ; get front-buffer address      ;+12=104
@@ -369,14 +377,14 @@ write_tiles_3wide:
         ld      A,      [DE]
         inc     DE
         ld      [HL+],  A
-        rla
+        rla                             ; preserve carry flag!
         add     HL,     BC
-        rra
+        rra                             ; restore carry flag!
 
         ret
 
 
-refresh_tilemap:
+refresh:
 ;===============================================================================
 ; forces a full update of the background tilemap:
 ;
@@ -427,7 +435,7 @@ refresh_tilemap:
         ret
 
 
-refresh_screen:
+update:
 ;===============================================================================
 ; compares the differences between the front & back buffers, and generates
 ; the list of VRAM changes (tile queue) to make during vblank

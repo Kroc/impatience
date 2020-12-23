@@ -43,7 +43,8 @@
 .COMPUTEGBCHECKSUM              ; checksum bytes at $14E/F
 
 ;===============================================================================
-; GameBoys are a little-endian systems
+; GameBoys are little-endian systems:
+;
 .DEF	HI		$01
 .DEF	LO		$00
 

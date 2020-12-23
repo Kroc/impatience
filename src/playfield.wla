@@ -8,7 +8,7 @@ clear:
 ;
 ;-------------------------------------------------------------------------------
         ; the background tile indices are 'signed', so what we think of as
-        ; the first tile, tile "0", is tile # "-128", i.e $80
+        ; the first tile, tile "0", is tile # "-1", i.e $80
         ld      A,      $80
         ; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32
         ; playfield. for our purposes we place the menu on the left and

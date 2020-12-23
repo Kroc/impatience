@@ -10,19 +10,19 @@ SET RGBGFX="bin\rgbds\rgbgfx.exe"
 
 %RGBGFX% -f ^
     -o "build\tiles_even.2bpp" ^
-       "src\gfx\tiles_even.png"
+       "src\tiles\tiles_even.png"
 
 IF ERRORLEVEL 1 EXIT /B 1
 
 %RGBGFX% -f ^
     -o "build\tiles_odd.2bpp" ^
-       "src\gfx\tiles_odd.png"
+       "src\tiles\tiles_odd.png"
 
 IF ERRORLEVEL 1 EXIT /B 1
 
-%RGBGFX% -f ^
+%RGBGFX% -f -h ^
     -o "build\tiles_sprites.2bpp" ^
-       "src\gfx\tiles_sprites.png"
+       "src\tiles\tiles_sprites.png"
 
 IF ERRORLEVEL 1 EXIT /B 1
 

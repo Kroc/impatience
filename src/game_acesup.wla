@@ -107,6 +107,6 @@ init:
 
         ;-----------------------------------------------------------------------
         call    screen_off
-        call    tilemap.refresh_tilemap
+        call    tilemap.refresh
         call    screen_on
         ret

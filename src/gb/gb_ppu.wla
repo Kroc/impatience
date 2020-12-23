@@ -1,15 +1,6 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
-;===============================================================================
-; VRAM layout:
 ;
-;    $8000            $8800            $9000           $9800    $9C00    $A000
-;    +----------------+--------------------------------+--------+--------+
-;    | SPRITES        | TILES                          | BG     | WINDOW |
-;    +----------------+--------------------------------+--------+--------+
-;      (128 tiles)      (256 tiles)
-;
-
 ; hardware registers:
 ;===============================================================================
 ; <https://bgb.bircd.org/pandocs.htm>
@@ -79,31 +70,27 @@
 .DEF    OBP0                    $ff48
 .DEF    OBP1                    $ff49
 
+; VRAM layout:
+;===============================================================================
+;    $8000            $8800            $9000           $9800    $9C00    $A000
+;    +----------------+--------------------------------+--------+--------+
+;    | SPRITES        | TILES                          | BG     | WINDOW |
+;    +----------------+--------------------------------+--------+--------+
+;      (128 tiles)      (256 tiles)
+;
 .DEF    VRAM                    $8000
 .DEF    VRAM_TILES1             $8000   ; $8000-$8FFF
 .DEF    VRAM_TILES2             $8800   ; $8800-$97FF (note the overlap)
 .DEF    VRAM_MAP1               $9800
 .DEF    VRAM_MAP2               $9c00
-.DEF    VRAM_OAM                $fe00
-
-
-wait_for_vblank:
-;===============================================================================
-; TODO: this is battery draining, keeping the CPU in spinlock;
-;       replace this with a HALT & IRQ approach
-;-------------------------------------------------------------------------------
--	ld	A,      [LY]
-	cp	145
-	jr 	nz, -
-
-        ret
+.DEF    OAM                	$fe00
 
 
 screen_on:
 ;===============================================================================
 ; turns the screen on; we do not have to wait for vblank to do this
 ;
-; out:  A       (preserved)
+; out:  AF      (preserved)
 ;-------------------------------------------------------------------------------
 	push	AF
 	ld 	A,	[LCDC]
@@ -133,3 +120,30 @@ screen_off:
 
 +	pop 	AF
 	ret
+
+
+wait_for_vblank:
+;===============================================================================
+	; disable all interrupts whilst we make changes
+	di
+	; enable v-blank interrupts
+	ld	HL,	INTERRUPT_ENABLE
+	set	0,	[HL]
+	; request a v-blank interrupt by setting the
+	; correct bit in the interrupt flag register
+	ld	HL,	INTERRUPT_FLAGS
+	set	0,	[HL]
+	; enable the CPU's interrupt line
+	ei
+
+	; stop the CPU until an interrupt occurs!
+	; (this will save battery life)
+-	halt
+	; check if the interrupt was v-blank:
+	bit	0,	[HL]
+	jr	nz,	-
+
+	; disable v-blank interrupts
+	ld	HL,	INTERRUPT_ENABLE
+	res	0,	[HL]
+        ret
