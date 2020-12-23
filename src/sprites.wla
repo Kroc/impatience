@@ -22,17 +22,6 @@ init:
         ld      B,      (tiles_sprites__size / 16) - 1
         call    tilemap.copy_tiles
 
-        ; clear sprite registers (OAM)
-        ld      HL,     OAM
-        ld      C,      40              ; number of sprites
-        xor     A                       ; (set A to zero)
--       ld      [HL+],  A               ; set sprite Y to zero
-        ld      [HL+],  A               ; set sprite X to zero
-        ld      [HL+],  A               ; set sprite tile index to zero
-        ld      [HL+],  A               ; set sprite attributes to zero
-        dec     C
-        jr      nz,     -
-
         ; configure the cursor sprite:
         ld      HL,     OAM
         ld      A,      72

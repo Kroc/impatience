@@ -171,129 +171,133 @@ wla-dx v9.12a documentation
 
   * 2.83. ".ASC "HELLO WORLD!""
 
-  * 2.84. ".DW 16000, 10, 255"
+  * 2.84. ".STRINGMAPTABLE script "script.tbl""
 
-  * 2.85. ".WORD 16000, 10, 255"
+  * 2.85. ".STRINGMAP script "Hello\n""
 
-  * 2.86. ".ADDR 16000, main, 255"
+  * 2.86. ".DW 16000, 10, 255"
 
-  * 2.87. ".DWM filtermacro 1, 2, 3"
+  * 2.87. ".WORD 16000, 10, 255"
 
-  * 2.88. ".DL $102030, $405060"
+  * 2.88. ".ADDR 16000, main, 255"
 
-  * 2.89. ".LONG $102030, $405060"
+  * 2.89. ".DWM filtermacro 1, 2, 3"
 
-  * 2.90. ".FARADDR main, irq_1"
+  * 2.90. ".DL $102030, $405060"
 
-  * 2.91. ".DLM filtermacro 1, 2, 3"
+  * 2.91. ".LONG $102030, $405060"
 
-  * 2.92. ".DEFINE IF $FF0F"
+  * 2.92. ".FARADDR main, irq_1"
 
-  * 2.93. ".DEF IF $FF0F"
+  * 2.93. ".DLM filtermacro 1, 2, 3"
 
-  * 2.94. ".EQU IF $FF0F"
+  * 2.94. ".DEFINE IF $FF0F"
 
-  * 2.95. ".REDEFINE IF $0F"
+  * 2.95. ".DEF IF $FF0F"
 
-  * 2.96. ".REDEF IF $0F"
+  * 2.96. ".EQU IF $FF0F"
 
-  * 2.97. ".IF DEBUG == 2"
+  * 2.97. ".REDEFINE IF $0F"
 
-  * 2.98. ".IFDEF IF"
+  * 2.98. ".REDEF IF $0F"
 
-  * 2.99. ".IFEXISTS "main.s""
+  * 2.99. ".IF DEBUG == 2"
 
-  * 2.100. ".UNDEFINE DEBUG"
+  * 2.100. ".IFDEF IF"
 
-  * 2.101. ".UNDEF DEBUG"
+  * 2.101. ".IFEXISTS "main.s""
 
-  * 2.102. ".IFNDEF IF"
+  * 2.102. ".UNDEFINE DEBUG"
 
-  * 2.103. ".IFDEFM \2"
+  * 2.103. ".UNDEF DEBUG"
 
-  * 2.104. ".IFNDEFM \2"
+  * 2.104. ".IFNDEF IF"
 
-  * 2.105. ".IFEQ DEBUG 2"
+  * 2.105. ".IFDEFM \2"
 
-  * 2.106. ".IFNEQ DEBUG 2"
+  * 2.106. ".IFNDEFM \2"
 
-  * 2.107. ".IFLE DEBUG 2"
+  * 2.107. ".IFEQ DEBUG 2"
 
-  * 2.108. ".IFLEEQ DEBUG 2"
+  * 2.108. ".IFNEQ DEBUG 2"
 
-  * 2.109. ".IFGR DEBUG 2"
+  * 2.109. ".IFLE DEBUG 2"
 
-  * 2.110. ".IFGREQ DEBUG 2"
+  * 2.110. ".IFLEEQ DEBUG 2"
 
-  * 2.111. ".ELSE"
+  * 2.111. ".IFGR DEBUG 2"
 
-  * 2.112. ".ENDIF"
+  * 2.112. ".IFGREQ DEBUG 2"
 
-  * 2.113. ".REPEAT 6"
+  * 2.113. ".ELSE"
 
-  * 2.114. ".REPT 6"
+  * 2.114. ".ENDIF"
 
-  * 2.115. ".ENDR"
+  * 2.115. ".REPEAT 6"
 
-  * 2.116. ".ENUM $C000"
+  * 2.116. ".REPT 6"
 
-  * 2.117. ".ENDE"
+  * 2.117. ".ENDR"
 
-  * 2.118. ".STRUCT enemy_object"
+  * 2.118. ".ENUM $C000"
 
-  * 2.119. ".ENDST"
+  * 2.119. ".ENDE"
 
-  * 2.120. ".MEMORYMAP"
+  * 2.120. ".STRUCT enemy_object"
 
-  * 2.121. ".ENDME"
+  * 2.121. ".ENDST"
 
-  * 2.122. ".ROMBANKMAP"
+  * 2.122. ".MEMORYMAP"
 
-  * 2.123. ".ENDRO"
+  * 2.123. ".ENDME"
 
-  * 2.124. ".SEED 123"
+  * 2.124. ".ROMBANKMAP"
 
-  * 2.125. ".SECTION "Init" FORCE"
+  * 2.125. ".ENDRO"
 
-  * 2.126. ".RAMSECTION "Vars" BANK 0 SLOT 1 ALIGN 256 OFFSET 32"
+  * 2.126. ".SEED 123"
 
-  * 2.127. ".ENDS"
+  * 2.127. ".SECTION "Init" FORCE"
 
-  * 2.128. ".ROMGBC"
+  * 2.128. ".RAMSECTION "Vars" BANK 0 SLOT 1 ALIGN 256 OFFSET 32"
 
-  * 2.129. ".ROMGBCONLY"
+  * 2.129. ".ENDS"
 
-  * 2.130. ".ROMDMG"
+  * 2.130. ".ROMGBC"
 
-  * 2.131. ".ROMSGB"
+  * 2.131. ".ROMGBCONLY"
 
-  * 2.132. ".EXPORT work_x"
+  * 2.132. ".ROMDMG"
 
-  * 2.133. ".PRINT "Numbers 1 and 10: ", DEC 1, " $", HEX 10, "\n""
+  * 2.133. ".ROMSGB"
 
-  * 2.134. ".PRINTT "Here we are...\n""
+  * 2.134. ".EXPORT work_x"
 
-  * 2.135. ".PRINTV DEC DEBUG+1"
+  * 2.135. ".PRINT "Numbers 1 and 10: ", DEC 1, " $", HEX 10, "\n""
 
-  * 2.136. ".OUTNAME "other.o""
+  * 2.136. ".PRINTT "Here we are...\n""
 
-  * 2.137. ".SNESHEADER"
+  * 2.137. ".PRINTV DEC DEBUG+1"
 
-  * 2.138. ".ENDSNES"
+  * 2.138. ".OUTNAME "other.o""
 
-  * 2.139. ".SNESNATIVEVECTOR"
+  * 2.139. ".SNESHEADER"
 
-  * 2.140. ".ENDNATIVEVECTOR"
+  * 2.140. ".ENDSNES"
 
-  * 2.141. ".SNESEMUVECTOR"
+  * 2.141. ".SNESNATIVEVECTOR"
 
-  * 2.142. ".ENDEMUVECTOR"
+  * 2.142. ".ENDNATIVEVECTOR"
 
-  * 2.143. ".UNION name"
+  * 2.143. ".SNESEMUVECTOR"
 
-  * 2.144. ".NEXTU name"
+  * 2.144. ".ENDEMUVECTOR"
 
-  * 2.145. ".ENDU"
+  * 2.145. ".UNION name"
+
+  * 2.146. ".NEXTU name"
+
+  * 2.147. ".ENDU"
 
 * 3. Assembler Syntax
 
@@ -782,6 +786,10 @@ Group 3:
 | ALL | ".SLOT 1"                                                        |
 +-----+------------------------------------------------------------------+
 | ALL | ".STRUCT enemy_object"                                           |
++-----+------------------------------------------------------------------+
+| ALL | ".STRINGMAPTABLE script "script.tbl""                            |
++-----+------------------------------------------------------------------+
+| ALL | ".STRINGMAP script "Hello\n""                                    |
 +-----+------------------------------------------------------------------+
 | ALL | ".SYM SAUSAGE"                                                   |
 +-----+------------------------------------------------------------------+
@@ -2379,6 +2387,58 @@ This is not a compulsory directive.
 
 ".ASC "HELLO WORLD!""
 =====================
+
+".ASC" is an alias for ".DB", but if you use ".ASC" it will remap the
+characters using the mapping given via ".ASCIITABLE".
+
+This is not a compulsory directive.
+
+
+".STRINGMAPTABLE script "script.tbl""
+=====================================
+
+".STRINGMAPTABLE"’s only purpose is to provide string mapping for
+".STRINGMAP". Take a look at the example:
+
+   .STRINGMAPTABLE script "script.tbl"
+
+This will load the file “script.tbl” and define a new string mapping
+called “script”. This file is in the “table file” format commonly used
+for game translations; take a look at an example of one:
+
+   00=A
+   01=B
+   ; This is a comment
+   ff01=あ
+   ff02=いうえ
+   fe=\n
+
+The values to the left of the ‘=’ are a variable number of bytes
+expressed in hex, which map to the text value on the right. Note that
+depending on the text encoding of the file, this may be a variable
+number of bytes too. Thus this is a more flexible version of
+".ASCIITABLE".
+
+After you’ve given the ".STRINGMAPTABLE", use ".STRINGMAP" to define
+bytes using this mapping. For example:
+
+   .STRINGMAP script, "いうえA\n"
+
+This will map to the byte values "FF 02 00 FE", provided the source
+file and TBL file use the same string encoding - use of UTF-8 is
+advised.
+
+Note that all characters must be defined in the mapping - there is no
+fallback to ASCII encoding. You also cannot mix in byte values like
+with ".DB" and ".ASC".
+
+You can define multiple named string map tables.
+
+This is not a compulsory directive.
+
+
+".STRINGMAP script "Hello\n""
+=============================
 
 ".ASC" is an alias for ".DB", but if you use ".ASC" it will remap the
 characters using the mapping given via ".ASCIITABLE".
@@ -4402,6 +4462,10 @@ If flag "d" is used, WLALINK discards all unreferenced "FREE",
 "SEMIFREE", "SEMISUBFREE", "SUPERFREE" and "RAM" sections. This way
 you can link big libraries to your project and WLALINK will choose
 only the used sections, so you won’t be linking any dead code/data.
+
+If flag "D" is used, WLALINK doesn’t create any _sizeof_* labels. Note
+that to disable fully _sizeof_* label creation, you’ll also need to
+give WLA the "s" flag.
 
 If flag "t" is used with "c64PRG", WLALINK will add a two byte header
 to the program file (use with flag "b"). The header contains the load

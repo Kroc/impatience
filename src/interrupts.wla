@@ -1,0 +1,23 @@
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+;
+.BANK 0
+
+; overwrite the GameBoy v-blank interrupt entry-point:
+; this area only provides 8 bytes free before the next IRQ ($48),
+; so we can only call on to a bigger routine
+;
+.SECTION        "gb_vblank"
+;///////////////////////////////////////////////////////////////////////////////
+        jp      irq_vblank
+;///////////////////////////////////////////////////////////////////////////////
+.ENDS
+
+.SECTION        "irq_vblank"    FREE
+;///////////////////////////////////////////////////////////////////////////////
+
+irq_vblank:
+;===============================================================================
+        reti
+;///////////////////////////////////////////////////////////////////////////////
+.ENDS

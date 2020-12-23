@@ -43,11 +43,11 @@
 .COMPUTEGBCHECKSUM              ; checksum bytes at $14E/F
 
 ;===============================================================================
-; GameBoys are little-endian systems:
+; GameBoys are little-Endian systems:
 ;
 .DEF	HI		$01
 .DEF	LO		$00
 
 ;===============================================================================
-.INC	"gb/gb_irqs.wla"        ; interrupts (RSTs / IRQs)
-.INC    "gb/gb_ppu.wla"         ; picture-processing-unit (GPU)
+.INC	"gb/gb_irqs.wla"        NAMESPACE "gb" ; interrupts (RSTs / IRQs)
+.INC    "gb/gb_ppu.wla"         NAMESPACE "gb" ; picture-processing-unit (GPU)

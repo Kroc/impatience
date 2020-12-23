@@ -4,7 +4,7 @@
 
 init:
 ;===============================================================================
-        call    wait_for_vblank
+        call    gb.wait_for_vblank
         
         ; temp: set scroll offset to move menu off-screen
         ld      A,      MENU_WIDTH * 8
@@ -106,7 +106,7 @@ init:
         call    playfield.draw_pile     ; draw tableau 4
 
         ;-----------------------------------------------------------------------
-        call    screen_off
+        call    gb.screen_off
         call    tilemap.refresh
-        call    screen_on
+        call    gb.screen_on
         ret

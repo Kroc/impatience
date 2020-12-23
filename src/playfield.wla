@@ -51,7 +51,7 @@ draw_deck:
 
         ; NOTE: by incrementing L here, we have automatically moved onto the
         ;       next Pile structure. by returning this HL value, the caller
-        ;       can draw multiple piles that follow one another (e.g tableau)
+        ;       can draw multiple piles that follow one another (e.g tableaus)
         inc     L
         push    HL
 
@@ -64,7 +64,8 @@ draw_deck:
         and     A,      A               ; (set flags!)
         jr      z,      draw_empty      ; if zero, draw a placeholder
         
-        ; the deck extends a row upwards to give it that thicker appearance
+        ; the deck in particular extends a row upwards
+        ; to give it that thicker appearance
         dec     B
         ; get an address in the front-buffer for the X/Y co-ords
         call    tilemap.get_buffer_addr
@@ -95,7 +96,7 @@ draw_pile:
 ;
 ; in:   HL      address of the Pile structure
 ;
-; out:  HL      HL is moved forward on to the next Pile structure
+; out:  HL      HL is moved forward to the next Pile structure
 ;-------------------------------------------------------------------------------
         inc     HL                      ; skip over the max-cards byte
         ld      E,      [HL]            ; read cards-address, lo-byte

@@ -72,6 +72,7 @@
 
 ; VRAM layout:
 ;===============================================================================
+;
 ;    $8000            $8800            $9000           $9800    $9C00    $A000
 ;    +----------------+--------------------------------+--------+--------+
 ;    | SPRITES        | TILES                          | BG     | WINDOW |
@@ -105,9 +106,10 @@ screen_off:
 ;===============================================================================
 ; turns the screen off, holding execution until safe to do so
 ;
-; out:  A       (preserved)
+; out:  AF      (preserved)
 ;-------------------------------------------------------------------------------
 	push 	AF
+
 	ld 	A,	[LCDC]
 	bit 	7,	A
 	jr 	z, +
@@ -127,11 +129,11 @@ wait_for_vblank:
 	; disable all interrupts whilst we make changes
 	di
 	; enable v-blank interrupts
-	ld	HL,	INTERRUPT_ENABLE
+	ld	HL,	IRQ_ENABLE
 	set	0,	[HL]
 	; request a v-blank interrupt by setting the
 	; correct bit in the interrupt flag register
-	ld	HL,	INTERRUPT_FLAGS
+	ld	HL,	IRQ_FLAGS
 	set	0,	[HL]
 	; enable the CPU's interrupt line
 	ei
@@ -144,6 +146,6 @@ wait_for_vblank:
 	jr	nz,	-
 
 	; disable v-blank interrupts
-	ld	HL,	INTERRUPT_ENABLE
+	ld	HL,	IRQ_ENABLE
 	res	0,	[HL]
         ret

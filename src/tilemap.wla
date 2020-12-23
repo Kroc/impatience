@@ -198,38 +198,15 @@ tilemap_back:
 
 init:
 ;===============================================================================
-; to get this project started, this sample code taken from:
-; https://gist.github.com/iamgreaser/9cccd24dd4519a0ae95240d8b8eeb252
-; (will be replaced soon)
-;
-;-------------------------------------------------------------------------------
-        ; configure LCD:
-	ld 	A, 	[LCDC]		; read the current LCD config
-
-	; we *MUST NOT* disable the LCD (bit7=1) outside of vblank!
-	; even though we want the screen off during initialisation,
-	; we must set the LCD enable bit to 1 at this time and instead
-	; rely on a vblank routine to turn it on / off when desired
-	;
-	and 	LCDC.lcd_enable		; enable LCD
+        ld      HL,     LCDC
+        ld      A,      [HL]
 	or	LCDC.window_select	; use $9C00 for the window-map
 	or  	LCDC.bg_display		; turn background on
-	ld 	[LCDC],	A               ; write settings to LCD register
+        ld      [HL],   A
 
-	call screen_off
-
-	; clear VRAM
-        ;-----------------------------------------------------------------------
-	ld 	HL, 	VRAM
-	xor 	A                       ; (set A to 0)
--	ld 	[HL+],  A
-	bit 	5,	H               ; have we hit 8'192 bytes?
-	jr 	z, -                    ; i.e. %00010000_00000000
-
-        ;-----------------------------------------------------------------------
 	call    clear_queue             ; clear the tile update queue
         call	copy_main_tileset	; copy main tileset from ROM to VRAM
-        call    sprites.init
+        call    sprites.init            ; clear and configure hardware sprites
         
 	call	playfield.clear		; clear the playfield background
 	call    menu.clear		; clear and draw the menu
@@ -240,7 +217,7 @@ init:
 	ld	A,	%11100100
 	ld 	[BGP], 	A
 
-	call screen_on
+	call    gb.screen_on
 	ret
 
 
@@ -437,7 +414,7 @@ refresh:
 
 update:
 ;===============================================================================
-; compares the differences between the front & back buffers, and generates
+; compares the differences between the front & back buffers and generates
 ; the list of VRAM changes (tile queue) to make during vblank
 ;
 ;-------------------------------------------------------------------------------
@@ -478,9 +455,9 @@ update:
         ; disable vblank interrupts whilst we update the queue; we don't want
         ; the queue being emptied whilst we're writing to it!
         ;
-        ld      A,      [INTERRUPT_ENABLE]
+        ld      A,      [IRQ_ENABLE]
         and     IE.vblank^$ff           ; exclude the vblank bit
-        ld      [INTERRUPT_ENABLE],     A
+        ld      [IRQ_ENABLE],   A
 
         ; get current update queue position:
         ; TODO: handle queue overflow. stop processing buffers, and wait
@@ -502,9 +479,9 @@ update:
 
         ; re-enable vblank interrupts:
         ;
-        ld      A,      [INTERRUPT_ENABLE]
+        ld      A,      [IRQ_ENABLE]
         or      IE.vblank
-        ld      [INTERRUPT_ENABLE],     A
+        ld      [IRQ_ENABLE],   A
 
         pop     HL                      ; (restore front buffer position)
         pop     BC                      ; (restore current buffer position)
