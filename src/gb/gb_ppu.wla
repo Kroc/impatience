@@ -126,15 +126,17 @@ screen_off:
 
 wait_for_vblank:
 ;===============================================================================
+	push	HL
+	
 	; disable all interrupts whilst we make changes
 	di
 	; enable v-blank interrupts
 	ld	HL,	IRQ_ENABLE
 	set	0,	[HL]
-	; request a v-blank interrupt by setting the
-	; correct bit in the interrupt flag register
-	ld	HL,	IRQ_FLAGS
-	set	0,	[HL]
+;;	; request a v-blank interrupt by setting the
+;;	; correct bit in the interrupt flag register
+;;	ld	HL,	IRQ_FLAGS
+;;	set	0,	[HL]
 	; enable the CPU's interrupt line
 	ei
 
@@ -145,7 +147,5 @@ wait_for_vblank:
 	bit	0,	[HL]
 	jr	nz,	-
 
-	; disable v-blank interrupts
-	ld	HL,	IRQ_ENABLE
-	res	0,	[HL]
+	pop	HL
         ret

@@ -12,6 +12,9 @@ tiles_sprites:
 .ENDS
 
 
+.include        "cursor.wla"    NAMESPACE "cursor"
+
+
 init:
 ;===============================================================================
         ; copy the sprite tiles to VRAM:
@@ -22,25 +25,7 @@ init:
         ld      B,      (tiles_sprites__size / 16) - 1
         call    tilemap.copy_tiles
 
-        ; configure the cursor sprite:
-        ld      HL,     OAM
-        ld      A,      72
-        ld      [HL+],  A
-        ld      A,      80
-        ld      [HL+],  A
-        ld      A,      $00
-        ld      [HL+],  A
-        ld      A,      %0000000
-        ld      [HL+],  A
-
-        ld      A,      72
-        ld      [HL+],  A
-        ld      A,      80 + 8
-        ld      [HL+],  A
-        ld      A,      $08
-        ld      [HL+],  A
-        ld      A,      %0000000
-        ld      [HL+],  A
+        call    cursor.init
 
         ; set sprite palettes:
 	ld	A,	%00011111
@@ -50,4 +35,5 @@ init:
         ld      HL,     LCDC
         set     2,      [HL]            ; enable 8x16 sprites
         set     1,      [HL]            ; switch sprites on
+        
         ret

@@ -25,42 +25,42 @@
 .ORG    $00
 
 rst_00:
-        reti
+        ret
 
 .ORG    $08
 
 rst_08:
-        reti
+        ret
 
 .ORG    $10
 
 rst_10:
-        reti
+        ret
 
 .ORG    $18
 
 rst_18:
-        reti
+        ret
 
 .ORG    $20
 
 rst_20:
-        reti
+        ret
 
 .ORG    $28
 
 rst_28:
-        reti
+        ret
 
 .ORG    $30
 
 rst_30:
-        reti
+        ret
 
 .ORG    $38
 
 rst_38:
-        reti
+        ret
 
 ; interrupts:
 ;===============================================================================

@@ -26,15 +26,15 @@
 ;///////////////////////////////////////////////////////////////////////////////
 
 tiles_main:
-;-------------------------------------------------------------------------------
+;===============================================================================
 .INCBIN         "build\tiles_even.2bpp" FSIZE tiles_main__size
 
 ; 3x4 cards:
 ;===============================================================================
 ; foundation:
 ;-------------------------------------------------------------------------------
-; a foundation is a blank space on the playfield where cards are "played off",
-; into their final destination
+; a foundation is a blank space on the playfield where cards are
+; "played off", into their final destination
 ;
 .DEF    TILE3X4_FNDT_1X1        $80+$25 ; foundation, top-left
 .DEF    TILE3X4_FNDT_1X2        $80+$26 ; foundation, top-centre

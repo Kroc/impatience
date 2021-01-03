@@ -3,6 +3,39 @@
 ;
 .BANK 0
 
+.SECTION        "z80_rst_00"    SIZE 8
+;///////////////////////////////////////////////////////////////////////////////
+
+z80_rst_00:                                                             ;$00
+;===============================================================================
+        ldh     A,      [<IRQ_ENABLE]
+        and     IE.vblank
+        ldh     [<IRQ_ENABLE],  A
+        reti
+
+;///////////////////////////////////////////////////////////////////////////////
+.ENDS
+
+.SECTION        "z80_rst_08"    SIZE 8
+;///////////////////////////////////////////////////////////////////////////////
+
+wait_for_a_vblank:                                                        ;$08
+;===============================================================================
+        ;                               ; bytes:
+        ; stop the CPU until an interrupt occurs!
+	; (this will save battery life)
+-       halt                            ;+1=1
+        ; read the IRQ flags register at $FF0F:
+        ; (using HRAM instruction saves 1 byte over `ld A, [IRQ_FLAGS]`!)
+        ldh     A,      [<IRQ_FLAGS]    ;+2=3
+        bit     0,      A               ;+2=5
+        jr      nz,     -               ;+2=7
+
+        ret                             ;+1=8
+
+;///////////////////////////////////////////////////////////////////////////////
+.ENDS
+
 ; overwrite the GameBoy v-blank interrupt entry-point:
 ; this area only provides 8 bytes free before the next IRQ ($48),
 ; so we can only call on to a bigger routine
@@ -18,6 +51,20 @@
 
 irq_vblank:
 ;===============================================================================
+        push    AF
+        push    HL
+
+        ;;ld      HL,     OBP0
+        ;;swap    [HL]
+        
+        ; no more work to be done,
+        ; disable v-blank interrupts
+        ld	HL,	IRQ_ENABLE
+	res	0,	[HL]
+        
+        pop     HL
+        pop     AF
         reti
+
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS

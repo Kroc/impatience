@@ -1,0 +1,35 @@
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+
+.RAMSECTION "cursor"    SLOT "WRAMLO"           RETURNORG
+        ;-----------------------------------------------------------------------
+        cursor_x        BYTE    ; current cursor X-position
+        cursor_y        BYTE    ; current cursor Y-position
+        cursor_dest_x   BYTE    ; new X-position to move cursor to
+        cursor_dest_y   BYTE    ; new Y-position to move cursor to
+.ENDS
+
+
+init:
+;===============================================================================
+        ; configure the cursor sprite:
+        ld      HL,     OAM
+        ld      A,      72      ; starting Y-position
+        ld      [HL+],  A
+        ld      A,      80      ; starting X-position
+        ld      [HL+],  A
+        ld      A,      $00     ; tile-number
+        ld      [HL+],  A
+        ld      A,      %0000000
+        ld      [HL+],  A
+
+        ld      A,      72      ; starting Y-position
+        ld      [HL+],  A
+        ld      A,      80 + 8  ; starting X-position
+        ld      [HL+],  A
+        ld      A,      $08     ; tile-number
+        ld      [HL+],  A
+        ld      A,      %0000000
+        ld      [HL+],  A
+
+        ret

@@ -109,4 +109,5 @@ init:
         call    gb.screen_off
         call    tilemap.refresh
         call    gb.screen_on
+        
         ret

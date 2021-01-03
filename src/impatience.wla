@@ -69,11 +69,13 @@ init:
         dec     C
         jr      nz,     -
 
+	ei
+
 	; begin initialising the game:
 	;-----------------------------------------------------------------------
 	call	tilemap.init
 	call	acesup.init
-
+	
 -	halt
 	jr	-
 
