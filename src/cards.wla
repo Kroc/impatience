@@ -107,7 +107,7 @@ clear:
         ret
 
 
-alloc_deck:
+allocateDeck:
 ;===============================================================================
 ; allocates the deck: (this is always 52 cards in size)
 ; the deck is populated with cards, but not shuffled
@@ -130,7 +130,7 @@ alloc_deck:
         ; BC    row & column to draw the deck
         ;  A    number of cards in deck
         ;
-        call    alloc_pile
+        call    allocatePile
 
         pop     DE                      ; return to starting storage address
         push    BC                      ; preserve B & C
@@ -163,7 +163,7 @@ alloc_deck:
         ret
 
 
-alloc_pile:
+allocatePile:
 ;===============================================================================
 ; allocates a pile where cards will be stored:
 ; e.g. a deck, hand, foundation or tableau, etc.
@@ -231,7 +231,7 @@ alloc_pile:
         ret
 
 
-add_card:
+addCard:
 ;===============================================================================
 ; add a card to a pile:
 ;

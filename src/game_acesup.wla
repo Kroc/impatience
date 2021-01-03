@@ -4,13 +4,13 @@
 
 init:
 ;===============================================================================
-        call    gb.wait_for_vblank
+        rst     rst_waitVBlank
         
         ; temp: set scroll offset to move menu off-screen
         ld      A,      MENU_WIDTH * 8
-        ld      [SCX],  A
+        ldh     [<SCX], A
         xor     A
-        ld      [SCY],  A
+        ldh     [<SCY], A
 
         ; setup the playfield for the game
         ;-----------------------------------------------------------------------
@@ -23,91 +23,91 @@ init:
         ; allocate the deck:
         ld      B,      1               ; row
         ld      C,      MENU_WIDTH + 1  ; column
-        call    cards.alloc_deck
+        call    cards.allocateDeck
 
         ; allocate the tableau:
         ld      HL,     cards.tableau1
         ld      C,      MENU_WIDTH + 5  ; column, row is re-used
         ld      A,      13              ; max. number of cards
-        call    cards.alloc_pile
+        call    cards.allocatePile
 
         ; tableau 2, 3 & 4 all follow in order,
         ; so we do not need to set HL again
         ld      C,      MENU_WIDTH + 8  ; column, row is re-used
-        call    cards.alloc_pile
+        call    cards.allocatePile
 
         ld      C,      MENU_WIDTH + 11 ; column, row is re-used
-        call    cards.alloc_pile
+        call    cards.allocatePile
 
         ld      C,      MENU_WIDTH + 14 ; column, row is re-used
-        call    cards.alloc_pile
+        call    cards.allocatePile
 
         ;-----------------------------------------------------------------------
         ld      HL,     cards.tableau1
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.add_card
+        call    cards.addCard
         
         ld      A,      CARD_K | SUIT_SPADE
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_Q | SUIT_HEART
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_J | SUIT_CLUB
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_X | SUIT_DIAMOND
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_9 | SUIT_SPADE
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_8 | SUIT_HEART
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_7 | SUIT_CLUB
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_6 | SUIT_DIAMOND
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_5 | SUIT_SPADE
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_4 | SUIT_HEART
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_3 | SUIT_CLUB
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_2 | SUIT_DIAMOND
-        call    cards.add_card
+        call    cards.addCard
         ld      A,      CARD_A | SUIT_SPADE
-        call    cards.add_card
+        call    cards.addCard
 
         ld      HL,     cards.tableau2
         ld      A,      CARD_J | SUIT_HEART
-        call    cards.add_card
+        call    cards.addCard
         ld      HL,     cards.tableau3
         ld      A,      CARD_Q | SUIT_CLUB
-        call    cards.add_card
+        call    cards.addCard
         ;;ld      HL,     cards.tableau4
         ;;ld      A,      CARD_K | SUIT_DIAMOND
-        ;;call    cards.add_card
+        ;;call    cards.addCard
 
         ;-----------------------------------------------------------------------
-        call    playfield.draw_deck
+        call    playfield.drawDeck
         
         ; NOTE: tableau 1, 2, 3 & 4 follow each other, so each call
         ;       to `draw_pile` moves HL on to the next tableau pile
         ld      HL,     cards.tableau1
-        call    playfield.draw_pile     ; draw tableau 1
-        call    playfield.draw_pile     ; draw tableau 2
-        call    playfield.draw_pile     ; draw tableau 3
-        call    playfield.draw_pile     ; draw tableau 4
+        call    playfield.drawPile      ; draw tableau 1
+        call    playfield.drawPile      ; draw tableau 2
+        call    playfield.drawPile      ; draw tableau 3
+        call    playfield.drawPile      ; draw tableau 4
 
         ;-----------------------------------------------------------------------
-        call    gb.screen_off
+        rst     rst_screenOff
         call    tilemap.refresh
-        call    gb.screen_on
+        rst     rst_screenOn
         
         ret

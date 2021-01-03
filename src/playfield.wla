@@ -35,7 +35,7 @@ clear:
         ret
 
 
-draw_deck:
+drawDeck:
 ;===============================================================================
 ; draws the deck on the front-buffer:
 ;
@@ -62,16 +62,16 @@ draw_deck:
         ;
         ld      A,      [DE]            ; number of cards in pile
         and     A,      A               ; (set flags!)
-        jr      z,      draw_empty      ; if zero, draw a placeholder
+        jr      z,      drawEmpty       ; if zero, draw a placeholder
         
         ; the deck in particular extends a row upwards
         ; to give it that thicker appearance
         dec     B
         ; get an address in the front-buffer for the X/Y co-ords
-        call    tilemap.get_buffer_addr
+        call    tilemap.getBufferAddr
         ; draw out the tiles for the deck
         ld      DE,     tilemap.tilemap_deck     
-        call    tilemap.write_tiles_3wide_5rows
+        call    tilemap.writeTiles_3wide_5rows
 
         ;-----------------------------------------------------------------------
         ; return the beginning address of the next Pile structure
@@ -79,18 +79,18 @@ draw_deck:
         ret
 
 
-draw_empty:
+drawEmpty:
 ;===============================================================================
-        call    tilemap.get_buffer_addr
+        call    tilemap.getBufferAddr
         ld      DE,     tilemap.tilemap_empty     
-        call    tilemap.write_tiles_3wide_4rows
+        call    tilemap.writeTiles_3wide_4rows
 
         ;-----------------------------------------------------------------------
         pop     HL
         ret
 
 
-draw_pile:
+drawPile:
 ;===============================================================================
 ; draws a pile on the back-buffer:
 ;
@@ -119,11 +119,11 @@ draw_pile:
         ld      A,      [DE]
         and     A,      A               ; (set flags!)
         ; if the pile is empty, draw its outline instead
-        jr      z,      draw_empty
+        jr      z,      drawEmpty
         ; get front-buffer address for the X/Y co-ords. note that this returns
         ; the address in HL, but clobbers BC. we depend upon it preserving A
         ; (our card count) to be able to set BC afterwards!
-        call    tilemap.get_buffer_addr
+        call    tilemap.getBufferAddr
         ; retain the card-count for iterating through the pile
         ld      C,      A
         ; begin the pile at the first card
@@ -143,7 +143,7 @@ draw_pile:
         ld      A,      [DE]            ; read a card value
         push    DE                      ; (preserve when drawing)
 
-        call    draw_card
+        call    drawCard
         pop     DE
         pop     BC
         jr      c,      -
@@ -153,7 +153,7 @@ draw_pile:
         ret
 
 
-draw_card:
+drawCard:
 ;===============================================================================
 ; draws a card, handling all of its different properties
 ;
@@ -175,9 +175,9 @@ draw_card:
         ; face-down cards do not differ between active & inactive
         ld      DE,     tilemap.tilemap_back
         ; if carry is set, we want to draw only one row
-        jp      c,      tilemap.write_tiles_3wide_1row
+        jp      c,      tilemap.writeTiles_3wide_1row
         ; otherwise draw the full card back
-        jp              tilemap.write_tiles_3wide_4rows
+        jp              tilemap.writeTiles_3wide_4rows
 
         ; face-up:
         ;-----------------------------------------------------------------------
