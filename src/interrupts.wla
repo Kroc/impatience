@@ -96,6 +96,9 @@ irq_vblank:
         ;;ld      HL,     OBP0
         ;;swap    [HL]
         
+        call    cursor.update
+
+        ;-----------------------------------------------------------------------
         ; no more work to be done,
         ; disable v-blank interrupts
         ld	HL,	IRQ_ENABLE

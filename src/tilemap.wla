@@ -204,8 +204,7 @@ init:
         ldh     [<LCDC],        A
 
 	call    clearQueue              ; clear the tile update queue
-        call	copy_main_tileset	; copy main tileset from ROM to VRAM
-        call    sprites.init            ; clear and configure hardware sprites
+        call	copyMainTileset	        ; copy main tileset from ROM to VRAM
         
 	call	playfield.clear		; clear the playfield background
 	call    menu.clear		; clear and draw the menu
@@ -239,7 +238,7 @@ clearQueue:
         ret
 
 
-copy_main_tileset:
+copyMainTileset:
 ;===============================================================================
 ; copy the main tileset used throughout the game:
 ;
@@ -253,7 +252,7 @@ copy_main_tileset:
         ld      B,      (tiles_main__size / 16) - 1
 
 
-copy_tiles:
+copyTiles:
 ;===============================================================================
 ; copy a number of graphic tiles to VRAM:
 ;
@@ -274,7 +273,7 @@ copy_tiles:
         inc     DE
         
         dec     B
-        jr      nz, copy_tiles
+        jr      nz, copyTiles
         
         ret
 

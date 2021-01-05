@@ -4,32 +4,58 @@
 .RAMSECTION "cursor"    SLOT "WRAMLO"           RETURNORG
         ;-----------------------------------------------------------------------
         cursor_x        BYTE    ; current cursor X-position
-        cursor_y        BYTE    ; current cursor Y-position
         cursor_dest_x   BYTE    ; new X-position to move cursor to
+        cursor_y        BYTE    ; current cursor Y-position
         cursor_dest_y   BYTE    ; new Y-position to move cursor to
 .ENDS
 
 
 init:
 ;===============================================================================
+        ; clear variables:
+        xor     A                       ; A = 0
+        ld      HL,     cursor_x
+        ld      [HL+],  A               ; cursor_x = 0
+        ld      [HL+],  A               ; cursor_dest_x = 0
+        ld      [HL+],  A               ; cursor_y = 0
+        ld      [HL+],  A               ; cursor_dest_y = 0
+
         ; configure the cursor sprite:
         ld      HL,     OAM
-        ld      A,      72      ; starting Y-position
+        ld      A,      72              ; starting Y-position
         ld      [HL+],  A
-        ld      A,      80      ; starting X-position
+        ld      A,      80              ; starting X-position
         ld      [HL+],  A
-        ld      A,      $00     ; tile-number
-        ld      [HL+],  A
-        ld      A,      %0000000
-        ld      [HL+],  A
-
-        ld      A,      72      ; starting Y-position
-        ld      [HL+],  A
-        ld      A,      80 + 8  ; starting X-position
-        ld      [HL+],  A
-        ld      A,      $08     ; tile-number
+        ld      A,      $00             ; tile-number
         ld      [HL+],  A
         ld      A,      %0000000
         ld      [HL+],  A
 
+        ld      A,      72              ; starting Y-position
+        ld      [HL+],  A
+        ld      A,      80 + 8          ; starting X-position
+        ld      [HL+],  A
+        ld      A,      $08             ; tile-number
+        ld      [HL+],  A
+        ld      A,      %0000000
+        ld      [HL+],  A
+
+        ret
+
+
+update:
+;===============================================================================
+; check to see if the cursor needs moving
+;-------------------------------------------------------------------------------
+        ld      HL,     cursor_x
+        ld      A,      [HL+]
+        sub     A,      [HL]
+        jr      nz,     @move
+
+        inc     HL
+        ld      A,      [HL+]
+        sub     A,      [HL]
+        ret     z
+
+@move:
         ret

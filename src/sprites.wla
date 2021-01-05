@@ -23,7 +23,7 @@ init:
         ; number of tiles to copy, 0-based
         ; (each tile is 16-bytes)
         ld      B,      (tiles_sprites__size / 16) - 1
-        call    tilemap.copy_tiles
+        call    tilemap.copyTiles
 
         call    cursor.init
 

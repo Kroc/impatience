@@ -73,6 +73,7 @@ init:
 
 	; begin initialising the game:
 	;-----------------------------------------------------------------------
+	call	sprites.init
 	call	tilemap.init
 	call	acesup.init
 	
