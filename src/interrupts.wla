@@ -91,6 +91,7 @@ rst_screenOff:                                                          ;$18
 irq_vblank:
 ;===============================================================================
         push    AF
+        push    BC
         push    HL
 
         ;;ld      HL,     OBP0
@@ -101,10 +102,11 @@ irq_vblank:
         ;-----------------------------------------------------------------------
         ; no more work to be done,
         ; disable v-blank interrupts
-        ld	HL,	IRQ_ENABLE
-	res	0,	[HL]
+        ;;ld	HL,	IRQ_ENABLE
+	;;res	0,	[HL]
         
         pop     HL
+        pop     BC
         pop     AF
         reti
 

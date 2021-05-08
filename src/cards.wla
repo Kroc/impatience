@@ -150,7 +150,7 @@ allocateDeck:
 
         inc     B                       ; move to the next ordinal
         ld      A,      B               ; (need to use A for comparison)
-        cp      13                      ; have we gone past the king?
+        cp      CARD_K                  ; have we gone past the king?
         jr      nc,     -               ; no, continue adding cards
 
         inc     C                       ; move to the next suit
@@ -287,3 +287,31 @@ addCard:
 
         pop     HL                      ; return original HL
         ret
+
+
+getPilePos:
+;===============================================================================
+; retrieve the row & column co-ordinates (on the tile-map) of a pile:
+; these are tile co-ordinates, NOT pixels!
+;
+; in:   HL      address of the pile-structure
+;               (NOT the pile storage address)
+;
+; out:  B       row position of the pile on the tile-map
+;       C       column position of the pile on-screen
+;               (note that these two disregard scroll position)
+;       HL      (preserved)
+;       DE, A   (preserved)
+;-------------------------------------------------------------------------------
+        ; this routine merely returns the X & Y tile co-ordinates stored
+        ; in the Pile structure. the lack of index registers on the SM83
+        ; is excruciating...
+        ;
+        push    HL
+        ld      B,      0
+        ld      C,      Pile.x
+        add     HL,     BC
+        ld      C,      [HL]
+        inc     L
+        ld      B,      [HL]
+        pop     HL

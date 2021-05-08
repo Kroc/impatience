@@ -37,3 +37,45 @@ init:
         set     1,      [HL]            ; switch sprites on
         
         ret
+
+
+tilePosToScrXY:
+;===============================================================================
+; given a tile row/col, return the position in X/Y on-screen pixels:
+; note that this accounts for the tilemap scroll offset
+;
+; in:   B       tilemap row position
+;       C       tilempa column position
+;
+; out:  B       Y-position on screen (in pixels)
+;       C       X-position on screen (in pixels)
+;       A       (clobbered)
+;-------------------------------------------------------------------------------
+        ; multiply row by 8:
+        sla     B                       ; x2
+        sla     B                       ; x4
+        sla     B                       ; x8
+        ; subtract the scroll offset:
+        ;
+        ; the difficulty here is that we can only subtract C from A, and *not*
+        ; A from C which is the wrong way around for our numbers. we compensate
+        ; for this by inverting and adding instead of subtracting
+        ;
+        ldh     A,      [<SCY]          ; read Y-scroll register through hi-RAM
+        cpl                             ; invert the number (i.e. -A)
+        add     A,      B
+        add     A,      16              ; account for off-screen sprite space
+        ld      B,      A               ; return value back in B
+
+        ; multiply column by 8:
+        sla     C                       ; x2
+        sla     C                       ; x4
+        sla     C                       ; x8
+        ; subtract the scroll offset:
+        ldh     A,      [<SCX]          ; read X-scroll register through hi-RAM
+        cpl                             ; invert the number (i.e. -A)
+        add     A,      C
+        add     A,      8               ; account for off-screen sprite space
+        ld      C,      A               ; return value back in C
+
+        ret

@@ -30,6 +30,10 @@ init:
         ld      C,      MENU_WIDTH + 5  ; column, row is re-used
         ld      A,      13              ; max. number of cards
         call    cards.allocatePile
+        
+        ; set the cursor to point to the first tableau pile:
+        ; this will use BC as row & column and preserve HL
+        call    cursor.moveToPos
 
         ; tableau 2, 3 & 4 all follow in order,
         ; so we do not need to set HL again

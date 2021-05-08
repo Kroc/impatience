@@ -77,7 +77,7 @@ init:
 	call	tilemap.init
 	call	acesup.init
 	
--	halt
+-	rst	rst_waitVBlank
 	jr	-
 
 

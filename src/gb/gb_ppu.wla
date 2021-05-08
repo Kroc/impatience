@@ -85,3 +85,15 @@
 .DEF    VRAM_MAP1               $9800
 .DEF    VRAM_MAP2               $9c00
 .DEF    OAM                	$fe00
+
+.STRUCT Sprite
+        y               BYTE
+        x               BYTE
+        tile            BYTE
+        attr            BYTE
+.ENDST
+
+.RAMSECTION "OAM"       SLOT "OAM"              RETURNORG
+        ;-----------------------------------------------------------------------
+        OAM             INSTANCEOF Sprite 40
+.ENDS

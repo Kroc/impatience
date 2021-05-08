@@ -1,61 +1,144 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 
+; default starting position of the cursor
+; (for the GameBoy's screen)
+.DEF    CURSOR_START_X  80
+.DEF    CURSOR_START_Y  72
+
 .RAMSECTION "cursor"    SLOT "WRAMLO"           RETURNORG
         ;-----------------------------------------------------------------------
-        cursor_x        BYTE    ; current cursor X-position
-        cursor_dest_x   BYTE    ; new X-position to move cursor to
-        cursor_y        BYTE    ; current cursor Y-position
-        cursor_dest_y   BYTE    ; new Y-position to move cursor to
+        cursor_dest_x   BYTE            ; new X-position to move cursor to
+        cursor_x        BYTE            ; current cursor X-position
+        cursor_dest_y   BYTE            ; new Y-position to move cursor to
+        cursor_y        BYTE            ; current cursor Y-position
 .ENDS
 
 
 init:
 ;===============================================================================
+; WARNING: OAM must be writable (e.g. vblank)
+;-------------------------------------------------------------------------------
         ; clear variables:
         xor     A                       ; A = 0
-        ld      HL,     cursor_x
-        ld      [HL+],  A               ; cursor_x = 0
+        ld      HL,     cursor_dest_x
         ld      [HL+],  A               ; cursor_dest_x = 0
-        ld      [HL+],  A               ; cursor_y = 0
+        ld      [HL+],  A               ; cursor_x = 0
         ld      [HL+],  A               ; cursor_dest_y = 0
+        ld      [HL+],  A               ; cursor_y = 0
 
         ; configure the cursor sprite:
         ld      HL,     OAM
-        ld      A,      72              ; starting Y-position
+        ld      A,      CURSOR_START_Y  ; starting Y-position
+        ld      [cursor_y],     A
         ld      [HL+],  A
-        ld      A,      80              ; starting X-position
+        ld      A,      CURSOR_START_X  ; starting X-position
+        ld      [cursor_x],     A
         ld      [HL+],  A
         ld      A,      $00             ; tile-number
         ld      [HL+],  A
         ld      A,      %0000000
         ld      [HL+],  A
 
-        ld      A,      72              ; starting Y-position
+        ld      A,      CURSOR_START_Y  ; starting Y-position
         ld      [HL+],  A
-        ld      A,      80 + 8          ; starting X-position
+        ld      A,      CURSOR_START_X + 8
         ld      [HL+],  A
         ld      A,      $08             ; tile-number
         ld      [HL+],  A
         ld      A,      %0000000
         ld      [HL+],  A
 
+        ld      A,      8
+        ld      [cursor_dest_x],        A
+        ld      [cursor_dest_y],        A
+        ret
+
+
+moveToPos:
+;===============================================================================
+; move the cursor to a given tile row/col:
+; this is a tile position, NOT pixels
+;
+; the move isn't instant, it'll move over several frames until it reaches its
+; destination. another position can be set even whilst in motion
+;
+; in:   B       row position to move the cursor to
+;       C       column position to move the cursor to
+;
+; out:  BC, HL  (preserved)
+;       A       (clobbered)
+;-------------------------------------------------------------------------------
+        ; when laying out multiple piles,
+        ; its helpful to preserve the tile position
+        push    BC
+
+        ; convert the tile row/col to screen-space pixels
+        call    sprites.tilePosToScrXY
+
+        ; offset the cursor a little so that it appears
+        ; over the cards rather than on the outside edge
+        ld      A,      5
+        add     A,      B
+        ld      B,      A
+
+        push    HL
+        ld      HL,     cursor_dest_x
+        ld      [HL],   C
+        inc     HL
+        inc     HL
+        ld      [HL],   B
+        pop     HL
+
+        pop     BC
         ret
 
 
 update:
 ;===============================================================================
-; check to see if the cursor needs moving
+; move the cursor one frame towards its destination:
+; WARNING: OAM must be writable (e.g. vblank)
+;
 ;-------------------------------------------------------------------------------
-        ld      HL,     cursor_x
-        ld      A,      [HL+]
-        sub     A,      [HL]
-        jr      nz,     @move
+        ; is the cursor in its intended X-position?
+        ;
+        ; the destination X-position and current X-position are next to each
+        ; other in RAM; we subtract them from each other to check for any
+        ; difference
+        ld      HL,     cursor_dest_x   ; begin with destination X addr
+        ld      A,      [HL+]           ; read and increment addr to current-X
+        sub     A,      [HL]            ; subtract destination-X from current-X
+        jr      z,      @y              ; if equal, no horizontal movement
 
-        inc     HL
-        ld      A,      [HL+]
-        sub     A,      [HL]
-        ret     z
+        ; move in the X-direction:
+        ;
+        sra     A
+        sra     A
+        jr      nz,     +
+        inc     A
++       add     A,      [HL]
 
-@move:
+        ld      [HL],           A
+        ld      [gb.OAM.1.x],   A
+        add     A,              8
+        ld      [gb.OAM.2.x],   A
+
+        ;-----------------------------------------------------------------------
+@y:     inc     HL                      ; = cursor_dest_y
+        ld      A,      [HL+]           ; read and increment addr to current-Y
+        sub     A,      [HL]            ; subtract destination-Y from current-Y
+        ret     z                       ; if equal, no vertical movement
+        
+        ; move in the Y-direction:
+        ;
+        sra     A
+        sra     A
+        jr      nz,     +
+        inc     A
++       add     A,      [HL]
+
+        ld      [HL],           A
+        ld      [gb.OAM.1.y],   A
+        ld      [gb.OAM.2.y],   A
+
         ret

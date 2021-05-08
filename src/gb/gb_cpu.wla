@@ -13,7 +13,8 @@
         SLOT 3  START $a000 SIZE $2000  NAME "SRAM"     ; 8KB cartridge RAM
         SLOT 4  START $c000 SIZE $1000  NAME "WRAMLO"   ; 4KB WRAM 
         SLOT 5  START $d000 SIZE $1000  NAME "WRAMHI"   ; 4KB WRAM (banked)
-        SLOT 6  START $ff80 SIZE $7f    NAME "HRAM"     ; embedded CPU RAM
+        SLOT 6  START $fe00 SIZE $a0    NAME "OAM"      ; object-attributes
+        SLOT 7  START $ff80 SIZE $7f    NAME "HRAM"     ; embedded CPU RAM
 .ENDME
 
 .ROMBANKSIZE $4000
