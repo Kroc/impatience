@@ -1,4 +1,4 @@
-; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 
 ; since we cannot modify VRAM during the display period,
@@ -27,7 +27,7 @@
 
 tiles_main:
 ;===============================================================================
-.INCBIN         "build\tiles_even.2bpp" FSIZE tiles_main__size
+.INCBIN         "build/tiles_even.2bpp" FSIZE tiles_main__size
 
 ; 3x4 cards:
 ;===============================================================================
@@ -314,35 +314,30 @@ getBufferAddr:
 
 writeTiles_3wide_5rows:
 ;===============================================================================
-        ld      BC,     29
         call    writeTiles_3wide
 
 writeTiles_3wide_4rows:
 ;===============================================================================
-        ld      BC,     29
         call    writeTiles_3wide
 
 writeTiles_3wide_3rows:
 ;===============================================================================
-        ld      BC,     29
         call    writeTiles_3wide
 
 writeTiles_3wide_2rows:
 ;===============================================================================
-        ld      BC,     29
         call    writeTiles_3wide
 
 writeTiles_3wide_1row:
 ;===============================================================================
-        ld      BC,     29
-
 writeTiles_3wide:
 ;===============================================================================
-; in:   BC      number of tiles to skip for next row, should be set to 29
-;       DE      address with tiles to read from
+; in:   DE      address with tiles to read from
 ;       HL      address to write to, where 3 tiles are written and then
 ;               the address is moved to the next row of the tilemap
 ;-------------------------------------------------------------------------------
+        ld      BC,     29
+
         ld      A,      [DE]
         inc     DE
         ld      [HL+],  A

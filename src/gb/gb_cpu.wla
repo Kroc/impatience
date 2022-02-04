@@ -1,4 +1,4 @@
-; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;===============================================================================
 ; GameBoy memory map:
@@ -14,7 +14,8 @@
         SLOT 4  START $c000 SIZE $1000  NAME "WRAMLO"   ; 4KB WRAM 
         SLOT 5  START $d000 SIZE $1000  NAME "WRAMHI"   ; 4KB WRAM (banked)
         SLOT 6  START $fe00 SIZE $a0    NAME "OAM"      ; object-attributes
-        SLOT 7  START $ff80 SIZE $7f    NAME "HRAM"     ; embedded CPU RAM
+        SLOT 7  START $ff00 SIZE $80    NAME "IO"       ; I/O registers
+        SLOT 8  START $ff80 SIZE $7f    NAME "HRAM"     ; embedded CPU RAM
 .ENDME
 
 .ROMBANKSIZE $4000
@@ -52,3 +53,4 @@
 ;===============================================================================
 .INC	"gb/gb_irqs.wla"        NAMESPACE "gb" ; interrupts (RSTs / IRQs)
 .INC    "gb/gb_ppu.wla"         NAMESPACE "gb" ; picture-processing-unit (GPU)
+.INC    "gb/gb_io.wla"          NAMESPACE "gb" ; input/output registers

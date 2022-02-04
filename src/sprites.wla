@@ -1,4 +1,4 @@
-; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 
 .SECTION        "tiles_sprites" ALIGN 16        RETURNORG
@@ -6,7 +6,7 @@
 
 tiles_sprites:
 ;-------------------------------------------------------------------------------
-.INCBIN         "build\tiles_sprites.2bpp"      FSIZE tiles_sprites__size
+.INCBIN         "build/tiles_sprites.2bpp"      FSIZE tiles_sprites__size
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
@@ -28,9 +28,9 @@ init:
         call    cursor.init
 
         ; set sprite palettes:
-	ld	A,	%00011111
-	ld 	[OBP0], A
-        ld 	[OBP1], A
+        ld      A,      %00011111
+        ld      [OBP0], A
+        ld      [OBP1], A
 
         ld      HL,     LCDC
         set     2,      [HL]            ; enable 8x16 sprites
@@ -45,7 +45,7 @@ tilePosToScrXY:
 ; note that this accounts for the tilemap scroll offset
 ;
 ; in:   B       tilemap row position
-;       C       tilempa column position
+;       C       tilemap column position
 ;
 ; out:  B       Y-position on screen (in pixels)
 ;       C       X-position on screen (in pixels)
@@ -55,6 +55,7 @@ tilePosToScrXY:
         sla     B                       ; x2
         sla     B                       ; x4
         sla     B                       ; x8
+
         ; subtract the scroll offset:
         ;
         ; the difficulty here is that we can only subtract C from A, and *not*

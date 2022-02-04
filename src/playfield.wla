@@ -1,4 +1,4 @@
-; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
 
@@ -8,6 +8,16 @@
 PLAYFIELD_TOP   = 0
 PLAYFIELD_LEFT  = MENU_WIDTH
 PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
+
+.RAMSECTION \
+        "cursor"        RETURNORG
+        ;-----------------------------------------------------------------------
+        ; the address of the Pile struct that the cursor is pointing to,
+        ; $0000 if cursor is free
+        cursor_pile     WORD
+        ; the number of the card in the pile the cursor is pointing at
+        cursor_card     BYTE
+.ENDS
 
 clear:
 ;===============================================================================
@@ -43,7 +53,7 @@ drawDeck:
 ; draws the deck on the front-buffer:
 ;
 ;-------------------------------------------------------------------------------
-        ld      HL,     cards.deck.addr ; address of deck pile
+        ld      HL,     cards.deck.pool ; address of deck pile
         ld      E,      [HL]            ; read cards-address, lo-byte
         inc     L
         ld      D,      [HL]            ; read cards-address, hi-byte
@@ -84,8 +94,11 @@ drawDeck:
 
 drawEmpty:
 ;===============================================================================
+; draw a pile placeholder, an outline where cards may go:
+;
+;-------------------------------------------------------------------------------
         call    tilemap.getBufferAddr
-        ld      DE,     tilemap.tilemap_empty     
+        ld      DE,     tilemap.tilemap_empty
         call    tilemap.writeTiles_3wide_4rows
 
         ;-----------------------------------------------------------------------
@@ -244,3 +257,41 @@ drawCard:
         ld      [HL+],  A               ; write the tile and advance
 
         ret
+
+
+pointToCard:
+;===============================================================================
+; move the cursor to a specific card in a pile:
+;
+; in:   HL      address of the Pile structure
+;       A       number of the card in the pile, 0-based
+;
+; out:  B       row number of the card (not pixels!)
+;       C       column number of the card (not pixels!)
+;       A, DE   (clobbered)
+;-------------------------------------------------------------------------------
+        ; update the record of which pile/card is currently being pointed to
+        ld      DE,     cursor_pile
+        push    AF
+        ld      A,      H
+        ld      [DE],   A
+        inc     DE
+        ld      A,      L
+        ld      [DE],   A
+        inc     DE
+        pop     AF
+        ld      [DE],  A
+
+        ; retrieve the row/column for the bottom of the pile
+        call    cards.getPilePos
+        
+        ; add the card number to the row number as
+        ; each card in a pile adds another tile's height
+        add     A,      C
+        ld      C,      A
+
+        ; in the case of cards, we want to point to the space
+        ; between the suit / number so as not to obscure either
+        inc     C
+
+        jp      cursor.moveToPos

@@ -1,4 +1,4 @@
-; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
 
@@ -30,10 +30,6 @@ init:
         ld      C,      MENU_WIDTH + 5  ; column, row is re-used
         ld      A,      13              ; max. number of cards
         call    cards.allocatePile
-        
-        ; set the cursor to point to the first tableau pile:
-        ; this will use BC as row & column and preserve HL
-        call    cursor.moveToPos
 
         ; tableau 2, 3 & 4 all follow in order,
         ; so we do not need to set HL again
@@ -114,4 +110,7 @@ init:
         call    tilemap.refresh
         rst     rst_screenOn
         
-        ret
+        ; move the cursor to the bottom card in the first tableau pile
+        ld      HL,     cards.tableau1
+        ld      A,      0
+        jp      playfield.pointToCard

@@ -1,0 +1,22 @@
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+;
+; hardware registers:
+;===============================================================================
+; <https://bgb.bircd.org/pandocs.htm>
+;
+.DEF    JOYP                    $ff00
+
+.DEF    JOYP.dpad               %11101111
+;-------------------------------------------------------------------------------
+.DEF    JOYP.down               %00001000
+.DEF    JOYP.up                 %00000100
+.DEF    JOYP.left               %00000010
+.DEF    JOYP.right              %00000001
+
+.DEF    JOYP.buttons            %11011111
+;-------------------------------------------------------------------------------
+.DEF    JOYP.start              %00001000
+.DEF    JOYP.select             %00000100
+.DEF    JOYP.buttonB            %00000010
+.DEF    JOYP.buttonA            %00000001

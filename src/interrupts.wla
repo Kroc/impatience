@@ -1,7 +1,17 @@
-; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020:
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
 .BANK 0
+
+; RAM for remembering joypad state:
+;
+.RAMSECTION     "joypad"        RETURNORG
+        ;-----------------------------------------------------------------------
+        joy_dpad                BYTE
+        joy_dpad_prev           BYTE
+        joy_buttons             BYTE
+        joy_buttons_prev        BYTE
+.ENDS
 
 .SECTION        "z80_rst_00"    SIZE 8
 ;///////////////////////////////////////////////////////////////////////////////
@@ -23,21 +33,21 @@ rst_waitVBlank:                                                         ;$00
 
 rst_haltVBlank:                                                         ;$08
 ;===============================================================================
-        ;                               ; bytes:
+        ;                                                               ; bytes:
         ; stop the CPU until an interrupt occurs!
 	; (this will save battery life)
--       halt                            ;+1=1
+-       halt                                                            ;+1=1
         ; read the IRQ flags register at $FF0F:
         ; (using HRAM instruction saves 1 byte over `ld A, [IRQ_FLAGS]`,
         ;  this is required to fit within the max. 8-bytes we have here!)
-        ldh     A,      [<IRQ_FLAGS]    ;+2=3
+        ldh     A,      [<IRQ_FLAGS]                                    ;+2=3
         ; was it a v-blank interrupt? (bit 0)
-        bit     0,      A               ;+2=5
+        bit     0,      A                                               ;+2=5
         ; if not, wait again...
-        jr      nz,     -               ;+2=7
+        jr      nz,     -                                               ;+2=7
 
         ; we are now in v-blank!
-        ret                             ;+1=8
+        ret                                                             ;+1=8
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
@@ -49,7 +59,8 @@ rst_screenOn:                                                           ;$10
 ;===============================================================================
 ; turn the LCD on
 ;-------------------------------------------------------------------------------
-	ldh	A,	[<LCDC]
+	; (using HRAM instruction saves 1 byte over `ld A, [LCDC]`,
+        ldh	A,	[<LCDC]
 	set 	7,	A
 	ldh 	[<LCDC],A
 	ret
@@ -79,36 +90,116 @@ rst_screenOff:                                                          ;$18
 ; this area only provides 8 bytes free before the next IRQ ($48),
 ; so we only have room to jump to a bigger routine
 ;
-.SECTION        "gb_vblank"
+.SECTION        "irq_vblank"
 ;///////////////////////////////////////////////////////////////////////////////
         jp      irq_vblank
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
 
-.SECTION        "irq_vblank"    FREE
+.SECTION        "interrupts"    FREE
 ;///////////////////////////////////////////////////////////////////////////////
+
+init_interrupts:
+;===============================================================================
+        ; clear the interrupt registers:
+	; we don't want unexpected interrupts firing due to dirty state
+	; (e.g. device was rebooted mid-game)
+	;
+	xor     A                       ; (sets A to 0)
+	ld	[IRQ_ENABLE],	A	; disallow each type of interrupt
+	ld	[IRQ_FLAGS],	A	; clear any 'pending' interrupts
+
+        ; clear interrupt handler work-RAM (note A = 0)
+        ; TODO: This should validate its size against the RAMSECTION,
+        ;       and/or use a generic zeroing routine
+        ld      HL,     SECTIONSTART_joypad
+        ld      [HL+],  A
+        ld      [HL+],  A
+        ld      [HL+],  A
+        ld      [HL+],  A
+
+        ret
+
 
 irq_vblank:
 ;===============================================================================
         push    AF
-        push    BC
         push    HL
 
-        ;;ld      HL,     OBP0
-        ;;swap    [HL]
-        
+        ; TODO: any tile updates?
+
+        ; move the cursor one frame
         call    cursor.update
+
+        ; read the joypad:
+        ;-----------------------------------------------------------------------
+        ; move current values to previous values:
+        ; the order of variables makes this copy `dpad` to `dpad_prev`
+        ; and `buttons` to `buttons_prev` accordingly
+        ld      HL,     joy_dpad
+        ld      A,      [HL+]
+        ld      [HL+],  A
+        ld      A,      [HL+]
+        ld      [HL+],  A
+
+        ; read d-pad values:
+        ;
+        ; first we WRITE a bit to filter either dpad or buttons
+        ld      A,      JOYP.dpad
+        ldh     [<JOYP],        A
+        ; READ to get the dpad state. an emulator will give you an instant
+        ; result, but real hardware is said to "take a few cycles" to settle;
+        ; the original DMG bricks have *very* noisy circuits
+        ;
+        ; TODO: test on real hardware: DMG, GBC, GBA
+        ldh     A,      [<JOYP]
+        ldh     A,      [<JOYP]
+        ldh     A,      [<JOYP]
+        ldh     A,      [<JOYP]
+        ldh     A,      [<JOYP]
+        ldh     A,      [<JOYP]
+        cpl     A
+        ld      [joy_dpad], A
+
+        ld      HL,     joy_dpad
+        bit     3,      [HL]
+        jr      z,      +
+
+        ld      HL,     cursor.cursor_dest_y
+        inc     [HL]
++
+
+        ; read button values:
+        ;
+        ; first we WRITE a bit to filter either dpad or buttons
+        ld      A,      JOYP.buttons
+        ldh     [<JOYP],        A
+        ; READ to get the buttons state. an emulator will give you an instant
+        ; result, but real hardware is said to "take a few cycles" to settle;
+        ; the original DMG bricks have *very* noisy circuits
+        ;
+        ldh     A,      [<JOYP]
+        ldh     A,      [<JOYP]
+        ldh     A,      [<JOYP]
+        ldh     A,      [<JOYP]
+        ldh     A,      [<JOYP]
+        ldh     A,      [<JOYP]
+        cpl     A
+        ld      [joy_buttons], A
 
         ;-----------------------------------------------------------------------
         ; no more work to be done,
         ; disable v-blank interrupts
         ;;ld	HL,	IRQ_ENABLE
-	;;res	0,	[HL]
+        ;;res	0,	[HL]
         
         pop     HL
-        pop     BC
         pop     AF
         reti
+
+read_joypad:
+;===============================================================================
+
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
