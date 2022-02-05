@@ -99,6 +99,8 @@ update:
 ; move the cursor one frame towards its destination:
 ; WARNING: OAM must be writable (e.g. vblank)
 ;
+; out:  BC, DE  (preserved)
+;       HL, A   (clobbered)
 ;-------------------------------------------------------------------------------
         ; is the cursor in its intended X-position?
         ;

@@ -113,4 +113,31 @@ init:
         ; move the cursor to the bottom card in the first tableau pile
         ld      HL,     cards.tableau1
         ld      A,      0
-        jp      playfield.pointToCard
+        call    playfield.pointToCard
+
+        ; play loop:
+        ;=======================================================================
+        ; stop the processor; the vblank will awaken it again, where upon
+        ; the screen will be updated and the buttons will be read
+@main:  rst     rst_waitVBlank
+
+        ; check controls:
+        ;-----------------------------------------------------------------------
+        ; wait for button release; this game doesn't continue to move if you
+        ; hold a button as the cursor snaps to cards and doesn't move freely
+        ld      A,      [joy_state]
+        and     A,      A
+        jr      z,      @main
+
+        ; cursor down?
+        ld      HL,     joy_state
+        bit     BUTTON_DOWN,    [HL]
+        jr      z,      +
+
+        ld      HL,     cursor.cursor_dest_y
+        ld      A,      [HL]
+        add     A,      8
+        ld      [HL],   A
++
+
+        jp @main

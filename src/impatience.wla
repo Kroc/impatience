@@ -2,57 +2,57 @@
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
 ; GameBoy hardware definitions
-.INC	"gb/gb_cpu.wla"		NAMESPACE "gb"
+.INC    "gb/gb_cpu.wla"         NAMESPACE "gb"
 
-.INC	"strings.wla"		; string & text routines
-.INC	"interrupts.wla"
-.INC	"tilemap.wla"		NAMESPACE "tilemap"
-.INC	"sprites.wla"		NAMESPACE "sprites"
+.INC    "strings.wla"           ; string & text routines
+.INC    "interrupts.wla"
+.INC    "tilemap.wla"           NAMESPACE "tilemap"
+.INC    "sprites.wla"           NAMESPACE "sprites"
 
 
 init:
 ;===============================================================================
-	di				; disable interrupts
-	ld 	SP,	$dff0		; locate the stack
+        di                              ; disable interrupts
+        ld      SP,     $dff0           ; locate the stack
 
-	call 	init_interrupts
+        call    init_interrupts
 
-	; configure LCD:
-	;-----------------------------------------------------------------------
-	ld	HL,	LCDC		; LCD config register;
-	ld 	A, 	[HL]		; read the current value
+        ; configure LCD:
+        ;-----------------------------------------------------------------------
+        ld      HL,     LCDC            ; LCD config register;
+        ld      A,      [HL]            ; read the current value
 
-	; we *MUST NOT* disable the LCD (bit7=1) outside of vblank!
-	; even though we want the screen off during initialisation,
-	; we must set the LCD enable bit to 1 at this time and
-	; then wait for vblank to turn it off!
-	;
-	;		%1-------	; LCD enable
-	;		%--0-----	; window disabled
-	;		%------0-	; sprites disabled
-	;		%-------0	; background disabled 
-	ld	A,	%10000000
-	ld 	[HL],	A               ; write settings to LCD register
+        ; we *MUST NOT* disable the LCD (bit7=1) outside of vblank!
+        ; even though we want the screen off during initialisation,
+        ; we must set the LCD enable bit to 1 at this time and
+        ; then wait for vblank to turn it off!
+        ;
+        ;               %1-------       ; LCD enable
+        ;               %--0-----       ; window disabled
+        ;               %------0-       ; sprites disabled
+        ;               %-------0       ; background disabled 
+        ld      A,      %10000000
+        ld      [HL],   A               ; write settings to LCD register
 
-	; since interrupts are currently disabled we'll spin in place until
-	; the LCD status register indicates that we've reached vblank
-	;
--	ld	A,	[STAT]		; read current LCD state
-	and	%11			; bottom-two bits determine mode
-	dec	A			; 1 = vblank; -1 and check for 0
-	jr	nz,	-		; not vblank, keep spinning
+        ; since interrupts are currently disabled we'll spin in place until
+        ; the LCD status register indicates that we've reached vblank
+        ;
+-       ldh     A,      [<STAT]         ; read current LCD state
+        and     %11                     ; bottom-two bits determine mode
+        dec     A                       ; 1 = vblank; -1 and check for 0
+        jr      nz,     -               ; not vblank, keep spinning
 
-	; turn the LCD off
-	res	7, 	[HL]		; (this is why we load HL with LCDC)
+        ; turn the LCD off
+        res     7,      [HL]            ; (this is why we load HL with LCDC)
 
-	; clear VRAM:
-	xor 	A                       ; (set A to 0)
-	ld 	HL, 	VRAM
--	ld 	[HL+],  A
-	bit 	5,	H               ; have we hit 8'192 bytes?
-	jr 	z, -                    ; i.e. %00010000_00000000
+        ; clear VRAM:
+        xor     A                       ; (set A to 0)
+        ld      HL,     VRAM
+-       ld      [HL+],  A
+        bit     5,      H               ; have we hit 8'192 bytes?
+        jr      z, -                    ; i.e. %00010000_00000000
 
-	; clear sprite registers (OAM)
+        ; clear sprite registers (OAM)
         ld      HL,     OAM
         ld      C,      40              ; number of sprites
         xor     A                       ; (set A to zero)
@@ -63,20 +63,20 @@ init:
         dec     C
         jr      nz,     -
 
-	ei
+        ei
 
-	; begin initialising the game:
-	;-----------------------------------------------------------------------
-	call	sprites.init
-	call	tilemap.init
-	call	acesup.init
-	
--	rst	rst_waitVBlank
-	jr	-
+        ; begin initialising the game:
+        ;-----------------------------------------------------------------------
+        call	sprites.init
+        call	tilemap.init
+        call	acesup.init
+        
+-       rst     rst_waitVBlank
+        jr      -
 
 
 ;===============================================================================
-.INC	"cards.wla"		NAMESPACE "cards"
-.INC	"menu.wla"		NAMESPACE "menu"
-.INC	"playfield.wla"		NAMESPACE "playfield"
-.INC	"game_acesup.wla"	NAMESPACE "acesup"
+.INC    "cards.wla"             NAMESPACE "cards"
+.INC    "menu.wla"              NAMESPACE "menu"
+.INC    "playfield.wla"         NAMESPACE "playfield"
+.INC    "game_acesup.wla"       NAMESPACE "acesup"

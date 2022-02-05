@@ -3,14 +3,24 @@
 ;
 .BANK 0
 
+; these are the *logical* button constants for the game, not the ones used by
+; the hardware, which are split across two bytes. these are `bit` numbers
+;
+.DEF    BUTTON_RIGHT            0
+.DEF    BUTTON_LEFT             1
+.DEF    BUTTON_UP               2
+.DEF    BUTTON_DOWN             3
+.DEF    BUTTON_A                4
+.DEF    BUTTON_B                5
+.DEF    BUTTON_SELECT           6
+.DEF    BUTTON_START            7
+
 ; RAM for remembering joypad state:
 ;
-.RAMSECTION     "joypad"        RETURNORG
+.RAMSECTION \
+        "joypad"                RETURNORG
         ;-----------------------------------------------------------------------
-        joy_dpad                BYTE
-        joy_dpad_prev           BYTE
-        joy_buttons             BYTE
-        joy_buttons_prev        BYTE
+        joy_state               BYTE
 .ENDS
 
 .SECTION        "z80_rst_00"    SIZE 8
@@ -102,12 +112,12 @@ rst_screenOff:                                                          ;$18
 init_interrupts:
 ;===============================================================================
         ; clear the interrupt registers:
-	; we don't want unexpected interrupts firing due to dirty state
-	; (e.g. device was rebooted mid-game)
-	;
-	xor     A                       ; (sets A to 0)
-	ld	[IRQ_ENABLE],	A	; disallow each type of interrupt
-	ld	[IRQ_FLAGS],	A	; clear any 'pending' interrupts
+        ; we don't want unexpected interrupts firing due to dirty state
+        ; (e.g. device was rebooted mid-game)
+        ;
+        xor     A                       ; (sets A to 0)
+        ldh     [<IRQ_ENABLE],   A      ; disallow each type of interrupt
+        ldh     [<IRQ_FLAGS],    A      ; clear any 'pending' interrupts
 
         ; clear interrupt handler work-RAM (note A = 0)
         ; TODO: This should validate its size against the RAMSECTION,
@@ -132,23 +142,18 @@ irq_vblank:
         call    cursor.update
 
         ; read the joypad:
-        ;-----------------------------------------------------------------------
-        ; move current values to previous values:
-        ; the order of variables makes this copy `dpad` to `dpad_prev`
-        ; and `buttons` to `buttons_prev` accordingly
-        ld      HL,     joy_dpad
-        ld      A,      [HL+]
-        ld      [HL+],  A
-        ld      A,      [HL+]
-        ld      [HL+],  A
+        ;=======================================================================
+        ; this is where the logical joypad state is stored that the game uses;
+        ; the game code never talks directly to the joypad hardware
+        ld      HL,     joy_state
 
-        ; read d-pad values:
-        ;
+        ; read d-pad state:
+        ;-----------------------------------------------------------------------
         ; first we WRITE a bit to filter either dpad or buttons
         ld      A,      JOYP.dpad
         ldh     [<JOYP],        A
         ; READ to get the dpad state. an emulator will give you an instant
-        ; result, but real hardware is said to "take a few cycles" to settle;
+        ; result but real hardware is said to "take a few cycles" to settle;
         ; the original DMG bricks have *very* noisy circuits
         ;
         ; TODO: test on real hardware: DMG, GBC, GBA
@@ -159,23 +164,16 @@ irq_vblank:
         ldh     A,      [<JOYP]
         ldh     A,      [<JOYP]
         cpl     A
-        ld      [joy_dpad], A
+        and     A,      %00001111       ; mask out the other/unused bits
+        ld      [HL],   A               ; store the dpad state (lo-nybble)
 
-        ld      HL,     joy_dpad
-        bit     3,      [HL]
-        jr      z,      +
-
-        ld      HL,     cursor.cursor_dest_y
-        inc     [HL]
-+
-
-        ; read button values:
-        ;
+        ; read button state:
+        ;-----------------------------------------------------------------------
         ; first we WRITE a bit to filter either dpad or buttons
         ld      A,      JOYP.buttons
         ldh     [<JOYP],        A
         ; READ to get the buttons state. an emulator will give you an instant
-        ; result, but real hardware is said to "take a few cycles" to settle;
+        ; result but real hardware is said to "take a few cycles" to settle;
         ; the original DMG bricks have *very* noisy circuits
         ;
         ldh     A,      [<JOYP]
@@ -185,8 +183,11 @@ irq_vblank:
         ldh     A,      [<JOYP]
         ldh     A,      [<JOYP]
         cpl     A
-        ld      [joy_buttons], A
-
+        and     A,      %00001111       ; mask out the other/unused bits
+        swap    A                       ; buttons go in the hi-nybble
+        or      A,      [HL]            ; combine with the lo-nybble,
+        ld      [HL],   A               ; and write back
+        
         ;-----------------------------------------------------------------------
         ; no more work to be done,
         ; disable v-blank interrupts
@@ -196,10 +197,6 @@ irq_vblank:
         pop     HL
         pop     AF
         reti
-
-read_joypad:
-;===============================================================================
-
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS

@@ -300,11 +300,12 @@ getPilePos:
 ; in:   HL      address of the pile-structure
 ;               (NOT the pile storage address)
 ;
-; out:  B       row position of the pile on the tile-map
-;       C       column position of the pile on-screen
-;               (note that these two disregard scroll position)
-;       HL      (preserved)
-;       DE, A   (preserved)
+; out:  B       row number of the pile on the tile-map
+;       C       column number of the pile on-screen
+;               (note that these two disregard scroll position!)
+;
+;       HL, DE  (preserved)
+;       A       (preserved)
 ;-------------------------------------------------------------------------------
         ; this routine merely returns the X & Y tile co-ordinates stored
         ; in the Pile structure. the lack of index registers on the SM83
