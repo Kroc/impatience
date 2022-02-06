@@ -12,8 +12,8 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
 .RAMSECTION \
         "cursor"        RETURNORG
         ;-----------------------------------------------------------------------
-        ; the address of the Pile struct that the cursor is pointing to,
-        ; $0000 if cursor is free
+        ; the address of the Pile struct that the cursor is pointing to;
+        ; e.g. deck / tableau; $0000 if cursor is free
         cursor_pile     WORD
         ; the number of the card in the pile the cursor is pointing at
         cursor_card     BYTE
@@ -54,9 +54,9 @@ drawDeck:
 ;
 ;-------------------------------------------------------------------------------
         ld      HL,     cards.deck.pool ; address of deck pile
-        ld      E,      [HL]            ; read cards-address, lo-byte
+        ld      D,      [HL]            ; read cards-address, lo-byte
         inc     L
-        ld      D,      [HL]            ; read cards-address, hi-byte
+        ld      E,      [HL]            ; read cards-address, hi-byte
         inc     L
         ld      B,      [HL]            ; read row
         inc     L
@@ -114,10 +114,14 @@ drawPile:
 ;
 ; out:  HL      HL is moved forward to the next Pile structure
 ;-------------------------------------------------------------------------------
+        
+        ; TODO: use `cards.getPilePos` here?
+        ;       although we also need the pool address
+        ;
         inc     HL                      ; skip over the max-cards byte
-        ld      E,      [HL]            ; read cards-address, lo-byte
-        inc     L
         ld      D,      [HL]            ; read cards-address, hi-byte
+        inc     L
+        ld      E,      [HL]            ; read cards-address, lo-byte
         inc     L
         ld      B,      [HL]            ; read row
         inc     L
@@ -270,28 +274,67 @@ pointToCard:
 ;       C       column number of the card (not pixels!)
 ;       A, DE   (clobbered)
 ;-------------------------------------------------------------------------------
-        ; update the record of which pile/card is currently being pointed to
+        ; update the record of which pile/card is currently being pointed to.
+        ; if a pile has multiple cards, then pushing up/down will go through
+        ; the cards before leaving the pile
+        ;
         ld      DE,     cursor_pile
-        push    AF
+        push    AF                      ; A holds the card number to point to
+
+        ; save the address of the pile to point to
         ld      A,      H
         ld      [DE],   A
         inc     DE
         ld      A,      L
         ld      [DE],   A
         inc     DE
+        ; save the card number to point to
         pop     AF
         ld      [DE],  A
 
-        ; retrieve the row/column for the bottom of the pile
+        ; retrieve the row/column for the bottom (top, visually) of the pile
         call    cards.getPilePos
         
         ; add the card number to the row number as
         ; each card in a pile adds another tile's height
-        add     A,      C
-        ld      C,      A
+        add     A,      B
+        ld      B,      A
 
         ; in the case of cards, we want to point to the space
         ; between the suit / number so as not to obscure either
         inc     C
 
         jp      cursor.moveToPos
+
+
+moveCursorDown:
+;===============================================================================
+; move the cursor down, either going through a pile of cards,
+; or downward to the nearest pile below the current one
+;-------------------------------------------------------------------------------
+        ; retrieve current pile location:
+        ld      HL,     cursor_pile
+        ld      D,      [HL]
+        inc     HL
+        ld      E,      [HL]
+        inc     HL
+        ld      B,      [HL]            ; card number being pointed to
+        ld      H,      D
+        ld      L,      E
+
+        ; have we reached the bottom of the pile?
+        ;-----------------------------------------------------------------------
+        call    cards.getPilePool       ; get pool address from the pile
+        ld      A,      [DE]            ; first byte is number of cards in pile
+        dec     A                       ; (adjust for 1-based)
+        
+        ; compare A (number of cards) with B (current card)
+        cp      B
+        
+        ; if they are not equal, the pointer has not reached
+        ; the top of the pile (visually, bottom on screen)
+        ret     z
+
+        ld      A,      B
+        inc     A
+        jp      pointToCard

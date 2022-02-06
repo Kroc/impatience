@@ -29,11 +29,11 @@
 rst_waitVBlank:                                                         ;$00
 ;===============================================================================
 ; NOTE: this routine *must* be exactly 8-bytes -- no more, no less
-;       -- due to the fall-through to the next routine
+;       -- due to the fall-through to the next routine                  ;bytes:
 ;-------------------------------------------------------------------------------
-        ld      A,      [IRQ_ENABLE]    ;+3=3
-        or      A,      IE.vblank       ;+2=5
-        ld      [IRQ_ENABLE],   A       ;+3=8
+        ld      A,      [IRQ_ENABLE]                                    ;+3=3
+        or      A,      IE.vblank                                       ;+2=5
+        ld      [IRQ_ENABLE],   A                                       ;+3=8
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
@@ -45,7 +45,7 @@ rst_haltVBlank:                                                         ;$08
 ;===============================================================================
         ;                                                               ; bytes:
         ; stop the CPU until an interrupt occurs!
-	; (this will save battery life)
+        ; (this will save battery life)
 -       halt                                                            ;+1=1
         ; read the IRQ flags register at $FF0F:
         ; (using HRAM instruction saves 1 byte over `ld A, [IRQ_FLAGS]`,
@@ -69,11 +69,11 @@ rst_screenOn:                                                           ;$10
 ;===============================================================================
 ; turn the LCD on
 ;-------------------------------------------------------------------------------
-	; (using HRAM instruction saves 1 byte over `ld A, [LCDC]`,
-        ldh	A,	[<LCDC]
-	set 	7,	A
-	ldh 	[<LCDC],A
-	ret
+        ; (using HRAM instruction saves 1 byte over `ld A, [LCDC]`,
+        ldh     A,      [<LCDC]
+        set     7,      A
+        ldh     [<LCDC],A
+        ret
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
@@ -87,11 +87,11 @@ rst_screenOff:                                                          ;$18
 ; real hardware! therfore, we wait for v-blank to occur first:
 ;
 ;-------------------------------------------------------------------------------
-	rst     rst_waitVBlank
-        ldh	A,	[<LCDC]
-	res 	7,	A
-	ldh 	[<LCDC],A
-	ret
+        rst     rst_waitVBlank
+        ldh     A,      [<LCDC]
+        res     7,      A
+        ldh     [<LCDC],A
+        ret
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
@@ -197,6 +197,34 @@ irq_vblank:
         pop     HL
         pop     AF
         reti
+
+getButton:
+;===============================================================================
+; wait for a button press and return it:
+;
+; note that this waits first for any current buttons to be released
+; before waiting again for a fresh button press
+;
+; out:  A       the current `joy_state` value
+;       *       all other registers are preserved
+;-------------------------------------------------------------------------------
+        ; wait for button release; this game doesn't continue to move if you
+        ; hold a button as the cursor snaps to cards and doesn't move freely
+        ;
+        ; stop the processor; the vblank will awaken it again, where upon
+        ; the screen will be updated and the buttons will be read
+-       rst     rst_waitVBlank
+        ld      A,      [joy_state]
+        and     A,      A               ; set flags!
+        jr      nz,     -               ; spin for button pressed
+
+        ; wait for a new button press:
+-       rst     rst_waitVBlank
+        ld      A,      [joy_state]
+        and     A,      A               ; set flags!
+        jr      z,     -                ; spin for no button pressed
+
+        ret
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS

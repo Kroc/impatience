@@ -6,40 +6,40 @@
 ;===============================================================================
 ; this section defines how we store cards in memory, one byte per card
 ;
-; %bissnnnn	b     = "back" (back is visible)
+; %bissnnnn     b     = "back" (back is visible)
 ;               i     = "inactive", 0=active, 1=inactive (unplayable card)
-;		ss    = suit, 0-3,  0=spades, 1=clubs, 2=hearts, 3=diamonds
-;		nnnn  = number, 1 (A), 2-9, 10 (J), 11 (Q), 12 (K),
-;			13-15 unused. 0 = no-card / null
+;               ss    = suit, 0-3,  0=spades, 1=clubs, 2=hearts, 3=diamonds
+;               nnnn  = number, 1 (A), 2-9, 10 (J), 11 (Q), 12 (K),
+;                       13-15 unused. 0 = no-card / null
 ;
-.DEF	CARD_NONE	%00000000
+.DEF    CARD_NONE       %00000000
 
 .DEF    CARD_FRONT      %00000000       ; face-up card
-.DEF	CARD_BACK	%10000000       ; face-down card
+.DEF    CARD_BACK       %10000000       ; face-down card
 
 .DEF    CARD_ACTIVE     %00000000       ; card is playable
 .DEF    CARD_INACTIVE   %01000000       ; card is disabled
 
 ; suits:                %--0----- = black
-.DEF	SUIT_SPADE	%00000000
-.DEF	SUIT_CLUB	%00010000
+.DEF    SUIT_SPADE      %00000000
+.DEF    SUIT_CLUB       %00010000
 ;                       %--1----- = red
-.DEF	SUIT_HEART	%00100000
-.DEF	SUIT_DIAMOND	%00110000
+.DEF    SUIT_HEART      %00100000
+.DEF    SUIT_DIAMOND    %00110000
 
-.DEF	CARD_A		%00000001
-.DEF	CARD_2		%00000010
-.DEF	CARD_3		%00000011
-.DEF	CARD_4		%00000100
-.DEF	CARD_5		%00000101
-.DEF	CARD_6		%00000110
-.DEF	CARD_7		%00000111
-.DEF	CARD_8		%00001000
-.DEF	CARD_9 		%00001001
-.DEF	CARD_X		%00001010
-.DEF	CARD_J		%00001011
-.DEF	CARD_Q		%00001100
-.DEF	CARD_K		%00001101
+.DEF    CARD_A          %00000001
+.DEF    CARD_2          %00000010
+.DEF    CARD_3          %00000011
+.DEF    CARD_4          %00000100
+.DEF    CARD_5          %00000101
+.DEF    CARD_6          %00000110
+.DEF    CARD_7          %00000111
+.DEF    CARD_8          %00001000
+.DEF    CARD_9          %00001001
+.DEF    CARD_X          %00001010
+.DEF    CARD_J          %00001011
+.DEF    CARD_Q          %00001100
+.DEF    CARD_K          %00001101
 
 .STRUCT "Pile"
         ;-----------------------------------------------------------------------
@@ -202,9 +202,9 @@ allocatePile:
         ; the next two bytes are the address to the card-storage:
         ; (note that we can get away with only incrementing L
         ;  as the pile structures all fit within 256 bytes)
-        ld      [HL],   E
-        inc     L
         ld      [HL],   D
+        inc     L
+        ld      [HL],   E
         inc     L
 
         ; next is the row/column position on the tilemap
@@ -254,9 +254,9 @@ addCard:
         ;       begin at an $xx00 address and don't exceed 256 bytes
         inc     L
         ; read the storage address:
-        ld      E,      [HL]
-        inc     L
         ld      D,      [HL]
+        inc     L
+        ld      E,      [HL]
 
         ; from that, read the first byte of the card pool
         ; (the number of cards in the pile)
@@ -292,13 +292,32 @@ addCard:
         ret
 
 
+getPilePool:
+;===============================================================================
+; given a Pile struct address, returns the address
+; in the card pool where the pile's cards are stored
+;
+; in:   HL      address of a Pile structure (e.g. deck, tableau)
+; out:  DE      address of the pile's card pool
+;-------------------------------------------------------------------------------
+        push    HL
+
+        inc     HL              ; skip the `limit` field
+        ld      D,      [HL]    ; read the pool address, lo-byte
+        inc     HL
+        ld      E,      [HL]    ; read the pool address, hi-byte
+
+        pop     HL
+        ret
+
+
 getPilePos:
 ;===============================================================================
 ; retrieve the row & column co-ordinates (on the tile-map) of a pile:
 ; these are tile co-ordinates, NOT pixels!
 ;
 ; in:   HL      address of the pile-structure
-;               (NOT the pile storage address)
+;               (NOT the pile pool address)
 ;
 ; out:  B       row number of the pile on the tile-map
 ;       C       column number of the pile on-screen
@@ -312,6 +331,7 @@ getPilePos:
         ; is excruciating...
         ;
         push    HL
+
         ld      B,      0
         ld      C,      Pile.row
         add     HL,     BC
