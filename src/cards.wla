@@ -51,6 +51,10 @@
         pool            WORD    ; address of storage for card pile
         row             BYTE    ; row position on the tilemap (not pixels!)
         col             BYTE    ; column position on the tilemap (not pixels!)
+        left            BYTE    ; pile to the left of this one (lo-byte)
+        right           BYTE    ; pile to the right of this one (lo-byte)
+        up              BYTE    ; pile above this one (lo-byte)
+        down            BYTE    ; pile below this one (lo-byte)
 .ENDST
 
 ; define some RAM to hold cards during a game:
@@ -212,6 +216,17 @@ allocatePile:
         ld      [HL],   B               ; write row (Y)
         inc     L
         ld      [HL],   C               ; write column (X)
+        inc     L
+
+        ; positional data (TODO)
+        ld      [HL],   0
+        inc     L
+        ld      [HL],   0
+        inc     L
+        ld      [HL],   0
+        inc     L
+        ld      [HL],   0
+        ; must increment so as to move HL to the next Pile struct!
         inc     L
 
         ; clear the allocated card storage

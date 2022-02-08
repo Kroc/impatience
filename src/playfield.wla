@@ -66,6 +66,9 @@ drawDeck:
         ;       next Pile structure. by returning this HL value, the caller
         ;       can draw multiple piles that follow one another (e.g tableaus)
         inc     L
+        inc     L
+        inc     L
+        inc     L
         push    HL
 
         ; draw deck:
@@ -130,6 +133,9 @@ drawPile:
         ; NOTE: by incrementing L here, we have automatically moved onto the
         ;       next Pile structure. by returning this HL value, the caller
         ;       can draw multiple piles that follow one another (e.g tableau)
+        inc     L
+        inc     L
+        inc     L
         inc     L
         push    HL
 
