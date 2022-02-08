@@ -46,34 +46,86 @@ init:
         res     7,      [HL]            ; (this is why we load HL with LCDC)
 
         ; clear VRAM:
-        xor     A                       ; (set A to 0)
         ld      HL,     VRAM
--       ld      [HL+],  A
-        bit     5,      H               ; have we hit 8'192 bytes?
-        jr      z, -                    ; i.e. %00010000_00000000
+        ld      BC,     8192
+        call    zero
 
         ; clear sprite registers (OAM)
         ld      HL,     OAM
-        ld      C,      40              ; number of sprites
-        xor     A                       ; (set A to zero)
--       ld      [HL+],  A               ; set sprite Y to zero
-        ld      [HL+],  A               ; set sprite X to zero
-        ld      [HL+],  A               ; set sprite tile index to zero
-        ld      [HL+],  A               ; set sprite attributes to zero
-        dec     C
-        jr      nz,     -
+        ld      BC,     (40 * 4)
+        call    zero
 
         ei
 
         ; begin initialising the game:
         ;-----------------------------------------------------------------------
-        call	sprites.init
-        call	tilemap.init
-        call	acesup.init
+        call    sprites.init
+        call    tilemap.init
+        call    acesup.init
         
 -       rst     rst_waitVBlank
         jr      -
 
+
+zero:
+;===============================================================================
+; zero-out any area of RAM:
+;
+; in:   HL      starting address to zero
+;       BC      number of bytes to clear (1-based)
+;
+; out:  HL, BC  (clobbered)
+;       A       (clobbered)
+;-------------------------------------------------------------------------------
+        ; if the hi-byte is non-zero it's guaranteed that >255 bytes
+        ; remain and we can simply zero 255 bytes at a time!
+        xor     A                       ; (set A to zero)
+        cp      B                       ; (set flags!)
+        jp      z,      +
+
+        ; since the auto-incrementing `ldi` instruction is only 1 byte,
+-       ; this is very memory efficient for the speed it provides
+.REPEAT 256
+        ld      [HL+],  A
+.ENDR
+        dec     B                       ; one page copied, any remain?
+        jp      nz,     -               ; keep copying until B=0
+
+        ; if the lo-byte is $00 then there are no individual
+        ; bytes left to copy, we can exit early
+        cp      C
+        ret     z
+
+        ; <256 bytes remain:
+        ;
+        ; we try zero 8 bytes at a time for speed, thus we have
+        ; to check for when there's less than 8 bytes remaining
+        ;
+-       ld      A,      8               ; more than 8-bytes remaining?
+        cp      C
+        jr      c,      +               ; zero only one byte at a time
+
+        ; zero 8 bytes at a time
+        xor     A                       ; (set A to zero)
+        ld      [HL+],  A
+        ld      [HL+],  A
+        ld      [HL+],  A
+        ld      [HL+],  A
+        ld      [HL+],  A
+        ld      [HL+],  A
+        ld      [HL+],  A
+        ld      [HL+],  A
+
+        dec     C
+        jr      nz,     -
+
+        ret
+
++       xor     A                       ; (set A to zero)
+        ld      [HL+],  A
+        dec     C
+        jr      nz,     -
+        ret
 
 ;===============================================================================
 .INC    "cards.wla"             NAMESPACE "cards"

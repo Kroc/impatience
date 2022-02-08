@@ -94,19 +94,12 @@ clear:
 ; clear all piles, card storage:
 ;
 ; out:  DE      first address of the card storage pool
-;       A, BC   set to zero, by nature of looping
+;       BC, A   set to zero, by nature of looping
 ;       HL      (clobbered)
 ;-------------------------------------------------------------------------------
         ld      HL,     SECTIONSTART_cards.table
         ld      BC,     (SECTIONEND_cards.table - SECTIONSTART_cards.table)+1
-        xor     A                       ; (set A to zero)
--       ld      [HL+],  A               ; clear a byte
-        
-        ; watch out! 16-bit decrement doesn't set flags!
-        dec     C
-        jr      nz,     -
-        dec     B
-        jr      nz,     -
+        call    zero
         
         ; return the starting address of the card pool
         ; (used for allocating piles)

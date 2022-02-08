@@ -199,24 +199,24 @@ tilemap_back:
 init:
 ;===============================================================================
         ldh     A,      [<LCDC]
-	or	LCDC.window_select	; use $9C00 for the window-map
-	or  	LCDC.bg_display		; turn background on
+        or      LCDC.window_select      ; use $9C00 for the window-map
+        or      LCDC.bg_display         ; turn background on
         ldh     [<LCDC],        A
 
-	call    clearQueue              ; clear the tile update queue
-        call	copyMainTileset	        ; copy main tileset from ROM to VRAM
-        
-	call	playfield.clear		; clear the playfield background
-	call    menu.clear		; clear and draw the menu
+        call    clearQueue              ; clear the tile update queue
+        call    copyMainTileset         ; copy main tileset from ROM to VRAM
+
+        call    playfield.clear         ; clear the playfield background
+        call    menu.clear              ; clear and draw the menu
 
         call    refresh
 
-	; set palette:
-	ld	A,	%11100100
-	ld 	[BGP], 	A
+        ; set palette:
+        ld      A,      %11100100
+        ld      [BGP],  A
 
-	rst     rst_screenOn
-	ret
+        rst     rst_screenOn
+        ret
 
 
 clearQueue:
