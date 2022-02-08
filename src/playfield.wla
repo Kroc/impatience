@@ -307,20 +307,34 @@ pointToCard:
         jp      cursor.moveToPos
 
 
-moveCursorDown:
+getCursorPile:
 ;===============================================================================
-; move the cursor down, either going through a pile of cards,
-; or downward to the nearest pile below the current one
+; returns the address of the Pile struct the cursor is pointing to:
+;
+; out:  HL      ; address of the Pile the cursor is pointing at
+;       A       ; card number being pointed to
+;       DE      ; (clobbered)
 ;-------------------------------------------------------------------------------
-        ; retrieve current pile location:
+        ; retrieve current pile location into DE
         ld      HL,     cursor_pile
         ld      D,      [HL]
         inc     HL
         ld      E,      [HL]
         inc     HL
-        ld      B,      [HL]            ; card number being pointed to
+        ; retrieve card number being pointed to
+        ld      A,      [HL]
         ld      H,      D
         ld      L,      E
+        ret
+
+
+moveCursorDown:
+;===============================================================================
+; move the cursor down, either going through a pile of cards,
+; or downward to the nearest pile below the current one
+;-------------------------------------------------------------------------------
+        call    getCursorPile           ; retrieve current pile location
+        ld      B,      A               ; card number pointed at
 
         ; have we reached the bottom of the pile?
         ;-----------------------------------------------------------------------
@@ -337,4 +351,21 @@ moveCursorDown:
 
         ld      A,      B
         inc     A
+        jp      pointToCard
+
+
+moveCursorUp:
+;===============================================================================
+; move the cursor up, either going through a pile of cards,
+; or upwards to the nearest pile above the current one
+;-------------------------------------------------------------------------------
+        ; retrieve current pile location (HL) and card number pointed at (A)
+        call    getCursorPile
+        and     A,      A               ; (set flags!)
+        
+        ; is the current position 0? i.e. at the
+        ; bottom (top, visually) of the pile?
+        ret     z
+
+        dec     A
         jp      pointToCard

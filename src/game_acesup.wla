@@ -117,19 +117,32 @@ init:
 
         ; play loop:
         ;=======================================================================
-@main:  
-        ; check controls:
-        ;-----------------------------------------------------------------------
+@main:  call handleControls
+
+        jp @main
+
+
+handleControls:
+;===============================================================================
+; handles controller input:
+;
+; being a routine, we can just return after processing a button press,
+; avoiding an additional jump outside of the switch block
+;-------------------------------------------------------------------------------
         ; wait for a button press. this will halt the CPU
         ; between vblanks until a new button is pressed
         call    getButton
 
         ; cursor down?
-        ;-----------------------------------------------------------------------
         bit     BUTTON_DOWN,    A
         jr      z,      +
 
-        call    playfield.moveCursorDown
-+
+        jp      playfield.moveCursorDown
 
-        jp @main
+        ; cursor up?
++       bit     BUTTON_UP,      A
+        jr      z,      +
+
+        jp      playfield.moveCursorUp
+
++       ret

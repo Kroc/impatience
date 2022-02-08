@@ -113,6 +113,7 @@ update:
         jr      z,      @y              ; if equal, no horizontal movement
 
         ; move in the X-direction:
+        ; TODO: apply min/max speed?
         ;
         sra     A
         sra     A
