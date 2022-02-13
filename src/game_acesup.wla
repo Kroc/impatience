@@ -1,6 +1,32 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
+; create template card piles for the intial setup of the game
+;-------------------------------------------------------------------------------
+        ; label, max.cards      row, col,
+        ; pile-left,            pile-right,
+        ; pile-up,              pile-down
+cards.Pile \
+        acesup_deck, 52,        1, MENU_WIDTH + 1, \
+        cards.tableau4,         cards.tableau1, \
+        cards.deck,             cards.deck
+cards.Pile \
+        acesup_tableau1, 13,    1, MENU_WIDTH + 5, \
+        cards.deck,             cards.tableau2, \
+        cards.tableau1,         cards.tableau1
+cards.Pile \
+        acesup_tableau2, 13,    1, MENU_WIDTH + 8 \
+        cards.tableau1,         cards.tableau3, \
+        cards.tableau2,         cards.tableau2
+cards.Pile \
+        acesup_tableau3, 13,    1, MENU_WIDTH + 11 \
+        cards.tableau2,         cards.tableau4, \
+        cards.tableau3,         cards.tableau3
+cards.Pile \
+        acesup_tableau4, 13,    1, MENU_WIDTH + 14 \
+        cards.tableau3,         cards.deck, \
+        cards.tableau4,         cards.tableau4
+
 
 init:
 ;===============================================================================
@@ -21,25 +47,17 @@ init:
         call    cards.clear
 
         ; allocate the deck:
-        ld      B,      1               ; row
-        ld      C,      MENU_WIDTH + 1  ; column
+        ld      BC,     acesup_deck
         call    cards.allocateDeck
 
-        ; allocate the tableau:
+        ; allocate the tableaus:
         ld      HL,     cards.tableau1
-        ld      C,      MENU_WIDTH + 5  ; column, row is re-used
-        ld      A,      13              ; max. number of cards
+        ld      BC,     acesup_tableau1
         call    cards.allocatePile
-
         ; tableau 2, 3 & 4 all follow in order,
-        ; so we do not need to set HL again
-        ld      C,      MENU_WIDTH + 8  ; column, row is re-used
+        ; so we do not need to set HL & BC again
         call    cards.allocatePile
-
-        ld      C,      MENU_WIDTH + 11 ; column, row is re-used
         call    cards.allocatePile
-
-        ld      C,      MENU_WIDTH + 14 ; column, row is re-used
         call    cards.allocatePile
 
         ;-----------------------------------------------------------------------
@@ -56,7 +74,7 @@ init:
         call    cards.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
         call    cards.addCard
-        
+
         ld      A,      CARD_K | SUIT_SPADE
         call    cards.addCard
         ld      A,      CARD_Q | SUIT_HEART
@@ -71,18 +89,18 @@ init:
         call    cards.addCard
         ld      A,      CARD_7 | SUIT_CLUB
         call    cards.addCard
-        ld      A,      CARD_6 | SUIT_DIAMOND
-        call    cards.addCard
-        ld      A,      CARD_5 | SUIT_SPADE
-        call    cards.addCard
-        ld      A,      CARD_4 | SUIT_HEART
-        call    cards.addCard
-        ld      A,      CARD_3 | SUIT_CLUB
-        call    cards.addCard
-        ld      A,      CARD_2 | SUIT_DIAMOND
-        call    cards.addCard
-        ld      A,      CARD_A | SUIT_SPADE
-        call    cards.addCard
+        ;;ld      A,      CARD_6 | SUIT_DIAMOND
+        ;;call    cards.addCard
+        ;;ld      A,      CARD_5 | SUIT_SPADE
+        ;;call    cards.addCard
+        ;;ld      A,      CARD_4 | SUIT_HEART
+        ;;call    cards.addCard
+        ;;ld      A,      CARD_3 | SUIT_CLUB
+        ;;call    cards.addCard
+        ;;ld      A,      CARD_2 | SUIT_DIAMOND
+        ;;call    cards.addCard
+        ;;ld      A,      CARD_A | SUIT_SPADE
+        ;;call    cards.addCard
 
         ld      HL,     cards.tableau2
         ld      A,      CARD_J | SUIT_HEART

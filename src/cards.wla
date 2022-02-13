@@ -1,7 +1,6 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-
 ; card bytes:
 ;===============================================================================
 ; this section defines how we store cards in memory, one byte per card
@@ -88,6 +87,27 @@
         storage         DSB 1024
 .ENDS
 
+.DEF    __pool_addr     cards.storage
+
+.MACRO  Pile
+;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+.DSTRUCT \1 INSTANCEOF Pile VALUES
+        limit:          .BYTE   \2
+        pool:           .WORD   __pool_addr
+        row:            .BYTE   \3
+        col:            .BYTE   \4
+        left:           .BYTE   <\5
+        right:          .BYTE   <\6
+        up:             .BYTE   <\7
+        down:           .BYTE   <\8
+.ENDST
+
+.REDEF  __pool_addr     __pool_addr+\2+1
+
+;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+.ENDM
+
 
 clear:
 ;===============================================================================
@@ -112,27 +132,13 @@ allocateDeck:
 ; allocates the deck: (this is always 52 cards in size)
 ; the deck is populated with cards, but not shuffled
 ;
-; in:   B       row (Y) of the pile on the tilemap
-;       C       column (X) of the pile on the tilemap
-;
-;       DE      address to set as the data-store for the pile,
-;               i.e. where the "cards", each a byte, will be stored
+; in:   BC      address to a Pile structure (in ROM) to copy from
 ;-------------------------------------------------------------------------------
-        ld      HL,     deck            ; address of deck structure
-        ld      A,      52              ; size-limit of deck
-
-        ; backup our starting storage address because after
-        ; allocating we want to go back and populate the deck
-        push    DE
-
         ; HL    address of pile structure (`deck`)
-        ; DE    address in storage pool
-        ; BC    row & column to draw the deck
-        ;  A    number of cards in deck
-        ;
+        ; BC    address of template Pile in ROM
+        ld      HL,     deck
         call    allocatePile
 
-        pop     DE                      ; return to starting storage address
         push    BC                      ; preserve B & C
 
         ; fill the deck with cards:
@@ -158,8 +164,7 @@ allocateDeck:
         jr      z,      @next           ; no, do next suit
 
         ;-----------------------------------------------------------------------
-        pop     BC                      ; restore original B & C
-        ld      A,      52              ; preserve size-limit of deck
+        pop     BC                      ; restore B & C
         ret
 
 
@@ -168,66 +173,69 @@ allocatePile:
 ; allocates a pile where cards will be stored:
 ; e.g. a deck, hand, foundation or tableau, etc.
 ;
-; in:   A       maximum size (the limit) of the pile,
-;               i.e. how many cards the pile can hold
-;
-;       HL      address of the `Pile` structure;
+; in:   HL      address of the working Pile structure in RAM;
 ;               this consists of a set of properties that will be filled out
 ;
-;       DE      address to set as the data-store for the pile,
-;               i.e. where the "cards", each a byte, will be stored
-;               this area will be cleared, according to the limit set
+;       BC      address of the template Pile structure (in ROM) to copy
 ;
-;       B       row position of the pile on the tilemap
-;       C       column position of the pile on the tilemap
-;
-; out:  HL      the structure address is moved forward over the `Pile`
+; out:  HL      the structure address is moved forward over the Pile
 ;               structure. useful if you are allocating multiple piles
 ;               that directly follow each other in RAM
 ;
-;       DE      the storage address is moved forward by the pile-size
-;               allocated. this is so that you can allocate one pile
-;               after another
+;       DE      address of the card pool for the pile, i.e. where the "cards",
+;               each a byte, will be stored. this area will already have been
+;               cleared according to the limit set in the template Pile
 ;
-;       AF, BC  (preserved)
+;       AF      (clobbered)
 ;-------------------------------------------------------------------------------
-        push    AF                      ; preserve the A-register
+        ; copy the Pile template (in ROM) over the working Pile in RAM:
+        ; first byte is maximum number of cards in the pile
+        ld      A,      [BC]
+        ld      [HL+],  A               ; move HL (RAM) forward
+        inc     C                       ; move BC (ROM) forward
+        ; put this aside until we clear the pile's card pool
+        push    AF
 
-        ; the first byte is the number of bytes reserved for storage
+        ; next two bytes are the storage address;
+        ; we put this aside in DE for later
+        ld      A,      [BC]
+        ld      E,      A               ; lo-byte first
         ld      [HL+],  A
-
-        ; the next two bytes are the address to the card-storage:
-        ; (note that we can get away with only incrementing L
-        ;  as the pile structures all fit within 256 bytes)
-        ld      [HL],   D
-        inc     L
-        ld      [HL],   E
-        inc     L
+        inc     C
+        ld      A,      [BC]
+        ld      D,      A               ; hi-byte next
+        ld      [HL+],  A
+        inc     C
 
         ; next is the row/column position on the tilemap
-        ; (these are separate byte fields, so not little-endian order)
-        ld      [HL],   B               ; write row (Y)
-        inc     L
-        ld      [HL],   C               ; write column (X)
-        inc     L
+        ld      A,      [BC]            ; read row (Y) from ROM
+        ld      [HL+],  A               ; write to RAM
+        inc     C
+        ld      A,      [BC]            ; read column (X) from ROM
+        ld      [HL+],  A               ; write to RAM
+        inc     C
 
-        ; positional data (TODO)
-        ld      [HL],   0
-        inc     L
-        ld      [HL],   0
-        inc     L
-        ld      [HL],   0
-        inc     L
-        ld      [HL],   0
-        ; must increment so as to move HL to the next Pile struct!
-        inc     L
+        ; positional data:
+        ld      A,      [BC]            ; pile left
+        ld      [HL+],  A
+        inc     C
+        ld      A,      [BC]            ; pile right
+        ld      [HL+],  A
+        inc     C
+        ld      A,      [BC]            ; pile top
+        ld      [HL+],  A
+        inc     C
+        ld      A,      [BC]            ; pile down
+        ld      [HL+],  A
+        inc     C
 
         ; clear the allocated card storage
         ;-----------------------------------------------------------------------
-        push    BC                      ; (preserve B & C registers)
+        pop     AF                      ; retrieve max. card count
+        push    BC                      ; preserve ROM address
+        push    DE                      ; keep original pool address
 
         ld      B,      A               ; copy card-limit to counter
-        inc     B                       ; (account for 1-based count)
         inc     B                       ; first byte is number of cards... 
         xor     A                       ; ...in the pile, i.e. zero
         
@@ -236,9 +244,9 @@ allocatePile:
         dec     B                       ; one less byte to fill
         jr      nz, -                   ; have we done all of them?
 
-        ;-----------------------------------------------------------------------
-        pop     BC                      ; restore original B & C registers
-        pop     AF                      ; restore original A register
+        pop     DE                      ; restore original pool address
+        pop     BC                      ; restore current ROM address
+        
         ret
 
 
@@ -262,9 +270,9 @@ addCard:
         ;       begin at an $xx00 address and don't exceed 256 bytes
         inc     L
         ; read the storage address:
-        ld      D,      [HL]
+        ld      E,      [HL]            ; lo-byte first
         inc     L
-        ld      E,      [HL]
+        ld      D,      [HL]            ; then hi-byte
 
         ; from that, read the first byte of the card pool
         ; (the number of cards in the pile)
@@ -287,6 +295,7 @@ addCard:
         ld      A,      B               ; retrieve card to add
         ld      [DE],   A               ; write to pile
         
+        scf
         ccf
 
         pop     HL                      ; return original HL
@@ -295,6 +304,8 @@ addCard:
         ; pile is full!
         ;-----------------------------------------------------------------------
 @full:  scf
+
+        ld      B,      B
 
         pop     HL                      ; return original HL
         ret
@@ -307,13 +318,14 @@ getPilePool:
 ;
 ; in:   HL      address of a Pile structure (e.g. deck, tableau)
 ; out:  DE      address of the pile's card pool
+;       HL, A   (preserved)
 ;-------------------------------------------------------------------------------
         push    HL
 
         inc     HL              ; skip the `limit` field
-        ld      D,      [HL]    ; read the pool address, lo-byte
+        ld      E,      [HL]    ; read the pool address, lo-byte
         inc     HL
-        ld      E,      [HL]    ; read the pool address, hi-byte
+        ld      D,      [HL]    ; read the pool address, hi-byte
 
         pop     HL
         ret

@@ -1,6 +1,6 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
-
+;
 .DEF    MENU_WIDTH              12
 
 

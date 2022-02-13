@@ -1,7 +1,6 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-
 ; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32 playfield.
 ; for our purposes we place the menu on the left and the playfield next to it,
 ; therefore the playfield begins at X = 12 and not the top-left (X = 0)
@@ -54,9 +53,9 @@ drawDeck:
 ;
 ;-------------------------------------------------------------------------------
         ld      HL,     cards.deck.pool ; address of deck pile
-        ld      D,      [HL]            ; read cards-address, lo-byte
+        ld      E,      [HL]            ; read cards-address, lo-byte
         inc     L
-        ld      E,      [HL]            ; read cards-address, hi-byte
+        ld      D,      [HL]            ; read cards-address, hi-byte
         inc     L
         ld      B,      [HL]            ; read row
         inc     L
@@ -86,7 +85,7 @@ drawDeck:
         ; get an address in the front-buffer for the X/Y co-ords
         call    tilemap.getBufferAddr
         ; draw out the tiles for the deck
-        ld      DE,     tilemap.tilemap_deck     
+        ld      DE,     tilemap.tilemap_deck
         call    tilemap.writeTiles_3wide_5rows
 
         ;-----------------------------------------------------------------------
@@ -122,13 +121,14 @@ drawPile:
         ;       although we also need the pool address
         ;
         inc     HL                      ; skip over the max-cards byte
-        ld      D,      [HL]            ; read cards-address, hi-byte
-        inc     L
         ld      E,      [HL]            ; read cards-address, lo-byte
+        inc     L
+        ld      D,      [HL]            ; read cards-address, hi-byte
         inc     L
         ld      B,      [HL]            ; read row
         inc     L
-        ld      C,      [HL]            ; read column 
+        ld      C,      [HL]            ; read column
+        inc     L
 
         ; NOTE: by incrementing L here, we have automatically moved onto the
         ;       next Pile structure. by returning this HL value, the caller
@@ -288,10 +288,10 @@ pointToCard:
         push    AF                      ; A holds the card number to point to
 
         ; save the address of the pile to point to
-        ld      A,      H
+        ld      A,      L
         ld      [DE],   A
         inc     DE
-        ld      A,      L
+        ld      A,      H
         ld      [DE],   A
         inc     DE
         ; save the card number to point to
@@ -323,9 +323,9 @@ getCursorPile:
 ;-------------------------------------------------------------------------------
         ; retrieve current pile location into DE
         ld      HL,     cursor_pile
-        ld      D,      [HL]
+        ld      E,      [HL]            ; pool address, lo-byte
         inc     HL
-        ld      E,      [HL]
+        ld      D,      [HL]            ; pool address, hi-byte
         inc     HL
         ; retrieve card number being pointed to
         ld      A,      [HL]
