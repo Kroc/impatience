@@ -10,62 +10,6 @@
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 .ENDM
 
-; define the conversion from ASCII to the tile-numbers in our tileset:
-;
-.ASCIITABLE
-        ;-----------------------------------------------------------------------
-        MAP   0 TO 127  = $80
-        MAP 128 TO 255  = $00
-        
-        MAP     " "     = $81
-        MAP     "0"     = $86
-        MAP     "1"     = $87
-        MAP     "2"     = $88
-        MAP     "3"     = $89
-        MAP     "4"     = $8a
-        MAP     "5"     = $8b
-        MAP     "6"     = $8c
-        MAP     "7"     = $8d
-        MAP     "8"     = $8e
-        MAP     "9"     = $8f
-        MAP     "a"     = $90
-        MAP     "b"     = $91
-        MAP     "c"     = $92
-        MAP     "d"     = $93
-        MAP     "e"     = $94
-        MAP     "f"     = $95
-        MAP     "g"     = $96
-        MAP     "h"     = $97
-        MAP     "i"     = $98
-        MAP     "j"     = $99
-        MAP     "k"     = $9a
-        MAP     "l"     = $9b
-        MAP     "m"     = $9c
-        MAP     "n"     = $9d
-        MAP     "o"     = $9e
-        MAP     "p"     = $9f
-        MAP     "q"     = $ad
-        MAP     "r"     = $ae
-        MAP     "s"     = $af
-        MAP     "t"     = $bd
-        MAP     "u"     = $be
-        MAP     "v"     = $bf
-        MAP     "w"     = $cd
-        MAP     "x"     = $ce
-        MAP     "y"     = $cf
-        MAP     "z"     = $dd
-        MAP     "A"     = $de          ; GameBoy button "A"
-        MAP     "B"     = $df          ; GameBoy button "B"
-        MAP     "!"     = $ed
-        MAP     ","     = $ee
-        MAP     "."     = $ef
-        MAP     "S"     = $82          ; spades symbol
-        MAP     "C"     = $83          ; clubs symbol
-        MAP     "H"     = $84          ; hearts symbol
-        MAP     "D"     = $85          ; diamonds symbol
-.ENDA
-
-
 print_str:
 ;===============================================================================
 ; print a length-prefixed string:

@@ -40,12 +40,29 @@
 .DEF    CARD_Q          %00001100
 .DEF    CARD_K          %00001101
 
-.STRUCT "Pile"
+; the different kinds of piles:
+;
+; regardless of the number of cards in a "deck" pile,
+; it always displays as one face-down card
+.DEF    PILE_DECK       1
+; like a "deck", the foundation does not spread,
+; but differs by displaying the top card face-up
+.DEF    PILE_FOUNDATION 2
+; a downward spread of cards as you would typically see in Klondike
+.DEF    PILE_COLUMN     3
+
+; for piles that spread to the right, instead of down the screen
+; this flag can be added to the pile type
+.DEF    PILE_HORZ       %10000000
+.DEF    PILE_ROW        PILE_COLUMN | PILE_HORZ
+
+.STRUCT Pile
         ;-----------------------------------------------------------------------
         ; we place the limit byte first so that when moving cards around,
         ; we can validate the movement without having to skip over fields
         ; that we will need to come back to
         ;
+        type            BYTE    ; type of pile, i.e. deck, hand, foundation &c.
         limit           BYTE    ; max.number of cards allowed in pile
         pool            WORD    ; address of storage for card pile
         row             BYTE    ; row position on the tilemap (not pixels!)
@@ -89,21 +106,33 @@
 
 .DEF    __pool_addr     cards.storage
 
-.MACRO  Pile
+; use this macro before defining a set of piles in ROM
+; in order to reset the starting pool address
+;
+.MACRO  BeginPiles
+;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+.REDEF  __pool_addr     cards.storage
+;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+.ENDM
+
+; this macro simplifies writing a pre-defined Pile of cards into ROM
+;
+.MACRO  DefinePile
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 .DSTRUCT \1 INSTANCEOF Pile VALUES
-        limit:          .BYTE   \2
+        type:           .BYTE   \2
+        limit:          .BYTE   \3
         pool:           .WORD   __pool_addr
-        row:            .BYTE   \3
-        col:            .BYTE   \4
-        left:           .BYTE   <\5
-        right:          .BYTE   <\6
-        up:             .BYTE   <\7
-        down:           .BYTE   <\8
+        row:            .BYTE   \4
+        col:            .BYTE   \5
+        left:           .BYTE   <\6
+        right:          .BYTE   <\7
+        up:             .BYTE   <\8
+        down:           .BYTE   <\9
 .ENDST
 
-.REDEF  __pool_addr     __pool_addr+\2+1
+.REDEF  __pool_addr     __pool_addr+\3+1
 
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 .ENDM
@@ -134,7 +163,7 @@ allocateDeck:
 ;
 ; in:   BC      address to a Pile structure (in ROM) to copy from
 ;-------------------------------------------------------------------------------
-        ; HL    address of pile structure (`deck`)
+        ; HL    address of Pile structure (`deck`)
         ; BC    address of template Pile in ROM
         ld      HL,     deck
         call    allocatePile
@@ -189,11 +218,16 @@ allocatePile:
 ;       AF      (clobbered)
 ;-------------------------------------------------------------------------------
         ; copy the Pile template (in ROM) over the working Pile in RAM:
-        ; first byte is maximum number of cards in the pile
+        ;
+        ; first byte is the type of the Pile
         ld      A,      [BC]
         ld      [HL+],  A               ; move HL (RAM) forward
         inc     C                       ; move BC (ROM) forward
-        ; put this aside until we clear the pile's card pool
+        ; next byte is maximum number of cards in the pile
+        ld      A,      [BC]
+        ld      [HL+],  A               ; move HL (RAM) forward
+        inc     C                       ; move BC (ROM) forward
+        ; put this aside until we clear the Pile's card pool
         push    AF
 
         ; next two bytes are the storage address;
@@ -229,16 +263,16 @@ allocatePile:
         ld      [HL+],  A
         inc     C
 
-        ; clear the allocated card storage
+        ; clear the allocated card storage:
         ;-----------------------------------------------------------------------
         pop     AF                      ; retrieve max. card count
         push    BC                      ; preserve ROM address
         push    DE                      ; keep original pool address
 
         ld      B,      A               ; copy card-limit to counter
-        inc     B                       ; first byte is number of cards... 
+        inc     B                       ; first byte is number of cards...
         xor     A                       ; ...in the pile, i.e. zero
-        
+
 -       ld      [DE],   A               ; clear one byte
         inc     DE                      ; move to the next byte
         dec     B                       ; one less byte to fill
@@ -265,9 +299,11 @@ addCard:
         ld      B,      A               ; put aside card to add for later
 
         ; read the max. number of cards allowed in the pile:
-        ld      C,      [HL]
+        ;
         ; NOTE: we can get away with only incrementing L because the piles
         ;       begin at an $xx00 address and don't exceed 256 bytes
+        inc     L                       ; (2nd byte in Pile struct)
+        ld      C,      [HL]
         inc     L
         ; read the storage address:
         ld      E,      [HL]            ; lo-byte first
@@ -305,7 +341,7 @@ addCard:
         ;-----------------------------------------------------------------------
 @full:  scf
 
-        ld      B,      B
+        ld      B,      B               ; DEBUG
 
         pop     HL                      ; return original HL
         ret
@@ -322,9 +358,10 @@ getPilePool:
 ;-------------------------------------------------------------------------------
         push    HL
 
-        inc     HL              ; skip the `limit` field
+        inc     L               ; skip the `type` field
+        inc     L               ; skip the `limit` field
         ld      E,      [HL]    ; read the pool address, lo-byte
-        inc     HL
+        inc     L
         ld      D,      [HL]    ; read the pool address, hi-byte
 
         pop     HL
@@ -336,7 +373,7 @@ getPilePos:
 ; retrieve the row & column co-ordinates (on the tile-map) of a pile:
 ; these are tile co-ordinates, NOT pixels!
 ;
-; in:   HL      address of the pile-structure
+; in:   HL      address of the Pile structure
 ;               (NOT the pile pool address)
 ;
 ; out:  B       row number of the pile on the tile-map
@@ -355,6 +392,7 @@ getPilePos:
         ld      B,      0
         ld      C,      Pile.row
         add     HL,     BC
+        
         ld      B,      [HL]
         inc     L
         ld      C,      [HL]

@@ -64,15 +64,15 @@ drawDeck:
         ; NOTE: by incrementing L here, we have automatically moved onto the
         ;       next Pile structure. by returning this HL value, the caller
         ;       can draw multiple piles that follow one another (e.g tableaus)
-        inc     L
-        inc     L
-        inc     L
-        inc     L
+        inc     L                       ; (skip `left`)
+        inc     L                       ; (skip `right`)
+        inc     L                       ; (skip `up`)
+        inc     L                       ; (skip `down`)
         push    HL
 
         ; draw deck:
         ;-----------------------------------------------------------------------
-        ; read the card-count from the first-byte in the pile's card pool.
+        ; read the card-count from the the pile's card pool.
         ; if the deck is empty, draw its outline instead
         ;
         ld      A,      [DE]            ; number of cards in pile
@@ -116,11 +116,11 @@ drawPile:
 ;
 ; out:  HL      HL is moved forward to the next Pile structure
 ;-------------------------------------------------------------------------------
-        
         ; TODO: use `cards.getPilePos` here?
         ;       although we also need the pool address
         ;
-        inc     HL                      ; skip over the max-cards byte
+        inc     L                       ; skip over the `type` field
+        inc     L                       ; skip over the `limit` field
         ld      E,      [HL]            ; read cards-address, lo-byte
         inc     L
         ld      D,      [HL]            ; read cards-address, hi-byte
@@ -274,7 +274,7 @@ pointToCard:
 ; move the cursor to a specific card in a pile:
 ;
 ; in:   HL      address of the Pile structure
-;       A       number of the card in the pile, 0-based
+;       A       number of the card in the pile, 0-based!
 ;
 ; out:  B       row number of the card (not pixels!)
 ;       C       column number of the card (not pixels!)
@@ -346,6 +346,8 @@ moveCursorDown:
         ;-----------------------------------------------------------------------
         call    cards.getPilePool       ; get pool address from the pile
         ld      A,      [DE]            ; first byte is number of cards in pile
+        ld      A,      A
+        ret     z
         dec     A                       ; (adjust for 1-based)
         
         ; compare A (number of cards) with B (current card)
@@ -358,7 +360,6 @@ moveCursorDown:
         ld      A,      B
         inc     A
         jp      pointToCard
-
 
 moveCursorUp:
 ;===============================================================================
@@ -374,4 +375,62 @@ moveCursorUp:
         ret     z
 
         dec     A
+        jp      pointToCard
+
+moveCursorLeft:
+;===============================================================================
+; move the cursor left
+;-------------------------------------------------------------------------------
+        ; retrieve current pile location (HL)
+        call    getCursorPile
+
+        ; read the number of cards in the pile (first field) --
+        ; we want to move the cursor to the top of the pile
+        ; (furthest *down* the screen) and not to the bottom
+        ;
+        call    cards.getPilePool       ; get pool address from the pile
+        ld      A,      [DE]            ; first byte is number of cards in pile
+        dec     A                       ; (adjust for 1-based)
+
+        ; move to the field that contains the pile to the left
+        ld      B,      0
+        ld      C,      Pile.left
+        add     HL,     BC
+        ; read the lo-byte of the address of the pile to the left
+        ld      L,      [HL]
+        ; set the hi-byte for the piles
+        ld      H,      >SECTIONSTART_cards.table
+        
+        xor     A
+        ; note that A has not changed and is still the index
+        ; of the last card in the pile we are moving to
+        jp      pointToCard
+
+moveCursorRight:
+;===============================================================================
+; move the cursor right
+;-------------------------------------------------------------------------------
+        ; retrieve current pile location (HL)
+        call    getCursorPile
+
+        ; read the number of cards in the pile (first field) --
+        ; we want to move the cursor to the top of the pile
+        ; (furthest *down* the screen) and not to the bottom
+        ;
+        call    cards.getPilePool       ; get pool address from the pile
+        ld      A,      [DE]            ; first byte is number of cards in pile
+        dec     A                       ; (adjust for 1-based)
+
+        ; move to the field that contains the pile to the right
+        ld      B,      0
+        ld      C,      Pile.right
+        add     HL,     BC
+        ; read the lo-byte of the address of the pile to the right
+        ld      L,      [HL]
+        ; set the hi-byte for the piles
+        ld      H,      >SECTIONSTART_cards.table
+        
+        xor     A
+        ; note that A has not changed and is still the index
+        ; of the last card in the pile we are moving to
         jp      pointToCard
