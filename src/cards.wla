@@ -44,12 +44,12 @@
 ;
 ; regardless of the number of cards in a "deck" pile,
 ; it always displays as one face-down card
-.DEF    PILE_DECK       1
+.DEF    PILE_DECK       %00000001
 ; like a "deck", the foundation does not spread,
 ; but differs by displaying the top card face-up
-.DEF    PILE_FOUNDATION 2
+.DEF    PILE_FOUNDATION %00000010
 ; a downward spread of cards as you would typically see in Klondike
-.DEF    PILE_COLUMN     3
+.DEF    PILE_COLUMN     %00000100
 
 ; for piles that spread to the right, instead of down the screen
 ; this flag can be added to the pile type

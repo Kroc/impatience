@@ -342,9 +342,20 @@ moveCursorDown:
         call    getCursorPile           ; retrieve current pile location
         ld      B,      A               ; card number pointed at
 
-        ; have we reached the bottom of the pile?
+        ; first byte is the type of Pile
+        ld      A,      [HL]
+        
+        bit     0,      A               ; deck?
+        ret     nz                      ; TODO: move to next pile below
+
+        bit     2,      A               ; column?
+        jr      nz,     @col
+
+        ld      B,      B               ; DEBUG!
+
++       ; have we reached the bottom of the column?
         ;-----------------------------------------------------------------------
-        call    cards.getPilePool       ; get pool address from the pile
+@col:   call    cards.getPilePool       ; get pool address from the pile
         ld      A,      [DE]            ; first byte is number of cards in pile
         ld      A,      A
         ret     z
@@ -357,7 +368,8 @@ moveCursorDown:
         ; the top of the pile (visually, bottom on screen)
         ret     z
 
-        ld      A,      B
+        ; move down one card
+@card:  ld      A,      B
         inc     A
         jp      pointToCard
 
