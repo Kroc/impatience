@@ -11,11 +11,12 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
 .RAMSECTION \
         "cursor"        RETURNORG
         ;-----------------------------------------------------------------------
+        ; the number of the card in the pile the cursor is pointing at.
+        ; note that this is 0-based and not 1-based like the pile size!
+        cursor_card     BYTE
         ; the address of the Pile struct that the cursor is pointing to;
         ; e.g. deck / tableau; $0000 if cursor is free
         cursor_pile     WORD
-        ; the number of the card in the pile the cursor is pointing at
-        cursor_card     BYTE
 .ENDS
 
 clear:
@@ -269,6 +270,33 @@ drawCard:
         ret
 
 
+pointToPile:
+;===============================================================================
+; move the cursor to a specific pile, pointing to the default card,
+; e.g. on columns this is the face-up card furthest down the screen
+;
+; in:   HL      address of the Pile structure
+;-------------------------------------------------------------------------------
+        ; the type of the Pile determines where the default card will be:
+        ld      A,      [HL]
+        ;;and     A,      A               ; (set flags!)
+
+        and     PILE_DECK | PILE_FOUNDATION
+        jr      nz,     @first
+
+        ; column piles must point to the last card:
+        ; get the pile's card pool where the card-count is
+@last:  call    cards.getPilePool
+        jr      z,      pointToCard
+        dec     A                       ; (adjust to 0-based)
+        
+        ; skip the next (1-byte) instruction:
+        ; this is a `cp A, $nn` opcode with the next instruction
+        ; becoming a harmless immediate 8-bit value
+        .BYTE   $fe
+
+@first: xor     A                       ; set A to zero
+
 pointToCard:
 ;===============================================================================
 ; move the cursor to a specific card in a pile:
@@ -276,33 +304,33 @@ pointToCard:
 ; in:   HL      address of the Pile structure
 ;       A       number of the card in the pile, 0-based!
 ;
-; out:  B       row number of the card (not pixels!)
-;       C       column number of the card (not pixels!)
+; out:  B       row number the cursor will move to (not pixels!)
+;       C       column number the cursor will move to (not pixels!)
 ;       A, DE   (clobbered)
 ;-------------------------------------------------------------------------------
         ; update the record of which pile/card is currently being pointed to.
         ; if a pile has multiple cards, then pushing up/down will go through
         ; the cards before leaving the pile
         ;
-        ld      DE,     cursor_pile
-        push    AF                      ; A holds the card number to point to
+        ; save the card number to point to:
+        ld      DE,     cursor_card
+        ld      [DE],   A
+        push    AF
 
-        ; save the address of the pile to point to
+        ; save the address of the pile to point to:
+        inc     DE
         ld      A,      L
         ld      [DE],   A
         inc     DE
         ld      A,      H
         ld      [DE],   A
-        inc     DE
-        ; save the card number to point to
-        pop     AF
-        ld      [DE],  A
 
         ; retrieve the row/column for the bottom (top, visually) of the pile
         call    cards.getPilePos
         
         ; add the card number to the row number as
         ; each card in a pile adds another tile's height
+        pop     AF
         add     A,      B
         ld      B,      A
 
@@ -310,7 +338,7 @@ pointToCard:
         ; between the suit / number so as not to obscure either
         inc     C
 
-        jp      cursor.moveToPos
+        jp      cursor.moveToTile
 
 
 getCursorPile:
@@ -318,19 +346,21 @@ getCursorPile:
 ; returns the address of the Pile struct the cursor is pointing to:
 ;
 ; out:  HL      ; address of the Pile the cursor is pointing at
-;       A       ; card number being pointed to
+;       A       ; card number being pointed to, 0-based
 ;       DE      ; (clobbered)
 ;-------------------------------------------------------------------------------
+        ; retrieve card number being pointed to
+        ld      HL,     cursor_card
+        ld      A,      [HL]
+        inc     HL
         ; retrieve current pile location into DE
-        ld      HL,     cursor_pile
         ld      E,      [HL]            ; pool address, lo-byte
         inc     HL
         ld      D,      [HL]            ; pool address, hi-byte
-        inc     HL
-        ; retrieve card number being pointed to
-        ld      A,      [HL]
+        
         ld      H,      D
         ld      L,      E
+        
         ret
 
 
@@ -340,29 +370,26 @@ moveCursorDown:
 ; or downward to the nearest pile below the current one
 ;-------------------------------------------------------------------------------
         call    getCursorPile           ; retrieve current pile location
-        ld      B,      A               ; card number pointed at
+        ld      B,      A               ; card number pointed at (0-based)
 
         ; first byte is the type of Pile
         ld      A,      [HL]
         
-        bit     0,      A               ; deck?
+        ; for types of piles that have no spread (e.g. decks / foundations),
+        ; there are no cards to step through, just move to the next pile:
+        and     PILE_DECK | PILE_FOUNDATION
         ret     nz                      ; TODO: move to next pile below
 
-        bit     2,      A               ; column?
-        jr      nz,     @col
-
-        ld      B,      B               ; DEBUG!
-
-+       ; have we reached the bottom of the column?
+        ; have we reached the bottom of the column?
         ;-----------------------------------------------------------------------
-@col:   call    cards.getPilePool       ; get pool address from the pile
-        ld      A,      [DE]            ; first byte is number of cards in pile
-        ld      A,      A
-        ret     z
-        dec     A                       ; (adjust for 1-based)
+        ; get pool address from the pile
+        ; (number of cards in the pile is returned in A)
+@col:   call    cards.getPilePool
+        ret     z                       ; no cards in the column?
         
         ; compare A (number of cards) with B (current card)
-        cp      B
+        dec     A                       ; pile-size is 1-based,
+        cp      B                       ; but current card is 0-based
         
         ; if they are not equal, the pointer has not reached
         ; the top of the pile (visually, bottom on screen)
@@ -401,7 +428,6 @@ moveCursorLeft:
         ; (furthest *down* the screen) and not to the bottom
         ;
         call    cards.getPilePool       ; get pool address from the pile
-        ld      A,      [DE]            ; first byte is number of cards in pile
         dec     A                       ; (adjust for 1-based)
 
         ; move to the field that contains the pile to the left
@@ -413,10 +439,8 @@ moveCursorLeft:
         ; set the hi-byte for the piles
         ld      H,      >SECTIONSTART_cards.table
         
-        xor     A
-        ; note that A has not changed and is still the index
-        ; of the last card in the pile we are moving to
-        jp      pointToCard
+        ; move to the default card in the next pile
+        jp      pointToPile
 
 moveCursorRight:
 ;===============================================================================
@@ -430,7 +454,6 @@ moveCursorRight:
         ; (furthest *down* the screen) and not to the bottom
         ;
         call    cards.getPilePool       ; get pool address from the pile
-        ld      A,      [DE]            ; first byte is number of cards in pile
         dec     A                       ; (adjust for 1-based)
 
         ; move to the field that contains the pile to the right
@@ -442,7 +465,5 @@ moveCursorRight:
         ; set the hi-byte for the piles
         ld      H,      >SECTIONSTART_cards.table
         
-        xor     A
-        ; note that A has not changed and is still the index
-        ; of the last card in the pile we are moving to
-        jp      pointToCard
+        ; move to the default card in the next pile
+        jp      pointToPile

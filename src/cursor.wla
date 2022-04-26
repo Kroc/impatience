@@ -55,24 +55,20 @@ init:
         ret
 
 
-moveToPos:
+moveToTile:
 ;===============================================================================
 ; move the cursor to a given tile row/col:
 ; this is a tile position, NOT pixels
 ;
-; the move isn't instant, it'll move over several frames until it reaches its
-; destination. another position can be set even whilst in motion
+; the move isn't instant, it'll move over several frames until it reaches
+; its destination. another position can be set even whilst in motion
 ;
 ; in:   B       row position to move the cursor to
 ;       C       column position to move the cursor to
 ;
-; out:  BC, HL  (preserved)
-;       A       (clobbered)
+; out:  HL      (preserved)
+;       A, BC   (clobbered)
 ;-------------------------------------------------------------------------------
-        ; when laying out multiple piles,
-        ; its helpful to preserve the tile position
-        push    BC
-
         ; convert the tile row/col to screen-space pixels
         call    sprites.tilePosToScrXY
 
@@ -82,15 +78,29 @@ moveToPos:
         add     A,      B
         ld      B,      A
 
-        push    HL
-        ld      HL,     cursor_dest_x
-        ld      [HL],   C
-        inc     HL
-        inc     HL
-        ld      [HL],   B
-        pop     HL
+        ; fall-through to set the cursor destination
+        ;
 
-        pop     BC
+moveToPx:
+;===============================================================================
+; move the cursor to a specific X/Y position on the screen, in pixels:
+;
+; the move isn't instant, it'll move over several frames until it reaches
+; its destination. another position can be set even whilst in motion
+;
+; in:   B       Y position to move the cursor to
+;       C       X position to move the cursor to
+;
+; out:  BC      (preserved)
+;       A, HL   (clobbered)
+;-------------------------------------------------------------------------------
+        ; update the destination cursor position
+        ld      HL,     cursor_dest_x
+        ld      [HL],   C               ; set destination Y-position
+        inc     HL
+        inc     HL
+        ld      [HL],   B               ; set distination X-position
+        
         ret
 
 

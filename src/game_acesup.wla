@@ -59,12 +59,9 @@ init:
 
         ; allocate the tableaus:
         ld      HL,     cards.tableau1
-        ld      BC,     acesup_tableau1
         call    cards.allocatePile
-        ; tableau 2, 3 & 4 all follow in order,
-        ; so we do not need to set HL & BC again
-        call    cards.allocatePile
-        call    cards.allocatePile
+        call    cards.allocatePile      ; tableau 2, 3 & 4 all follow in order,
+        call    cards.allocatePile      ; so we don't need to set HL & BC again
         call    cards.allocatePile
 
         ;-----------------------------------------------------------------------
@@ -137,8 +134,7 @@ init:
         
         ; move the cursor to the bottom card in the first tableau pile
         ld      HL,     cards.tableau1
-        ld      A,      3
-        call    playfield.pointToCard
+        call    playfield.pointToPile
 
         ; play loop:
         ;=======================================================================
