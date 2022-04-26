@@ -11,12 +11,12 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
 .RAMSECTION \
         "cursor"        RETURNORG
         ;-----------------------------------------------------------------------
-        ; the number of the card in the pile the cursor is pointing at.
-        ; note that this is 0-based and not 1-based like the pile size!
-        cursor_card     BYTE
         ; the address of the Pile struct that the cursor is pointing to;
         ; e.g. deck / tableau; $0000 if cursor is free
         cursor_pile     WORD
+        ; the number of the card in the pile the cursor is pointing at.
+        ; note that this is 0-based and not 1-based like the pile size!
+        cursor_card     BYTE
 .ENDS
 
 clear:
@@ -281,12 +281,15 @@ pointToPile:
         ld      A,      [HL]
         ;;and     A,      A               ; (set flags!)
 
+        ; squared piles that don't show each card (e.g. deck, foundation)
+        ; always point to the "first" card:
         and     PILE_DECK | PILE_FOUNDATION
         jr      nz,     @first
 
         ; column piles must point to the last card:
         ; get the pile's card pool where the card-count is
 @last:  call    cards.getPilePool
+        ; if there are zero cards in the pile, skip ahead
         jr      z,      pointToCard
         dec     A                       ; (adjust to 0-based)
         
@@ -312,33 +315,59 @@ pointToCard:
         ; if a pile has multiple cards, then pushing up/down will go through
         ; the cards before leaving the pile
         ;
-        ; save the card number to point to:
-        ld      DE,     cursor_card
-        ld      [DE],   A
-        push    AF
-
+        ld      B,      A
         ; save the address of the pile to point to:
-        inc     DE
+        ld      DE,     cursor_pile
         ld      A,      L
         ld      [DE],   A
         inc     DE
         ld      A,      H
         ld      [DE],   A
+        inc     DE
+        ; save the card number to point to:
+        ; note that DE remains on this variable
+        ld      A,      B
+        ld      [DE],   A
 
-        ; retrieve the row/column for the bottom (top, visually) of the pile
+        ; retrieve the row/column of the pile in BC
         call    cards.getPilePos
-        
-        ; add the card number to the row number as
-        ; each card in a pile adds another tile's height
-        pop     AF
-        add     A,      B
-        ld      B,      A
-
-        ; in the case of cards, we want to point to the space
+        ; we will always be pointing to the horizontal middle of the card;
+        ; in the case of face-up cards, we want to point to the space
         ; between the suit / number so as not to obscure either
         inc     C
 
+        ; check the type of the pile, which will determine where the cursor
+        ; will point more specifically. note that HL hasn't changed from the
+        ; address of the current Pile
+        ld      A,      [HL]
+        
+        cp      PILE_DECK
+        jr      nz,     +
+
+        ;; TODO: the centre of the deck is slightly raised
+
++       cp      PILE_COLUMN
+        jr      z,      @col
+
         jp      cursor.moveToTile
+
+        ; for a column, the cursor will be positioned differently
+        ; for the top card (or empty pile), vs the spread
+@col:   
+
+        ; add the card number to the row number as
+        ; each card in a pile adds another tile's height
+        ld      A,      [DE]            ; retrieve card number
+        add     A,      B
+        ld      B,      A
+
+        call    sprites.tilePosToScrXY
+        ; offset the cursor a little so that it appears
+        ; over the cards rather than on the outside edge
+        ld      A,      5
+        add     A,      B
+        ld      B,      A
+        jp      cursor.moveToScrXY
 
 
 getCursorPile:
@@ -349,14 +378,16 @@ getCursorPile:
 ;       A       ; card number being pointed to, 0-based
 ;       DE      ; (clobbered)
 ;-------------------------------------------------------------------------------
-        ; retrieve card number being pointed to
-        ld      HL,     cursor_card
-        ld      A,      [HL]
-        inc     HL
         ; retrieve current pile location into DE
+        ld      HL,     cursor_pile
         ld      E,      [HL]            ; pool address, lo-byte
         inc     HL
         ld      D,      [HL]            ; pool address, hi-byte
+        inc     HL
+
+        ; retrieve card number being pointed to
+        ld      A,      [HL]
+        inc     HL
         
         ld      H,      D
         ld      L,      E

@@ -81,7 +81,7 @@ moveToTile:
         ; fall-through to set the cursor destination
         ;
 
-moveToPx:
+moveToScrXY:
 ;===============================================================================
 ; move the cursor to a specific X/Y position on the screen, in pixels:
 ;
