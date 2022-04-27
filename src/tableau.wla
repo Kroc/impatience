@@ -79,7 +79,7 @@
 ; the list of piles must not exceed 256 bytes
 ; as we increment only one register for speed!
 .RAMSECTION \
-        "tableau"       ALIGN 256 SIZE 256 RETURNORG
+        "layout"        ALIGN 256 SIZE 256 RETURNORG
         ;-----------------------------------------------------------------------
         ; a deck, where cards are drawn from
         deck            INSTANCEOF Pile
@@ -109,14 +109,14 @@
         storage         DSB 1024
 .ENDS
 
-.DEF    __pool_addr     cards.storage
+.DEF    __pool_addr     tableau.storage
 
 ; use this macro before defining a set of piles in ROM
 ; in order to reset the starting pool address
 ;
 .MACRO  BeginPiles
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-.REDEF  __pool_addr     cards.storage
+.REDEF  __pool_addr     tableau.storage
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 .ENDM
 
@@ -152,11 +152,11 @@ clear:
 ;       BC, A   set to zero, by nature of looping
 ;       HL      (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      HL,     SECTIONSTART_cards.tableau
-        ld      BC,     (SECTIONEND_cards.tableau-SECTIONSTART_cards.tableau)+1
+        ld      HL,     SECTIONSTART_tableau.layout
+        ld      BC,     (SECTIONEND_tableau.layout-SECTIONSTART_tableau.layout)+1
         call    zero
-        ld      HL,     SECTIONSTART_cards.storage
-        ld      BC,     (SECTIONEND_cards.storage-SECTIONSTART_cards.storage)+1
+        ld      HL,     SECTIONSTART_tableau.layout
+        ld      BC,     (SECTIONEND_tableau.layout-SECTIONSTART_tableau.layout)+1
         call    zero
 
         ; return the starting address of the card pool

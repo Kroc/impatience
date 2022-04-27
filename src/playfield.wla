@@ -53,7 +53,7 @@ drawDeck:
 ; draws the deck on the front-buffer:
 ;
 ;-------------------------------------------------------------------------------
-        ld      HL,     cards.deck.count
+        ld      HL,     tableau.deck.count
         ld      A,      [HL+]           ; read number of cards in pile
         ld      E,      [HL]            ; read pool-address, lo-byte
         inc     L
@@ -289,7 +289,7 @@ pointToPile:
 
         ; column piles must point to the last card:
         ; get the pile's card pool where the card-count is
-@last:  call    cards.getPilePool
+@last:  call    tableau.getPilePool
         ; if there are zero cards in the pile, skip ahead
         jr      z,      pointToCard
         dec     A                       ; (adjust to 0-based)
@@ -331,7 +331,7 @@ pointToCard:
         ld      [DE],   A
 
         ; retrieve the row/column of the pile in BC
-        call    cards.getPilePos
+        call    tableau.getPilePos
         ; we will always be pointing to the horizontal middle of the card;
         ; in the case of face-up cards, we want to point to the space
         ; between the suit / number so as not to obscure either
@@ -416,7 +416,7 @@ moveCursorDown:
         ;-----------------------------------------------------------------------
         ; get pool address from the pile
         ; (number of cards in the pile is returned in A)
-@col:   call    cards.getPilePool
+@col:   call    tableau.getPilePool
         ret     z                       ; no cards in the column?
         
         ; compare A (number of cards) with B (current card)
@@ -459,7 +459,7 @@ moveCursorLeft:
         ; we want to move the cursor to the top of the pile
         ; (furthest *down* the screen) and not to the bottom
         ;
-        call    cards.getPilePool       ; get pool address from the pile
+        call    tableau.getPilePool     ; get pool address from the pile
         dec     A                       ; (adjust for 1-based)
 
         ; move to the field that contains the pile to the left
@@ -469,7 +469,7 @@ moveCursorLeft:
         ; read the lo-byte of the address of the pile to the left
         ld      L,      [HL]
         ; set the hi-byte for the piles
-        ld      H,      >SECTIONSTART_cards.tableau
+        ld      H,      >SECTIONSTART_tableau.layout
         
         ; move to the default card in the next pile
         jp      pointToPile
@@ -485,7 +485,7 @@ moveCursorRight:
         ; we want to move the cursor to the top of the pile
         ; (furthest *down* the screen) and not to the bottom
         ;
-        call    cards.getPilePool       ; get pool address from the pile
+        call    tableau.getPilePool     ; get pool address from the pile
         dec     A                       ; (adjust for 1-based)
 
         ; move to the field that contains the pile to the right
@@ -495,7 +495,7 @@ moveCursorRight:
         ; read the lo-byte of the address of the pile to the right
         ld      L,      [HL]
         ; set the hi-byte for the piles
-        ld      H,      >SECTIONSTART_cards.tableau
+        ld      H,      >SECTIONSTART_tableau.layout
         
         ; move to the default card in the next pile
         jp      pointToPile

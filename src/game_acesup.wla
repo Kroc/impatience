@@ -3,36 +3,36 @@
 ;
 ; create template card piles for the intial setup of the game
 ;-------------------------------------------------------------------------------
-cards.BeginPiles
+tableau.BeginPiles
         ; label,                type, max-cards,
         ; row,                  col,
         ; pile-left,            pile-right,
         ; pile-up,              pile-down
-cards.DefinePile \
+tableau.DefinePile \
         acesup_deck,            PILE_DECK, 52, \
         1,                      MENU_WIDTH + 1, \
-        cards.depot4,           cards.depot1, \
-        cards.deck,             cards.deck
-cards.DefinePile \
+        tableau.depot4,         tableau.depot1, \
+        tableau.deck,           tableau.deck
+tableau.DefinePile \
         acesup_depot1,          PILE_COLUMN, 13, \
         1,                      MENU_WIDTH + 5, \
-        cards.deck,             cards.depot2, \
-        cards.depot1,           cards.depot1
-cards.DefinePile \
+        tableau.deck,           tableau.depot2, \
+        tableau.depot1,         tableau.depot1
+tableau.DefinePile \
         acesup_depot2,          PILE_COLUMN, 13, \
         1,                      MENU_WIDTH + 8 \
-        cards.depot1,           cards.depot3, \
-        cards.depot2,           cards.depot2
-cards.DefinePile \
+        tableau.depot1,         tableau.depot3, \
+        tableau.depot2,         tableau.depot2
+tableau.DefinePile \
         acesup_depot3,          PILE_COLUMN, 13, \
         1,                      MENU_WIDTH + 11 \
-        cards.depot2,           cards.depot4, \
-        cards.depot3,           cards.depot3
-cards.DefinePile \
+        tableau.depot2,         tableau.depot4, \
+        tableau.depot3,         tableau.depot3
+tableau.DefinePile \
         acesup_depot4,          PILE_COLUMN, 13, \
         1,                      MENU_WIDTH + 14 \
-        cards.depot3,           cards.deck, \
-        cards.depot4,           cards.depot4
+        tableau.depot3,         tableau.deck, \
+        tableau.depot4,         tableau.depot4
 
 
 init:
@@ -51,77 +51,77 @@ init:
         ; pool of all cards on the table. DE will be set to the beginning
         ; of the storage pool, as needed by the allocation routines
         ;
-        call    cards.clear
+        call    tableau.clear
 
         ; allocate the deck:
         ld      BC,     acesup_deck
-        call    cards.allocateDeck
+        call    tableau.allocateDeck
 
         ; allocate the depots:
-        ld      HL,     cards.depot1
-        call    cards.allocatePile
-        call    cards.allocatePile      ; depot 2, 3 & 4 all follow in order,
-        call    cards.allocatePile      ; so we don't need to set HL & BC again
-        call    cards.allocatePile
+        ld      HL,     tableau.depot1
+        call    tableau.allocatePile
+        call    tableau.allocatePile    ; depot 2, 3 & 4 all follow in order,
+        call    tableau.allocatePile    ; so we don't need to set HL & BC again
+        call    tableau.allocatePile
 
         ;-----------------------------------------------------------------------
-        ld      HL,     cards.depot1
+        ld      HL,     tableau.depot1
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    cards.addCard
+        call    tableau.addCard
 
         ld      A,      CARD_K | SUIT_SPADE
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_Q | SUIT_HEART
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_J | SUIT_CLUB
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_X | SUIT_DIAMOND
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_9 | SUIT_SPADE
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_8 | SUIT_HEART
-        call    cards.addCard
+        call    tableau.addCard
         ld      A,      CARD_7 | SUIT_CLUB
-        call    cards.addCard
+        call    tableau.addCard
         ;;ld      A,      CARD_6 | SUIT_DIAMOND
-        ;;call    cards.addCard
+        ;;call    tableau.addCard
         ;;ld      A,      CARD_5 | SUIT_SPADE
-        ;;call    cards.addCard
+        ;;call    tableau.addCard
         ;;ld      A,      CARD_4 | SUIT_HEART
-        ;;call    cards.addCard
+        ;;call    tableau.addCard
         ;;ld      A,      CARD_3 | SUIT_CLUB
-        ;;call    cards.addCard
+        ;;call    tableau.addCard
         ;;ld      A,      CARD_2 | SUIT_DIAMOND
-        ;;call    cards.addCard
+        ;;call    tableau.addCard
         ;;ld      A,      CARD_A | SUIT_SPADE
-        ;;call    cards.addCard
+        ;;call    tableau.addCard
 
-        ld      HL,     cards.depot2
+        ld      HL,     tableau.depot2
         ld      A,      CARD_J | SUIT_HEART
-        call    cards.addCard
-        ld      HL,     cards.depot3
+        call    tableau.addCard
+        ld      HL,     tableau.depot3
         ld      A,      CARD_Q | SUIT_CLUB
-        call    cards.addCard
-        ;;ld      HL,     cards.depot4
+        call    tableau.addCard
+        ;;ld      HL,     tableau.depot4
         ;;ld      A,      CARD_K | SUIT_DIAMOND
-        ;;call    cards.addCard
+        ;;call    tableau.addCard
 
         ;-----------------------------------------------------------------------
         call    playfield.drawDeck
         
         ; NOTE: depot 1, 2, 3 & 4 follow each other, so each call
         ;       to `draw_pile` moves HL on to the next depot pile
-        ld      HL,     cards.depot1
+        ld      HL,     tableau.depot1
         call    playfield.drawPile      ; draw depot 1
         call    playfield.drawPile      ; draw depot 2
         call    playfield.drawPile      ; draw depot 3
@@ -133,7 +133,7 @@ init:
         rst     rst_screenOn
         
         ; move the cursor to the bottom card in the first depot pile
-        ld      HL,     cards.depot1
+        ld      HL,     tableau.depot1
         call    playfield.pointToPile
 
         ; play loop:

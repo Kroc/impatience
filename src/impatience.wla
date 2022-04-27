@@ -128,7 +128,7 @@ zero:
         ret
 
 ;===============================================================================
-.INC    "cards.wla"             NAMESPACE "cards"
+.INC    "tableau.wla"           NAMESPACE "tableau"
 .INC    "menu.wla"              NAMESPACE "menu"
 .INC    "playfield.wla"         NAMESPACE "playfield"
 .INC    "game_acesup.wla"       NAMESPACE "acesup"
