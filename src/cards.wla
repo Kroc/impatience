@@ -75,8 +75,10 @@
 
 ; define some RAM to hold cards during a game:
 ;
+; the list of piles must not exceed 256 bytes
+; as we increment only one register for speed!
 .RAMSECTION \
-        "table"         ALIGN 256 RETURNORG
+        "tableau"       ALIGN 256 SIZE 256 RETURNORG
         ;-----------------------------------------------------------------------
         ; a deck, where cards are drawn from
         deck            INSTANCEOF Pile
@@ -89,18 +91,19 @@
         foundation2     INSTANCEOF Pile
         foundation3     INSTANCEOF Pile
         foundation4     INSTANCEOF Pile
-        ; up to eight tableau piles, where cards are sorted
-        tableau1        INSTANCEOF Pile
-        tableau2        INSTANCEOF Pile
-        tableau3        INSTANCEOF Pile
-        tableau4        INSTANCEOF Pile
-        tableau5        INSTANCEOF Pile
-        tableau6        INSTANCEOF Pile
-        tableau7        INSTANCEOF Pile
-        tableau8        INSTANCEOF Pile
-        ; TODO: the above must not exceed 256 bytes
-        ;       why can we not set size limits for RAMSECTIONs?
-        
+        ; up to eight depot piles, where cards are sorted
+        depot1          INSTANCEOF Pile
+        depot2          INSTANCEOF Pile
+        depot3          INSTANCEOF Pile
+        depot4          INSTANCEOF Pile
+        depot5          INSTANCEOF Pile
+        depot6          INSTANCEOF Pile
+        depot7          INSTANCEOF Pile
+        depot8          INSTANCEOF Pile
+.ENDS
+
+.RAMSECTION \
+        "storage"       RETURNORG
         storage         DSB 1024
 .ENDS
 
@@ -146,10 +149,13 @@ clear:
 ;       BC, A   set to zero, by nature of looping
 ;       HL      (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      HL,     SECTIONSTART_cards.table
-        ld      BC,     (SECTIONEND_cards.table - SECTIONSTART_cards.table)+1
+        ld      HL,     SECTIONSTART_cards.tableau
+        ld      BC,     (SECTIONEND_cards.tableau-SECTIONSTART_cards.tableau)+1
         call    zero
-        
+        ld      HL,     SECTIONSTART_cards.storage
+        ld      BC,     (SECTIONEND_cards.storage-SECTIONSTART_cards.storage)+1
+        call    zero
+
         ; return the starting address of the card pool
         ; (used for allocating piles)
         ld      DE,     storage
@@ -207,7 +213,7 @@ allocateDeck:
 allocatePile:
 ;===============================================================================
 ; allocates a pile where cards will be stored:
-; e.g. a deck, hand, foundation or tableau, etc.
+; e.g. a deck, hand, foundation or depot, etc.
 ;
 ; in:   HL      address of the working Pile structure in RAM;
 ;               this consists of a set of properties that will be filled out
@@ -362,7 +368,7 @@ getPilePool:
 ; given a Pile struct address, returns the address
 ; in the card pool where the pile's cards are stored
 ;
-; in:   HL      address of a Pile structure (e.g. deck, tableau)
+; in:   HL      address of a Pile structure (e.g. deck, depot)
 ;
 ; out:  DE      address of the pile's card pool
 ;       A       number of cards currently in the pile (1-based!)

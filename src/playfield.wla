@@ -12,7 +12,7 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
         "cursor"        RETURNORG
         ;-----------------------------------------------------------------------
         ; the address of the Pile struct that the cursor is pointing to;
-        ; e.g. deck / tableau; $0000 if cursor is free
+        ; e.g. deck / depot; $0000 if cursor is free
         cursor_pile     WORD
         ; the number of the card in the pile the cursor is pointing at.
         ; note that this is 0-based and not 1-based like the pile size!
@@ -64,7 +64,7 @@ drawDeck:
 
         ; NOTE: by incrementing L here, we have automatically moved onto the
         ;       next Pile structure. by returning this HL value, the caller
-        ;       can draw multiple piles that follow one another (e.g tableaus)
+        ;       can draw multiple piles that follow one another (e.g depots)
         inc     L                       ; (skip `left`)
         inc     L                       ; (skip `right`)
         inc     L                       ; (skip `up`)
@@ -468,7 +468,7 @@ moveCursorLeft:
         ; read the lo-byte of the address of the pile to the left
         ld      L,      [HL]
         ; set the hi-byte for the piles
-        ld      H,      >SECTIONSTART_cards.table
+        ld      H,      >SECTIONSTART_cards.tableau
         
         ; move to the default card in the next pile
         jp      pointToPile
@@ -494,7 +494,7 @@ moveCursorRight:
         ; read the lo-byte of the address of the pile to the right
         ld      L,      [HL]
         ; set the hi-byte for the piles
-        ld      H,      >SECTIONSTART_cards.table
+        ld      H,      >SECTIONSTART_cards.tableau
         
         ; move to the default card in the next pile
         jp      pointToPile
