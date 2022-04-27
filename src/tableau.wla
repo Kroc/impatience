@@ -40,8 +40,28 @@
 .DEF    CARD_Q          %00001100
 .DEF    CARD_K          %00001101
 
-; the different kinds of piles:
-;-------------------------------------------------------------------------------
+; cursor:
+;===============================================================================
+; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32 playfield.
+; for our purposes we place the menu on the left and the playfield next to it,
+; therefore the playfield begins at X = 12 and not the top-left (X = 0)
+PLAYFIELD_TOP   = 0
+PLAYFIELD_LEFT  = MENU_WIDTH
+PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
+
+.RAMSECTION \
+        "cursor"        RETURNORG
+        ;-----------------------------------------------------------------------
+        ; the address of the Pile struct that the cursor is pointing to;
+        ; e.g. deck / depot; $0000 if cursor is free
+        cursor_pile     WORD
+        ; the number of the card in the pile the cursor is pointing at.
+        ; note that this is 0-based and not 1-based like the pile size!
+        cursor_card     BYTE
+.ENDS
+
+; tableau piles:
+;===============================================================================
 ; regardless of the number of cards in a "deck" pile,
 ; it always displays as one face-down card
 .DEF    PILE_DECK       %00000001
