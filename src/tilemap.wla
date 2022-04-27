@@ -335,7 +335,7 @@ copyTiles:
 
 getBufferAddr:
 ;===============================================================================
-; given an X & Y co-ordinate, return an address in the front-buffer:
+; given an X & Y tile co-ordinate, return an address in the front-buffer:
 ;
 ; in:   B       y-position (row) in the tile-map (32x32)
 ;       C       x-position (column) in the tile-map (32x32)

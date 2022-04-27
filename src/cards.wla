@@ -64,6 +64,7 @@
         ;
         type            BYTE    ; type of pile, i.e. deck, hand, foundation &c.
         limit           BYTE    ; max.number of cards allowed in pile, 1-based!
+        count           BYTE    ; number of cards in the pile, 1-based!
         pool            WORD    ; address of storage for card pile
         row             BYTE    ; row position on the tilemap (not pixels!)
         col             BYTE    ; column position on the tilemap (not pixels!)
@@ -103,7 +104,8 @@
 .ENDS
 
 .RAMSECTION \
-        "storage"       RETURNORG
+        "storage"       SIZE 1024       RETURNORG
+        ;-----------------------------------------------------------------------
         storage         DSB 1024
 .ENDS
 
@@ -126,6 +128,7 @@
 .DSTRUCT \1 INSTANCEOF Pile VALUES
         type:           .BYTE   \2
         limit:          .BYTE   \3
+        count:          .BYTE   0       ; (assigned at run-time)
         pool:           .WORD   __pool_addr
         row:            .BYTE   \4
         col:            .BYTE   \5
@@ -135,7 +138,7 @@
         down:           .BYTE   <\9
 .ENDST
 
-.REDEF  __pool_addr     __pool_addr+\3+1
+.REDEF  __pool_addr     __pool_addr+\3
 
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 .ENDM
@@ -179,10 +182,9 @@ allocateDeck:
         ; fill the deck with cards:
         ;-----------------------------------------------------------------------
         ; calling `addCard` 52 times would be needlessly slow,
-        ; so we're going to manually write the card pool:
-        ld      A,      51              ; the first byte is the number of
-        ld      [DE],   A               ;  cards in the pile (0-based)
-        inc     DE
+        ; so we're going to manually write the pile size
+        ld      A,      52
+        ld      [deck.count],   A
         
         ; C will be our suit counter;
         ; 0=spades, 1=clubs, 2=hearts, 3=diamonds
@@ -243,9 +245,13 @@ allocatePile:
         ld      A,      [BC]
         ld      [HL+],  A               ; move HL (RAM) forward
         inc     C                       ; move BC (ROM) forward
-        ; put this aside until we clear the Pile's card pool
+        ; (put aside max pile size until we clear the Pile's card pool)
         push    AF
-
+        ; then the number of cards in the pile (defaults to 0)
+        ld      A,      [BC]
+        ld      [HL+],  A               ; move HL (RAM) forward
+        inc     C                       ; move BC (ROM) forward
+        
         ; next two bytes are the storage address;
         ; we put this aside in DE for later
         ld      A,      [BC]
@@ -286,8 +292,7 @@ allocatePile:
         push    DE                      ; keep original pool address
 
         ld      B,      A               ; copy card-limit to counter
-        inc     B                       ; first byte is number of cards...
-        xor     A                       ; ...in the pile, i.e. zero
+        xor     A                       ; (write zeroes)
 
 -       ld      [DE],   A               ; clear one byte
         inc     DE                      ; move to the next byte
@@ -315,29 +320,29 @@ addCard:
         ld      B,      A               ; put aside card to add for later
 
         ; read the max. number of cards allowed in the pile:
-        ;
-        ; NOTE: we can get away with only incrementing L because the piles
-        ;       begin at an $xx00 address and don't exceed 256 bytes
         inc     L                       ; (2nd byte in Pile struct)
-        ld      C,      [HL]
+        ld      C,      [HL]            ; C = pile limit
         inc     L
-        ; read the storage address:
-        ld      E,      [HL]            ; lo-byte first
-        inc     L
-        ld      D,      [HL]            ; then hi-byte
-
-        ; from that, read the first byte of the card pool
-        ; (the number of cards in the pile)
-        ld      A,      [DE]
+        ; read number of cards in the pile:
+        ld      A,      [HL]            ; A = card count
+        
         ; compare number of cards in pile, with max (1-based)
         cp      C
         jr      nc,      @full
 
         ; add card:
         ;-----------------------------------------------------------------------
+        ; first increase the card count:
 @add:   inc     A                       ; increase number of cards in pile
-        ld      [DE],   A               ; write back updated card count
+        ld      [HL],   A               ; write back updated card count
         
+        ; now write the card to the card pool;
+        ; begin by reading the storage address:
+        inc     L
+        ld      E,      [HL]            ; lo-byte first
+        inc     L
+        ld      D,      [HL]            ; then hi-byte
+
         ; move to the empty-slot at the end of the pile
         add     A,      E               ; add number of cards to pile addr.
         jr      nc,     +               ; E overflows?
@@ -377,6 +382,8 @@ getPilePool:
 ;-------------------------------------------------------------------------------
         inc     L                       ; skip the `type` field
         inc     L                       ; skip the `limit` field
+        ; read the card count from the pool
+        ld      A,      [HL+]           ; (also skip the `count` field)
         ld      E,      [HL]            ; read the pool address, lo-byte
         inc     L
         ld      D,      [HL]            ; read the pool address, hi-byte
@@ -384,10 +391,9 @@ getPilePool:
         dec     L                       ; restore HL:
         dec     L                       ;  this is still faster than
         dec     L                       ;  PUSH and POPing HL
+        dec     L
 
-        ld      A,      [DE]            ; read the card count from the pool
         and     A,      A               ; (set flags!)
-
         ret
 
 

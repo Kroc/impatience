@@ -53,10 +53,11 @@ drawDeck:
 ; draws the deck on the front-buffer:
 ;
 ;-------------------------------------------------------------------------------
-        ld      HL,     cards.deck.pool ; address of deck pile
-        ld      E,      [HL]            ; read cards-address, lo-byte
+        ld      HL,     cards.deck.count
+        ld      A,      [HL+]           ; read number of cards in pile
+        ld      E,      [HL]            ; read pool-address, lo-byte
         inc     L
-        ld      D,      [HL]            ; read cards-address, hi-byte
+        ld      D,      [HL]            ; read pool-address, hi-byte
         inc     L
         ld      B,      [HL]            ; read row
         inc     L
@@ -73,12 +74,9 @@ drawDeck:
 
         ; draw deck:
         ;-----------------------------------------------------------------------
-        ; read the card-count from the the pile's card pool.
         ; if the deck is empty, draw its outline instead
-        ;
-        ld      A,      [DE]            ; number of cards in pile
         and     A,      A               ; (set flags!)
-        jr      z,      drawEmpty       ; if zero, draw a placeholder
+        jr      z,      _drawEmpty      ; if zero, draw a placeholder
         
         ; the deck in particular extends a row upwards
         ; to give it that thicker appearance
@@ -95,10 +93,14 @@ drawDeck:
         ret
 
 
-drawEmpty:
+_drawEmpty:
 ;===============================================================================
 ; draw a pile placeholder, an outline where cards may go:
 ;
+; in:   B       y-position (row) in the tile-map (32x32)
+;       C       x-position (column) in the tile-map (32x32)
+;
+; out:  HL      (preserved)
 ;-------------------------------------------------------------------------------
         call    tilemap.getBufferAddr
         ld      DE,     tilemap.tilemap_empty
@@ -122,6 +124,7 @@ drawPile:
         ;
         inc     L                       ; skip over the `type` field
         inc     L                       ; skip over the `limit` field
+        ld      A,      [HL+]           ; read number of cards in pile
         ld      E,      [HL]            ; read cards-address, lo-byte
         inc     L
         ld      D,      [HL]            ; read cards-address, hi-byte
@@ -142,11 +145,9 @@ drawPile:
 
         ; draw pile:
         ;-----------------------------------------------------------------------
-        ; read the card-count from the first-byte in the pile's card pool
-        ld      A,      [DE]
-        and     A,      A               ; (set flags!)
         ; if the pile is empty, draw its outline instead
-        jr      z,      drawEmpty
+        and     A,      A               ; (set flags!)
+        jr      z,      _drawEmpty
         ; get front-buffer address for the X/Y co-ords. note that this returns
         ; the address in HL, but clobbers BC. we depend upon it preserving A
         ; (our card count) to be able to set BC afterwards!
