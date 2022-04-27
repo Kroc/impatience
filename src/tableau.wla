@@ -476,109 +476,33 @@ getPilePos:
         pop     HL
         ret
 
-drawDeck:
-;===============================================================================
-; draws the deck on the front-buffer:
-;
-;-------------------------------------------------------------------------------
-        ld      HL,     tableau.deck.count
-        ld      A,      [HL+]           ; read number of cards in pile
-        ld      E,      [HL]            ; read pool-address, lo-byte
-        inc     L
-        ld      D,      [HL]            ; read pool-address, hi-byte
-        inc     L
-        ld      B,      [HL]            ; read row
-        inc     L
-        ld      C,      [HL]            ; read column
-
-        ; NOTE: by incrementing L here, we have automatically moved onto the
-        ;       next Pile structure. by returning this HL value, the caller
-        ;       can draw multiple piles that follow one another (e.g depots)
-        inc     L                       ; (skip `left`)
-        inc     L                       ; (skip `right`)
-        inc     L                       ; (skip `up`)
-        inc     L                       ; (skip `down`)
-        push    HL
-
-        ; draw deck:
-        ;-----------------------------------------------------------------------
-        ; if the deck is empty, draw its outline instead
-        and     A,      A               ; (set flags!)
-        jr      z,      _drawEmpty      ; if zero, draw a placeholder
-        
-        ; the deck in particular extends a row upwards
-        ; to give it that thicker appearance
-        dec     B
-        ; get an address in the front-buffer for the X/Y co-ords
-        call    tilemap.getBufferAddr
-        ; draw out the tiles for the deck
-        ld      DE,     tilemap.tilemap_deck
-        call    tilemap.writeTiles_3wide_5rows
-
-        ;-----------------------------------------------------------------------
-        ; return the beginning address of the next Pile structure
-        pop     HL
-        ret
-
-
-_drawEmpty:
-;===============================================================================
-; draw a pile placeholder, an outline where cards may go:
-;
-; in:   B       y-position (row) in the tile-map (32x32)
-;       C       x-position (column) in the tile-map (32x32)
-;
-; out:  HL      (preserved)
-;-------------------------------------------------------------------------------
-        call    tilemap.getBufferAddr
-        ld      DE,     tilemap.tilemap_empty
-        call    tilemap.writeTiles_3wide_4rows
-
-        ;-----------------------------------------------------------------------
-        pop     HL
-        ret
-
 
 drawPile:
 ;===============================================================================
-; draws a pile on the back-buffer:
+; draws a pile on the screen-buffer:
 ;
 ; in:   HL      address of the Pile structure
 ;
-; out:  HL      HL is moved forward to the next Pile structure
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; TODO: use `cards.getPilePos` here?
-        ;       although we also need the pool address
-        ;
-        inc     L                       ; skip over the `type` field
-        inc     L                       ; skip over the `limit` field
-        ld      A,      [HL+]           ; read number of cards in pile
-        ld      E,      [HL]            ; read cards-address, lo-byte
-        inc     L
-        ld      D,      [HL]            ; read cards-address, hi-byte
-        inc     L
-        ld      B,      [HL]            ; read row
-        inc     L
-        ld      C,      [HL]            ; read column
-        inc     L
+        ld      A,      [HL+]           ; read type of pile
+        inc     L                       ; skip max-size of pile
+        
+        ; is the pile a deck?
+        cp      A,      PILE_DECK
+        jr      z,      @deck
 
-        ; NOTE: by incrementing L here, we have automatically moved onto the
-        ;       next Pile structure. by returning this HL value, the caller
-        ;       can draw multiple piles that follow one another (e.g tableau)
-        inc     L
-        inc     L
-        inc     L
-        inc     L
-        push    HL
-
-        ; draw pile:
+        ; column:
         ;-----------------------------------------------------------------------
-        ; if the pile is empty, draw its outline instead
+@col:   ld      A,      [HL+]           ; read number of cards in pile
         and     A,      A               ; (set flags!)
-        jr      z,      _drawEmpty
-        ; get front-buffer address for the X/Y co-ords. note that this returns
+        jr      z,      @empty          ; if zero, draw empty space
+
+        ; get the pile's row & col (BC), and the card pool address (DE)
+        call    @pos
+        ; get screen-buffer address for the X/Y co-ords. note that this returns
         ; the address in HL, but clobbers BC. we depend upon it preserving A
-        ; (our card count) to be able to set BC afterwards!
+        ; (our card count) and DE (the card pool address)
         call    tilemap.getBufferAddr
         ; retain the card-count for iterating through the pile
         ld      C,      A
@@ -604,8 +528,45 @@ drawPile:
         pop     BC
         jr      c,      -
 
+        ret
+
+        ; deck:
         ;-----------------------------------------------------------------------
-+       pop     HL                      ; return next Pile address
+@deck:  ld      A,      [HL+]           ; read number of cards in pile
+        and     A,      A               ; (set flags!)
+        jr      z,      @empty          ; if zero, draw empty space
+
+        ; get the pile's row & col
+        call    @pos
+        ; the deck in particular extends a row upwards
+        ; to give it that thicker appearance
+        dec     B
+        ; get an address in the buffer for the X/Y co-ords
+        call    tilemap.getBufferAddr
+        ; draw out the tiles for the deck
+        ld      DE,     tilemap.tilemap_deck
+        jp      tilemap.writeTiles_3wide_5rows
+
+        ; empty pile:
+        ;-----------------------------------------------------------------------
+        ; draw an empty pile on the buffer:
+        ; first get the pile's row & col
+@empty: call    @pos
+        ; translate to an address on the buffer
+        call    tilemap.getBufferAddr
+        ; draw the empty pile tiles
+        ld      DE,     tilemap.tilemap_empty
+        jp      tilemap.writeTiles_3wide_4rows
+
+        ; get the position of the pile:
+        ;-----------------------------------------------------------------------
+@pos:   ld      E,      [HL]            ; read pool-address, lo-byte
+        inc     L
+        ld      D,      [HL]            ; read pool-address, hi-byte
+        inc     L
+        ld      B,      [HL]            ; read row
+        inc     L
+        ld      C,      [HL]            ; read column
         ret
 
 

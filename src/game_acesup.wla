@@ -117,15 +117,16 @@ init:
         ;;call    tableau.addCard
 
         ;-----------------------------------------------------------------------
-        call    tableau.drawDeck
-        
-        ; NOTE: depot 1, 2, 3 & 4 follow each other, so each call
-        ;       to `draw_pile` moves HL on to the next depot pile
+        ld      HL,     tableau.deck
+        call    tableau.drawPile
         ld      HL,     tableau.depot1
-        call    tableau.drawPile        ; draw depot 1
-        call    tableau.drawPile        ; draw depot 2
-        call    tableau.drawPile        ; draw depot 3
-        call    tableau.drawPile        ; draw depot 4
+        call    tableau.drawPile
+        ld      HL,     tableau.depot2
+        call    tableau.drawPile
+        ld      HL,     tableau.depot3
+        call    tableau.drawPile
+        ld      HL,     tableau.depot4
+        call    tableau.drawPile
 
         ;-----------------------------------------------------------------------
         rst     rst_screenOff
