@@ -130,5 +130,4 @@ zero:
 ;===============================================================================
 .INC    "menu.wla"              NAMESPACE "menu"
 .INC    "tableau.wla"           NAMESPACE "tableau"
-.INC    "playfield.wla"         NAMESPACE "playfield"
 .INC    "game_acesup.wla"       NAMESPACE "acesup"

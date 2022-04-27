@@ -51,7 +51,7 @@ init:
         ; pool of all cards on the table. DE will be set to the beginning
         ; of the storage pool, as needed by the allocation routines
         ;
-        call    tableau.clear
+        call    tableau.clearPiles
 
         ; allocate the deck:
         ld      BC,     acesup_deck
@@ -117,15 +117,15 @@ init:
         ;;call    tableau.addCard
 
         ;-----------------------------------------------------------------------
-        call    playfield.drawDeck
+        call    tableau.drawDeck
         
         ; NOTE: depot 1, 2, 3 & 4 follow each other, so each call
         ;       to `draw_pile` moves HL on to the next depot pile
         ld      HL,     tableau.depot1
-        call    playfield.drawPile      ; draw depot 1
-        call    playfield.drawPile      ; draw depot 2
-        call    playfield.drawPile      ; draw depot 3
-        call    playfield.drawPile      ; draw depot 4
+        call    tableau.drawPile        ; draw depot 1
+        call    tableau.drawPile        ; draw depot 2
+        call    tableau.drawPile        ; draw depot 3
+        call    tableau.drawPile        ; draw depot 4
 
         ;-----------------------------------------------------------------------
         rst     rst_screenOff
@@ -134,7 +134,7 @@ init:
         
         ; move the cursor to the bottom card in the first depot pile
         ld      HL,     tableau.depot1
-        call    playfield.pointToPile
+        call    tableau.pointToPile
 
         ; play loop:
         ;=======================================================================
@@ -158,24 +158,24 @@ handleControls:
         bit     BUTTON_DOWN,    A
         jr      z,      +
 
-        jp      playfield.moveCursorDown
+        jp      tableau.moveCursorDown
 
         ; cursor up?
 +       bit     BUTTON_UP,      A
         jr      z,      +
 
-        jp      playfield.moveCursorUp
+        jp      tableau.moveCursorUp
 
         ; cursor left?
 +       bit     BUTTON_LEFT,    A
         jr      z,      +
 
-        jp      playfield.moveCursorLeft
+        jp      tableau.moveCursorLeft
 
         ; cursor right?
 +       bit     BUTTON_RIGHT,   A
         jr      z,      +
 
-        jp      playfield.moveCursorRight
+        jp      tableau.moveCursorRight
 
 +       ret

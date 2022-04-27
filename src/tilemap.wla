@@ -16,7 +16,6 @@
         back_buffer     DSB 32*32
 .ENDS
 
-
 ; include the tile graphics and map the various pieces of the card graphics
 ; to some constants so that we don't have to tweak tile numbers throughout
 ; the code-base. we want this aligned to one-tile (16-bytes) for some
@@ -261,7 +260,7 @@ init:
         call    clearQueue              ; clear the tile update queue
         call    copyMainTileset         ; copy main tileset from ROM to VRAM
 
-        call    playfield.clear         ; clear the playfield background
+        call    tableau.clearBackground
         call    menu.clear              ; clear and draw the menu
 
         call    refresh
