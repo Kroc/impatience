@@ -3,6 +3,11 @@
 ;
 ; create template card piles for the intial setup of the game
 ;-------------------------------------------------------------------------------
+; this table must not cross a page boundary!
+;
+.SECTION \
+        "piles"                 BITWINDOW 8
+
 tableau.BeginPiles
         ; label,                type, max-cards,
         ; row,                  col,
@@ -33,6 +38,8 @@ tableau.DefinePile \
         1,                      MENU_WIDTH + 14 \
         tableau.depot3,         tableau.deck, \
         tableau.depot4,         tableau.depot4
+
+.ENDS
 
 
 init:
@@ -178,5 +185,11 @@ handleControls:
         jr      z,      +
 
         jp      tableau.moveCursorRight
+
+        ; A button?
++       bit     BUTTON_A,       A
+        jr      z,      +
+
+        jp      tableau.pickCard
 
 +       ret

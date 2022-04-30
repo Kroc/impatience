@@ -260,7 +260,7 @@ init:
         call    clearQueue              ; clear the tile update queue
         call    copyMainTileset         ; copy main tileset from ROM to VRAM
 
-        call    tableau.clearBackground
+        call    tableau.clearTiles      ; clear the tableau (playing space)
         call    menu.clear              ; clear and draw the menu
 
         call    refresh

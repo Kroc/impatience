@@ -163,7 +163,8 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 .ENDM
 
-clearBackground:
+
+clearTiles:
 ;===============================================================================
 ; clears the tableau area, i.e. where cards are played:
 ;
@@ -416,6 +417,70 @@ addCard:
         ret
 
 
+getCard:
+;===============================================================================
+; gets the value of a specific card in a pile:
+;
+; in:   HL      address of a Pile structure
+;       A       index (0-based) of the card to return
+;
+; out:  A       value of card
+;       DE      address of the card pool for the pile
+;       HL      (preserved)
+;-------------------------------------------------------------------------------
+        ; get the pile's pool address (DE)
+        call    getPilePool
+        push    DE
+        ; add the card index:
+        add     A,      E               ; add card index to addr lo-byte
+        jr      nc,     +               ; E overflows?
+        inc     D                       ; ripple to D
++       ld      E,      A
+        
+        ld      A,      [DE]            ; read the card value from the pool
+
+        pop     DE
+        ret
+
+
+removeCard:
+;===============================================================================
+; removes a card from a pile:
+; the value of the card removed is returned
+;
+; note that it is up to the caller to ensure that there are no holes left
+; in the pile!
+;
+; in:   HL      address of the Pile
+;       A       index (0-based) of the card to remove
+;
+; out:  A       value of card
+;       DE      address of the card pool for the pile
+;       HL      (preserved)
+;-------------------------------------------------------------------------------
+        ; reduce the number of cards in the pile first
+        ; as that's the first byte in the Pile structure
+        dec     [HL]
+
+        ; get the pile's pool address (DE)
+        call    getPilePool
+        push    DE
+        ; add the card index:
+        add     A,      E               ; add card index to addr lo-byte
+        jr      nc,     +               ; E overflows?
+        inc     D                       ; ripple to D
++       ld      E,      A
+        ; read and erase the card:
+        ld      A,      [DE]            ; read the card value from the pool
+        push    AF                      ; keep card value
+        xor     A                       ; set A to zero
+        ld      [DE],   A               ; erase the card
+
+        pop     AF                      ; return the card value
+        pop     DE                      ; return the (starting) pool address
+        ret
+
+        
 getPilePool:
 ;===============================================================================
 ; given a Pile struct address, returns the address
@@ -424,11 +489,9 @@ getPilePool:
 ; in:   HL      address of a Pile structure (e.g. deck, depot)
 ;
 ; out:  DE      address of the pile's card pool
-;       A       number of cards currently in the pile (1-based!)
-;       z       Z-flag is set according to the number of cards in the pile
-;       HL      (preserved)
+;       HL, A   (preserved)
 ;-------------------------------------------------------------------------------
-        ld      A,      [HL+]           ; read the card count
+        inc     L                       ; skip the `count` field
         inc     L                       ; skip the `type` field
         inc     L                       ; skip the `limit` field
         ld      E,      [HL]            ; read the pool address, lo-byte
@@ -440,7 +503,6 @@ getPilePool:
         dec     L                       ;  PUSH and POPing HL
         dec     L
 
-        and     A,      A               ; (set flags!)
         ret
 
 
@@ -671,8 +733,7 @@ getCursorPile:
         inc     HL
 
         ; retrieve card number being pointed to
-        ld      A,      [HL]
-        inc     HL
+        ld      A,      [HL+]
         
         ld      H,      D
         ld      L,      E
@@ -855,7 +916,8 @@ moveCursorUp:
 ; move the cursor up, either going through a pile of cards,
 ; or upwards to the nearest pile above the current one
 ;-------------------------------------------------------------------------------
-        ; retrieve current pile location (HL) and card number pointed at (A)
+        ; retrieve current pile location (HL),
+        ; and the card index being pointed at (A)
         call    getCursorPile
         and     A,      A               ; (set flags!)
         
@@ -903,3 +965,23 @@ moveCursorRight:
         
         ; move to the default card in the next pile
         jp      pointToPile
+
+
+pickCard:
+;===============================================================================
+; attempt to pick up a card:
+;
+; the card will be validated and, if it can be picked,
+; it will be removed from the pile and placed in the cursor
+;
+;-------------------------------------------------------------------------------
+        ; retrieve current pile location (HL),
+        ; and the card index being pointed at (A)
+        call    getCursorPile
+        ; remove the card from the pile
+        ; (this also returns the value)
+        call    removeCard
+
+        ; create a sprite copy of the card
+        
+        ret
