@@ -982,6 +982,7 @@ pickCard:
         ; (this also returns the value)
         call    removeCard
 
-        ; create a sprite copy of the card
+        ; create a sprite copy of the card(s)
+        
         
         ret

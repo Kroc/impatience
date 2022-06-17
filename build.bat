@@ -9,20 +9,14 @@ REM # even though we won't be using RGBDS to assemble
 SET RGBGFX="bin\rgbds\rgbgfx.exe"
 
 %RGBGFX% -f ^
-    -o "build\tiles_even.2bpp" ^
-       "src\tiles\tiles_even.png"
-
-IF ERRORLEVEL 1 EXIT /B 1
-
-%RGBGFX% -f ^
-    -o "build\tiles_odd.2bpp" ^
-       "src\tiles\tiles_odd.png"
+    -o "build\tiles.2bpp" ^
+       "src\tiles\tiles.png"
 
 IF ERRORLEVEL 1 EXIT /B 1
 
 %RGBGFX% -f -h ^
-    -o "build\tiles_sprites.2bpp" ^
-       "src\tiles\tiles_sprites.png"
+    -o "build\sprites.2bpp" ^
+       "src\tiles\sprites.png"
 
 IF ERRORLEVEL 1 EXIT /B 1
 

@@ -26,7 +26,7 @@
 
 tiles_main:
 ;===============================================================================
-.INCBIN         "build/tiles_even.2bpp" FSIZE tiles_main__size
+.INCBIN         "build/tiles.2bpp"              FSIZE tiles_main__size
 
 ; define the conversion from ASCII to the tile-numbers in our tileset:
 ;
@@ -35,33 +35,33 @@ tiles_main:
         MAP   0 TO 127  = $80
         MAP 128 TO 255  = $00
         
-        MAP     " "     = $81
-        MAP     "0"     = $86
-        MAP     "1"     = $87
-        MAP     "2"     = $88
-        MAP     "3"     = $89
-        MAP     "4"     = $8a
-        MAP     "5"     = $8b
-        MAP     "6"     = $8c
-        MAP     "7"     = $8d
-        MAP     "8"     = $8e
-        MAP     "9"     = $8f
-        MAP     "a"     = $90
-        MAP     "b"     = $91
-        MAP     "c"     = $92
-        MAP     "d"     = $93
-        MAP     "e"     = $94
-        MAP     "f"     = $95
-        MAP     "g"     = $96
-        MAP     "h"     = $97
-        MAP     "i"     = $98
-        MAP     "j"     = $99
-        MAP     "k"     = $9a
-        MAP     "l"     = $9b
-        MAP     "m"     = $9c
-        MAP     "n"     = $9d
-        MAP     "o"     = $9e
-        MAP     "p"     = $9f
+        MAP     " "     = $71
+        MAP     "0"     = $76
+        MAP     "1"     = $77
+        MAP     "2"     = $78
+        MAP     "3"     = $79
+        MAP     "4"     = $7a
+        MAP     "5"     = $7b
+        MAP     "6"     = $7c
+        MAP     "7"     = $7d
+        MAP     "8"     = $7e
+        MAP     "9"     = $7f
+        MAP     "a"     = $f0
+        MAP     "b"     = $f1
+        MAP     "c"     = $f2
+        MAP     "d"     = $f3
+        MAP     "e"     = $f4
+        MAP     "f"     = $f5
+        MAP     "g"     = $f6
+        MAP     "h"     = $f7
+        MAP     "i"     = $f8
+        MAP     "j"     = $f9
+        MAP     "k"     = $fa
+        MAP     "l"     = $fb
+        MAP     "m"     = $fc
+        MAP     "n"     = $fd
+        MAP     "o"     = $fe
+        MAP     "p"     = $ff
         MAP     "q"     = $ad
         MAP     "r"     = $ae
         MAP     "s"     = $af
@@ -180,10 +180,10 @@ tiles_main:
 ; of the card (two-rows) is blank:
 ;
 .DEF    TILE3X4_CARD_2X1        $5d
-.DEF    TILE3X4_CARD_2X2        $80+$01 ; (re-uses space from font)
+.DEF    TILE3X4_CARD_2X2        $70+$01 ; (re-uses space from font)
 .DEF    TILE3X4_CARD_2X3        $5f
 .DEF    TILE3X4_CARD_3X1        $5d
-.DEF    TILE3X4_CARD_3X2        $80+$01 ; (re-uses space from font)
+.DEF    TILE3X4_CARD_3X2        $70+$01 ; (re-uses space from font)
 .DEF    TILE3X4_CARD_3X3        $5f
 
 ; the bottom-left of a face-up card has the suit:
@@ -266,7 +266,7 @@ init:
         call    refresh
 
         ; set palette:
-        ld      A,      %11100100
+        ld      A,      %01110010
         ld      [BGP],  A
 
         rst     rst_screenOn

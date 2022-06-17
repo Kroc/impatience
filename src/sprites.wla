@@ -6,11 +6,13 @@
 
 tiles_sprites:
 ;-------------------------------------------------------------------------------
-.INCBIN         "build/tiles_sprites.2bpp"      FSIZE tiles_sprites__size
+.INCBIN         "build/sprites.2bpp"            FSIZE tiles_sprites__size
+
+.DEF    SPRITE_HAND_LHS         $66
+.DEF    SPRITE_HAND_RHS         $6e
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
-
 
 .include        "cursor.wla"    NAMESPACE "cursor"
 
@@ -28,7 +30,7 @@ init:
         call    cursor.init
 
         ; set sprite palettes:
-        ld      A,      %00011111
+        ld      A,      %11010000
         ld      [OBP0], A
         ld      [OBP1], A
 

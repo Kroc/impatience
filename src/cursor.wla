@@ -35,7 +35,7 @@ init:
         ld      A,      CURSOR_START_X  ; starting X-position
         ld      [cursor_x],     A
         ld      [HL+],  A
-        ld      A,      $00             ; tile-number
+        ld      A,      SPRITE_HAND_LHS ; tile-number
         ld      [HL+],  A
         ld      A,      %0000000
         ld      [HL+],  A
@@ -44,7 +44,7 @@ init:
         ld      [HL+],  A
         ld      A,      CURSOR_START_X + 8
         ld      [HL+],  A
-        ld      A,      $08             ; tile-number
+        ld      A,      SPRITE_HAND_RHS ; tile-number
         ld      [HL+],  A
         ld      A,      %0000000
         ld      [HL+],  A
