@@ -4,12 +4,73 @@
 .SECTION        "tiles_sprites" ALIGN 16        RETURNORG
 ;///////////////////////////////////////////////////////////////////////////////
 
+.DEF    SPRITE_PALLETE          %01001100
+
+; the sprite tiles are orderd *VERTICALLY*, unlike the background tiles!
+;
 tiles_sprites:
 ;-------------------------------------------------------------------------------
 .INCBIN         "build/sprites.2bpp"            FSIZE tiles_sprites__size
 
+; tile indices for the hand sprite:
 .DEF    SPRITE_HAND_LHS         $66
 .DEF    SPRITE_HAND_RHS         $6e
+
+; card back rows 1 & 2, column 1 (left)
+.DEF    SPRITE_BACK_12X1        $68
+; card back rows 1 & 2, column 2 (middle)
+.DEF    SPRITE_BACK_12X2        $70
+; card back rows 1 & 2, column 3 (right)
+.DEF    SPRITE_BACK_12X3        $78
+; card back rows 3 & 4, column 1 (left)
+.DEF    SPRITE_BACK_34X1        $68+1
+; card back rows 3 & 4, column 2 (middle)
+.DEF    SPRITE_BACK_34X2        $70+1
+; card back rows 3 & 4, column 3 (right)
+.DEF    SPRITE_BACK_34X3        $78+1
+
+; card rows 1 & 2, column 1 (left)
+.DEF    SPRITE_CARD_12X1_A      $00
+.DEF    SPRITE_CARD_12X1_2      $08
+.DEF    SPRITE_CARD_12X1_3      $10
+.DEF    SPRITE_CARD_12X1_4      $18
+.DEF    SPRITE_CARD_12X1_5      $20
+.DEF    SPRITE_CARD_12X1_6      $28
+.DEF    SPRITE_CARD_12X1_7      $30
+.DEF    SPRITE_CARD_12X1_8      $38
+.DEF    SPRITE_CARD_12X1_9      $40
+.DEF    SPRITE_CARD_12X1_10     $48
+.DEF    SPRITE_CARD_12X1_J      $50
+.DEF    SPRITE_CARD_12X1_Q      $58
+.DEF    SPRITE_CARD_12X1_K      $60
+; card rows 1 & 2, column 2 (middle)
+.DEF    SPRITE_CARD_12X2        $00+2
+; card rows 1 & 2, column 3 (right)
+.DEF    SPRITE_CARD_12X3_SPD    $48+3
+.DEF    SPRITE_CARD_12X3_CLB    $50+3
+.DEF    SPRITE_CARD_12X3_HRT    $58+3
+.DEF    SPRITE_CARD_12X3_DMD    $60+3
+; card rows 3 & 4, column 1 (left)
+.DEF    SPRITE_CARD_34X1_SPD    $48+1
+.DEF    SPRITE_CARD_34X1_CLB    $50+1
+.DEF    SPRITE_CARD_34X1_HRT    $58+1
+.DEF    SPRITE_CARD_34X1_DMD    $60+1
+; card rows 3 & 4, column 2 (middle)
+.DEF    SPRITE_CARD_34X2        $08+2
+; card rows 3 & 4, column 3 (right)
+.DEF    SPRITE_CARD_34X3_A      $00+4
+.DEF    SPRITE_CARD_34X3_2      $08+4
+.DEF    SPRITE_CARD_34X3_3      $10+4
+.DEF    SPRITE_CARD_34X3_4      $18+4
+.DEF    SPRITE_CARD_34X3_5      $20+4
+.DEF    SPRITE_CARD_34X3_6      $28+4
+.DEF    SPRITE_CARD_34X3_7      $30+4
+.DEF    SPRITE_CARD_34X3_8      $38+4
+.DEF    SPRITE_CARD_34X3_9      $40+4
+.DEF    SPRITE_CARD_34X3_10     $48+4
+.DEF    SPRITE_CARD_34X3_J      $50+4
+.DEF    SPRITE_CARD_34X3_Q      $58+4
+.DEF    SPRITE_CARD_34X3_K      $60+4
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
@@ -30,7 +91,7 @@ init:
         call    cursor.init
 
         ; set sprite palettes:
-        ld      A,      %11010000
+        ld      A,      SPRITE_PALLETE
         ld      [OBP0], A
         ld      [OBP1], A
 
