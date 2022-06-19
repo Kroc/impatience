@@ -171,7 +171,7 @@ clearTiles:
 ;-------------------------------------------------------------------------------
         ; the background tile indices are 'signed', so what we think of as
         ; the first tile, tile "0", is tile # "-1", i.e $80
-        ld      A,      $80
+        ld      A,      $7e
         ld      HL,     PLAYFIELD_ADDR
         ; number of tiles to skip to next row
         ld      DE,     32-20

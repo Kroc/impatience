@@ -6,10 +6,11 @@
 ; this table has to be aligned to an 8-bit boundary because the DMA
 ; register only accepts a hi-byte and assumes $00 for the lo-byte
 ;
-.RAMSECTION "WorkOAM" \
+.RAMSECTION "Attrs" \
         SLOT "WRAMLO"   ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
         attrs           INSTANCEOF Sprite 40
+        ; number of sprites in use
 .ENDS
 
 .RAMSECTION "DoDMA"     SLOT "HRAM"     RETURNORG
@@ -19,7 +20,7 @@
 .SECTION "tiles_sprites" ALIGN 16
 ;///////////////////////////////////////////////////////////////////////////////
 
-.DEF    SPRITE_PALLETE          %01001100
+.DEF    SPRITE_PALLETE  %01001100
 
 ; the sprite tiles are orderd *VERTICALLY*, unlike the background tiles!
 ;
@@ -28,8 +29,8 @@ tiles_sprites:
 .INCBIN "build/sprites.2bpp"            FSIZE tiles_sprites__size
 
 ; tile indices for the hand sprite:
-.DEF    SPRITE_HAND_LHS         $66
-.DEF    SPRITE_HAND_RHS         $6e
+.DEF    SPRITE_HAND_LHS         $00
+.DEF    SPRITE_HAND_RHS         $08
 
 ; card back rows 1 & 2, column 1 (left)
 .DEF    SPRITE_BACK_12X1        $68
@@ -125,7 +126,7 @@ clearAttrs:
 ;
 ;-------------------------------------------------------------------------------
         ld      HL,     attrs
-        ld      BC,     SECTIONEND_sprites.WorkOAM-SECTIONSTART_sprites.WorkOAM
+        ld      BC,     SECTIONEND_sprites.Attrs-SECTIONSTART_sprites.Attrs
         jp      zero
 
 
