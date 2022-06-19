@@ -65,7 +65,7 @@
 .DEF    SCX                     $ff43
 .DEF    LY                      $ff44
 .DEF    LYC                     $ff45
-
+.DEF    DMA                     $ff46
 .DEF    BGP                     $ff47
 .DEF    OBP0                    $ff48
 .DEF    OBP1                    $ff49
@@ -84,7 +84,7 @@
 .DEF    VRAM_TILES2             $8800   ; $8800-$97FF (note the overlap)
 .DEF    VRAM_MAP1               $9800
 .DEF    VRAM_MAP2               $9c00
-.DEF    OAM                	$fe00
+.DEF    OAM                     $fe00
 
 .STRUCT Sprite
         y               BYTE

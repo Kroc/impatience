@@ -17,7 +17,8 @@
 
 init:
 ;===============================================================================
-; WARNING: OAM must be writable (e.g. vblank)
+; this configures the cursor sprite attributes in work RAM,
+; which will be automatically written to OAM during vblank
 ;-------------------------------------------------------------------------------
         ; clear variables:
         xor     A                       ; A = 0
@@ -28,7 +29,7 @@ init:
         ld      [HL+],  A               ; cursor_y = 0
 
         ; configure the cursor sprite:
-        ld      HL,     OAM
+        ld      HL,     sprites.attrs
         ld      A,      CURSOR_START_Y  ; starting Y-position
         ld      [cursor_y],     A
         ld      [HL+],  A
@@ -108,7 +109,9 @@ moveToScrXY:
 update:
 ;===============================================================================
 ; move the cursor one frame towards its destination:
-; WARNING: OAM must be writable (e.g. vblank)
+;
+; note that sprite position changes are written to the work RAM
+; and this is automatically synced with OAM during vblank
 ;
 ; out:  BC, DE  (preserved)
 ;       HL, A   (clobbered)
@@ -132,10 +135,10 @@ update:
         inc     A
 +       add     A,      [HL]
 
-        ld      [HL],           A
-        ld      [gb.OAM.1.x],   A
-        add     A,              8
-        ld      [gb.OAM.2.x],   A
+        ld      [HL],                   A
+        ld      [sprites.attrs.1.x],    A
+        add     A,                      8
+        ld      [sprites.attrs.2.x],    A
 
         ;-----------------------------------------------------------------------
 @y:     inc     HL                      ; = cursor_dest_y
@@ -151,8 +154,8 @@ update:
         inc     A
 +       add     A,      [HL]
 
-        ld      [HL],           A
-        ld      [gb.OAM.1.y],   A
-        ld      [gb.OAM.2.y],   A
+        ld      [HL],                   A
+        ld      [sprites.attrs.1.y],    A
+        ld      [sprites.attrs.2.y],    A
 
         ret

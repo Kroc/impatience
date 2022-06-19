@@ -1,7 +1,22 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-.SECTION        "tiles_sprites" ALIGN 16        RETURNORG
+; the original Game Boy has DMA for sprite attributes, so we modify
+; an attribute table in work RAM and copy it to OAM during vblank.
+; this table has to be aligned to an 8-bit boundary because the DMA
+; register only accepts a hi-byte and assumes $00 for the lo-byte
+;
+.RAMSECTION "WorkOAM" \
+        SLOT "WRAMLO"   ALIGN 256       RETURNORG
+        ;-----------------------------------------------------------------------
+        attrs           INSTANCEOF Sprite 40
+.ENDS
+
+.RAMSECTION "DoDMA"     SLOT "HRAM"     RETURNORG
+        doDMA           DSB 5
+.ENDS
+
+.SECTION "tiles_sprites" ALIGN 16
 ;///////////////////////////////////////////////////////////////////////////////
 
 .DEF    SPRITE_PALLETE          %01001100
@@ -10,7 +25,7 @@
 ;
 tiles_sprites:
 ;-------------------------------------------------------------------------------
-.INCBIN         "build/sprites.2bpp"            FSIZE tiles_sprites__size
+.INCBIN "build/sprites.2bpp"            FSIZE tiles_sprites__size
 
 ; tile indices for the hand sprite:
 .DEF    SPRITE_HAND_LHS         $66
@@ -88,6 +103,7 @@ init:
         ld      B,      (tiles_sprites__size / 16) - 1
         call    tilemap.copyTiles
 
+        call    clearAttrs
         call    cursor.init
 
         ; set sprite palettes:
@@ -99,6 +115,48 @@ init:
         set     2,      [HL]            ; enable 8x16 sprites
         set     1,      [HL]            ; switch sprites on
         
+        ret
+
+
+clearAttrs:
+;===============================================================================
+; clears the working copy of the sprite attributes:
+; this will be uploaded to OAM on the next vblank
+;
+;-------------------------------------------------------------------------------
+        ld      HL,     attrs
+        ld      BC,     SECTIONEND_sprites.WorkOAM-SECTIONSTART_sprites.WorkOAM
+        jp      zero
+
+
+update:
+;===============================================================================
+; update sprites (during vblank):
+;
+;-------------------------------------------------------------------------------
+        ; handle the cursor:
+        call    cursor.update
+
+        ; DMA the sprite attributes from work RAM into OAM:
+        ;
+        ; the DMA register only accepts 8-bits, which will
+        ; be the hi-byte of the address to copy from
+        ld      A,      >sprites.attrs
+        
+        ; whilst the DMA is occuring the CPU can only access HRAM,
+        ; therefore we must initialise the DMA and wait via a routine
+        ; running from HRAM. the routine has been copied into HRAM during
+        ; `init_interrupts`. B must be set to the number of loop iterations
+        ; to wait and C is set to the lo-byte of the DMA register
+        ;
+        ; despite using the information given here,
+        ; <https://gbdev.io/pandocs/OAM_DMA_Transfer.html>,
+        ; the BGB emulator would break on bad access during DMA
+        ; unless the wait was increased from 40 ($28) to 41!
+        ;
+        ld      BC,     (41<<8) + <DMA
+        call    sprites.doDMA
+
         ret
 
 

@@ -23,7 +23,7 @@
         joy_state               BYTE
 .ENDS
 
-.SECTION        "z80_rst_00"    SIZE 8
+.SECTION "z80_rst_00"   SIZE 8
 ;///////////////////////////////////////////////////////////////////////////////
 
 rst_waitVBlank:                                                         ;$00
@@ -38,7 +38,7 @@ rst_waitVBlank:                                                         ;$00
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
 
-.SECTION        "z80_rst_08"    SIZE 8
+.SECTION "z80_rst_08"   SIZE 8
 ;///////////////////////////////////////////////////////////////////////////////
 
 rst_haltVBlank:                                                         ;$08
@@ -62,7 +62,7 @@ rst_haltVBlank:                                                         ;$08
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
 
-.SECTION        "z80_rst_10"    SIZE 8
+.SECTION "z80_rst_10"   SIZE 8
 ;///////////////////////////////////////////////////////////////////////////////
 
 rst_screenOn:                                                           ;$10
@@ -78,13 +78,13 @@ rst_screenOn:                                                           ;$10
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
 
-.SECTION        "z80_rst_18"    SIZE 8
+.SECTION "z80_rst_18"   SIZE 8
 ;///////////////////////////////////////////////////////////////////////////////
 
 rst_screenOff:                                                          ;$18
 ;===============================================================================
 ; turn the LCD off. we must only do this during v-blank or risk damaging
-; real hardware! therfore, we wait for v-blank to occur first:
+; real hardware! therefore, we wait for v-blank to occur first:
 ;
 ;-------------------------------------------------------------------------------
         rst     rst_waitVBlank
@@ -100,20 +100,20 @@ rst_screenOff:                                                          ;$18
 ; this area only provides 8 bytes free before the next IRQ ($48),
 ; so we only have room to jump to a bigger routine
 ;
-.SECTION        "irq_vblank"
+.SECTION "irq_vblank"
 ;///////////////////////////////////////////////////////////////////////////////
         jp      irq_vblank
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
 
-.SECTION        "interrupts"    FREE
+.SECTION "interrupts"   FREE
 ;///////////////////////////////////////////////////////////////////////////////
 
 init_interrupts:
 ;===============================================================================
         ; clear the interrupt registers:
-        ; we don't want unexpected interrupts firing due to dirty state
-        ; (e.g. device was rebooted mid-game)
+        ; we don't want unexpected interrupts firing due to
+        ; dirty state (e.g. device was rebooted mid-game)
         ;
         xor     A                       ; (sets A to 0)
         ldh     [<IRQ_ENABLE],   A      ; disallow each type of interrupt
@@ -124,22 +124,40 @@ init_interrupts:
         ;       and/or use a generic zeroing routine
         ld      HL,     SECTIONSTART_joypad
         ld      [HL+],  A
-        ld      [HL+],  A
-        ld      [HL+],  A
-        ld      [HL+],  A
 
+        ; write the DMA routine into HRAM:
+        ;-----------------------------------------------------------------------
+        ld      C,      <sprites.doDMA
+        ld      B,      5               ; size of DMA routine
+        ld      HL,     @dma
+-       ld      A,      [HL+]
+        ldh     [C],    A
+        inc     C
+        dec     B
+        jr      nz, -
+
+        ret
+
+        ; this is the DMA routine in HRAM:
+        ;
+        ; send the lo-byte of the address to copy from (A)
+        ; to the DMA register $FF00+C(=$46)
+@dma:   ldh     [C],    A
+        ; wait for DMA to complete...
+-       dec     B                       ; decrement wait counter
+        jr      nz, -                   ; keep waiting?
         ret
 
 
 irq_vblank:
 ;===============================================================================
         push    AF
+        push    BC
         push    HL
 
         ; TODO: any tile updates?
-
-        ; move the cursor one frame
-        call    cursor.update
+        ; update the sprites:
+        call    sprites.update
 
         ; read the joypad:
         ;=======================================================================
@@ -195,8 +213,10 @@ irq_vblank:
         ;;res	0,	[HL]
         
         pop     HL
+        pop     BC
         pop     AF
         reti
+
 
 getButton:
 ;===============================================================================

@@ -4,13 +4,13 @@
 ; since we cannot modify VRAM during the display period,
 ; changes are queued up and then applied during vblank
 ;
-.RAMSECTION     "tile_queue"                    RETURNORG
+.RAMSECTION "tile_queue"                RETURNORG
         ;-----------------------------------------------------------------------
         queue_index     BYTE            ; current stack-level of the queue
-        tile_queue      DSB 126
+        tile_queue      DSB 121
 .ENDS
 
-.RAMSECTION     "buffers"       ALIGN 256       RETURNORG
+.RAMSECTION "buffers"   ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
         front_buffer    DSB 32*32
         back_buffer     DSB 32*32
@@ -21,12 +21,12 @@
 ; the code-base. we want this aligned to one-tile (16-bytes) for some
 ; tile-copying micro-optimisations
 ;
-.SECTION        "tiles_cards"   ALIGN 16        RETURNORG
+.SECTION "tiles_cards"  ALIGN 16        RETURNORG
 ;///////////////////////////////////////////////////////////////////////////////
 
 tiles_main:
 ;===============================================================================
-.INCBIN         "build/tiles.2bpp"              FSIZE tiles_main__size
+.INCBIN "build/tiles.2bpp"              FSIZE tiles_main__size
 
 ; define the conversion from ASCII to the tile-numbers in our tileset:
 ;
@@ -283,7 +283,7 @@ clearQueue:
         ld      HL,     queue_index
         ld      [HL],   C
 
-        ld      B,      _sizeof_tile_queue+1
+        ld      B,      _sizeof_tile_queue
 -       ldh     [C],    A               ; write 0 to queue
         inc     C                       ; move to next byte in queue
         dec     B                       ; one less byte to process

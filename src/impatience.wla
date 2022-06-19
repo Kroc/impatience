@@ -50,7 +50,7 @@ init:
         ld      BC,     8192
         call    zero
 
-        ; clear sprite registers (OAM)
+        ; clear sprite registers: (OAM)
         ld      HL,     OAM
         ld      BC,     (40 * 4)
         call    zero
@@ -117,14 +117,14 @@ zero:
         ld      [HL+],  A
 
         dec     C
-        jr      nz,     -
+        jr      nz, -
 
         ret
 
 +       xor     A                       ; (set A to zero)
         ld      [HL+],  A
         dec     C
-        jr      nz,     -
+        jr      nz, -
         ret
 
 ;===============================================================================
