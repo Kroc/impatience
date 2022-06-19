@@ -663,7 +663,8 @@ drawCard:
         ; top-left corner: ordinal
         ld      D,      A               ; make a copy of the original value
         and     %00001111               ; trim out the other bits
-        add     TILE3X4_CARD_1X1-1      ; offset the tile with the ordinal
+        rlca
+        add     TILE3X4_CARD_1X1-2      ; offset the tile with the ordinal
         ld      [HL+],  A               ; write the tile and advance
 
         ; top-middle:
@@ -674,6 +675,7 @@ drawCard:
         ld      A,      D
         swap    A                       ; move the suit to the bottom nybble
         and     %00000011               ; mask out the other bits
+        rlca
         ld      E,      A               ; remember the suit for later too
         add     TILE3X4_CARD_1X3
         ld      [HL+],  A
@@ -711,7 +713,8 @@ drawCard:
         ; bottom-right: ordinal
         ld      A,      D               ; retrieve ordinal from earlier
         and     %00001111               ; trim out the other bits
-        add     TILE3X4_CARD_4X3-1      ; offset the tile with the ordinal
+        rlca
+        add     TILE3X4_CARD_4X3-2      ; offset the tile with the ordinal
         ld      [HL+],  A               ; write the tile and advance
 
         ret

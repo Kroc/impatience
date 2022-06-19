@@ -8,15 +8,15 @@ REM # we use "rgbfix" from the RGBDS assembler,
 REM # even though we won't be using RGBDS to assemble
 SET RGBGFX="bin\rgbds\rgbgfx.exe"
 
-%RGBGFX% -f ^
-    -o "build\tiles.2bpp" ^
-       "src\tiles\tiles.png"
+%RGBGFX% -h ^
+    -o "build\sprites.2bpp" ^
+       "src\tiles\sprites.png"
 
 IF ERRORLEVEL 1 EXIT /B 1
 
-%RGBGFX% -f -h ^
-    -o "build\sprites.2bpp" ^
-       "src\tiles\sprites.png"
+%RGBGFX% -h ^
+    -o "build\tiles.2bpp" ^
+       "src\tiles\tiles.png"
 
 IF ERRORLEVEL 1 EXIT /B 1
 

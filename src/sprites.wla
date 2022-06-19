@@ -10,7 +10,9 @@
         SLOT "WRAMLO"   ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
         attrs           INSTANCEOF Sprite 40
-        ; number of sprites in use
+        ; number of sprites in use for the card-sprites:
+        ; (doesn't include the cursor, so this maxes out at 38)
+        used            BYTE
 .ENDS
 
 .RAMSECTION "DoDMA"     SLOT "HRAM"     RETURNORG
@@ -22,8 +24,6 @@
 
 .DEF    SPRITE_PALLETE  %01001100
 
-; the sprite tiles are orderd *VERTICALLY*, unlike the background tiles!
-;
 tiles_sprites:
 ;-------------------------------------------------------------------------------
 .INCBIN "build/sprites.2bpp"            FSIZE tiles_sprites__size
@@ -46,19 +46,19 @@ tiles_sprites:
 .DEF    SPRITE_BACK_34X3        $78+1
 
 ; card rows 1 & 2, column 1 (left)
-.DEF    SPRITE_CARD_12X1_A      $00
-.DEF    SPRITE_CARD_12X1_2      $08
-.DEF    SPRITE_CARD_12X1_3      $10
-.DEF    SPRITE_CARD_12X1_4      $18
-.DEF    SPRITE_CARD_12X1_5      $20
-.DEF    SPRITE_CARD_12X1_6      $28
-.DEF    SPRITE_CARD_12X1_7      $30
-.DEF    SPRITE_CARD_12X1_8      $38
-.DEF    SPRITE_CARD_12X1_9      $40
-.DEF    SPRITE_CARD_12X1_10     $48
-.DEF    SPRITE_CARD_12X1_J      $50
-.DEF    SPRITE_CARD_12X1_Q      $58
-.DEF    SPRITE_CARD_12X1_K      $60
+.DEF    SPRITE_CARD_12X1_A      $80
+.DEF    SPRITE_CARD_12X1_2      $81
+.DEF    SPRITE_CARD_12X1_3      $82
+.DEF    SPRITE_CARD_12X1_4      $83
+.DEF    SPRITE_CARD_12X1_5      $84
+.DEF    SPRITE_CARD_12X1_6      $85
+.DEF    SPRITE_CARD_12X1_7      $86
+.DEF    SPRITE_CARD_12X1_8      $87
+.DEF    SPRITE_CARD_12X1_9      $88
+.DEF    SPRITE_CARD_12X1_10     $89
+.DEF    SPRITE_CARD_12X1_J      $8a
+.DEF    SPRITE_CARD_12X1_Q      $8b
+.DEF    SPRITE_CARD_12X1_K      $8c
 ; card rows 1 & 2, column 2 (middle)
 .DEF    SPRITE_CARD_12X2        $00+2
 ; card rows 1 & 2, column 3 (right)
@@ -108,8 +108,9 @@ init:
         call    cursor.init
 
         ; set sprite palettes:
-        ld      A,      SPRITE_PALLETE
+        ld      A,      TILE_PALETTE
         ld      [OBP0], A
+        ld      A,      SPRITE_PALLETE
         ld      [OBP1], A
 
         ld      HL,     LCDC
@@ -201,4 +202,67 @@ tilePosToScrXY:
         add     A,      8               ; account for off-screen sprite space
         ld      C,      A               ; return value back in C
 
+        ret
+
+
+cardToSprite:
+;===============================================================================
+; converts a card into a sprite and places it into the cursor's hand:
+;
+; in:   A       the card to create a sprite version of
+;-------------------------------------------------------------------------------
+        ; keep an original copy of the card value in E
+        ld      E,      A
+
+        xor     A
+        ld      [used], A
+
+        ; get starting X & Y position
+        ld      HL,     cursor.cursor_y
+        ld      B,      [HL]
+        ld      HL,     cursor.cursor_x
+        ld      C,      [HL]
+
+        ; top-left corner: ordinal
+        ;-----------------------------------------------------------------------
+        ld      A,      E
+        and     %00001111               ; trim out the other bits
+        add     TILE3X4_CARD_1X1-1      ; offset the tile with the ordinal
+        ld      D,      A
+        call    pushSprite
+        ret
+
+
+pushSprite:
+;===============================================================================
+; define a sprite's attributes, adding it to the screen:
+;
+; in:   BC      y & x position of sprite
+;       D       tile-number of sprite
+;-------------------------------------------------------------------------------
+        push    AF
+
+        ld      HL,     attrs           ; local sprite table
+        ld      A,      [used]          ; get current available sprite index
+        add     A,      2               ; (skip cursor sprites)
+        rlca                            ; x2
+        rlca                            ; x4 (4 bytes per sprite)
+        add     A,      L               ; add to base address
+        ld      A,      H               ; handle hi-byte...
+        adc     0                       ; add the ripple
+        ld      H,      A
+        ; HL is the address of the sprite entry in the local sprite table
+        ld      A,      B               ; y-position
+        ld      [HL+],  A
+        ld      A,      C               ; x-position
+        ld      [HL+],  A
+        pop     AF                      ; retrieve tile-index
+        ld      [HL+],  A
+        ld      A,      %00000000       ; display attributes
+        ld      [HL+],  A
+        
+        ; move to next sprite slot
+        ld      HL,     used
+        inc     [HL]
+        
         ret

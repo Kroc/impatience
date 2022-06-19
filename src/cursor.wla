@@ -38,7 +38,7 @@ init:
         ld      [HL+],  A
         ld      A,      SPRITE_HAND_LHS ; tile-number
         ld      [HL+],  A
-        ld      A,      %0000000
+        ld      A,      %00010000       ; (use 2nd sprite palette)
         ld      [HL+],  A
 
         ld      A,      CURSOR_START_Y  ; starting Y-position
@@ -47,7 +47,7 @@ init:
         ld      [HL+],  A
         ld      A,      SPRITE_HAND_RHS ; tile-number
         ld      [HL+],  A
-        ld      A,      %0000000
+        ld      A,      %00010000       ; (use 2nd sprite palette)
         ld      [HL+],  A
 
         ld      A,      8

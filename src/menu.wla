@@ -10,7 +10,7 @@ clear:
 ;
 ;-------------------------------------------------------------------------------
         ; (menu background tile)
-        ld      A,      $80+$60
+        ld      A,      $50
         ; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32
         ; scrollable region. for our purposes we place the menu on
         ; the left of the playfield
