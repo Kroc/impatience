@@ -664,11 +664,11 @@ drawCard:
         ld      D,      A               ; make a copy of the original value
         and     %00001111               ; trim out the other bits
         rlca
-        add     TILE3X4_CARD_1X1-2      ; offset the tile with the ordinal
+        add     TILE_CARD_1X1-2         ; offset the tile with the ordinal
         ld      [HL+],  A               ; write the tile and advance
 
         ; top-middle:
-        ld      A,      TILE3X4_CARD_1X2
+        ld      A,      TILE_CARD_1X2
         ld      [HL+],  A
 
         ; top-right corner: suit
@@ -677,7 +677,7 @@ drawCard:
         and     %00000011               ; mask out the other bits
         rlca
         ld      E,      A               ; remember the suit for later too
-        add     TILE3X4_CARD_1X3
+        add     TILE_CARD_1X3
         ld      [HL+],  A
         add     HL,     BC              ; move to the next row
 
@@ -686,35 +686,35 @@ drawCard:
         ret     c                       ; return now if carry-set
 
         ; middle:
-        ld      A,      TILE3X4_CARD_2X1
+        ld      A,      TILE_CARD_2X1
         ld      [HL+],  A
-        ld      A,      TILE3X4_CARD_2X2
+        ld      A,      TILE_CARD_2X2
         ld      [HL+],  A
-        ld      A,      TILE3X4_CARD_2X3
+        ld      A,      TILE_CARD_2X3
         ld      [HL+],  A
         add     HL,     BC              ; move to the next row
-        ld      A,      TILE3X4_CARD_2X1
+        ld      A,      TILE_CARD_2X1
         ld      [HL+],  A
-        ld      A,      TILE3X4_CARD_2X2
+        ld      A,      TILE_CARD_2X2
         ld      [HL+],  A
-        ld      A,      TILE3X4_CARD_2X3
+        ld      A,      TILE_CARD_2X3
         ld      [HL+],  A
         add     HL,     BC              ; move to the next row
 
         ; bottom-left: suit
         ld      A,      E               ; retrieve suit from earlier
-        add     TILE3X4_CARD_4X1
+        add     TILE_CARD_4X1
         ld      [HL+],  A
 
         ; bottom-middle:
-        ld      A,      TILE3X4_CARD_4X2
+        ld      A,      TILE_CARD_4X2
         ld      [HL+],  A
 
         ; bottom-right: ordinal
         ld      A,      D               ; retrieve ordinal from earlier
         and     %00001111               ; trim out the other bits
         rlca
-        add     TILE3X4_CARD_4X3-2      ; offset the tile with the ordinal
+        add     TILE_CARD_4X3-2         ; offset the tile with the ordinal
         ld      [HL+],  A               ; write the tile and advance
 
         ret
@@ -986,6 +986,6 @@ pickCard:
         call    removeCard
 
         ; create a sprite copy of the card(s)
-        
+        call    sprites.cardToSprite
         
         ret

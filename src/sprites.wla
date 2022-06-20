@@ -33,60 +33,64 @@ tiles_sprites:
 .DEF    SPRITE_HAND_RHS         $08
 
 ; card back rows 1 & 2, column 1 (left)
-.DEF    SPRITE_BACK_12X1        $68
+.DEF    SPRITE_BACK_12X1        $60+4
 ; card back rows 1 & 2, column 2 (middle)
-.DEF    SPRITE_BACK_12X2        $70
+.DEF    SPRITE_BACK_12X2        $68+4
 ; card back rows 1 & 2, column 3 (right)
-.DEF    SPRITE_BACK_12X3        $78
+.DEF    SPRITE_BACK_12X3        $70+4
 ; card back rows 3 & 4, column 1 (left)
-.DEF    SPRITE_BACK_34X1        $68+1
+.DEF    SPRITE_BACK_34X1        $60+6
 ; card back rows 3 & 4, column 2 (middle)
-.DEF    SPRITE_BACK_34X2        $70+1
+.DEF    SPRITE_BACK_34X2        $68+6
 ; card back rows 3 & 4, column 3 (right)
-.DEF    SPRITE_BACK_34X3        $78+1
+.DEF    SPRITE_BACK_34X3        $70+6
 
 ; card rows 1 & 2, column 1 (left)
-.DEF    SPRITE_CARD_12X1_A      $80
-.DEF    SPRITE_CARD_12X1_2      $81
-.DEF    SPRITE_CARD_12X1_3      $82
-.DEF    SPRITE_CARD_12X1_4      $83
-.DEF    SPRITE_CARD_12X1_5      $84
-.DEF    SPRITE_CARD_12X1_6      $85
-.DEF    SPRITE_CARD_12X1_7      $86
-.DEF    SPRITE_CARD_12X1_8      $87
-.DEF    SPRITE_CARD_12X1_9      $88
-.DEF    SPRITE_CARD_12X1_10     $89
-.DEF    SPRITE_CARD_12X1_J      $8a
-.DEF    SPRITE_CARD_12X1_Q      $8b
-.DEF    SPRITE_CARD_12X1_K      $8c
+.DEF    SPRITE_CARD_12X1        $10
+.DEF    SPRITE_CARD_12X1_A      $10+0
+.DEF    SPRITE_CARD_12X1_2      $10+2
+.DEF    SPRITE_CARD_12X1_3      $10+4
+.DEF    SPRITE_CARD_12X1_4      $10+6
+.DEF    SPRITE_CARD_12X1_5      $10+8
+.DEF    SPRITE_CARD_12X1_6      $10+10
+.DEF    SPRITE_CARD_12X1_7      $10+12
+.DEF    SPRITE_CARD_12X1_8      $10+14
+.DEF    SPRITE_CARD_12X1_9      $10+16
+.DEF    SPRITE_CARD_12X1_10     $10+18
+.DEF    SPRITE_CARD_12X1_J      $10+20
+.DEF    SPRITE_CARD_12X1_Q      $10+22
+.DEF    SPRITE_CARD_12X1_K      $10+24
 ; card rows 1 & 2, column 2 (middle)
-.DEF    SPRITE_CARD_12X2        $00+2
+.DEF    SPRITE_CARD_12X2        $28+2
 ; card rows 1 & 2, column 3 (right)
-.DEF    SPRITE_CARD_12X3_SPD    $48+3
-.DEF    SPRITE_CARD_12X3_CLB    $50+3
-.DEF    SPRITE_CARD_12X3_HRT    $58+3
-.DEF    SPRITE_CARD_12X3_DMD    $60+3
+.DEF    SPRITE_CARD_12X3        $30
+.DEF    SPRITE_CARD_12X3_SPD    $30+0
+.DEF    SPRITE_CARD_12X3_CLB    $30+2
+.DEF    SPRITE_CARD_12X3_HRT    $30+4
+.DEF    SPRITE_CARD_12X3_DMD    $30+6
 ; card rows 3 & 4, column 1 (left)
-.DEF    SPRITE_CARD_34X1_SPD    $48+1
-.DEF    SPRITE_CARD_34X1_CLB    $50+1
-.DEF    SPRITE_CARD_34X1_HRT    $58+1
-.DEF    SPRITE_CARD_34X1_DMD    $60+1
+.DEF    SPRITE_CARD_34X1        $38
+.DEF    SPRITE_CARD_34X1_SPD    $38+0
+.DEF    SPRITE_CARD_34X1_CLB    $38+2
+.DEF    SPRITE_CARD_34X1_HRT    $38+4
+.DEF    SPRITE_CARD_34X1_DMD    $38+6
 ; card rows 3 & 4, column 2 (middle)
-.DEF    SPRITE_CARD_34X2        $08+2
+.DEF    SPRITE_CARD_34X2        $40
 ; card rows 3 & 4, column 3 (right)
-.DEF    SPRITE_CARD_34X3_A      $00+4
-.DEF    SPRITE_CARD_34X3_2      $08+4
-.DEF    SPRITE_CARD_34X3_3      $10+4
-.DEF    SPRITE_CARD_34X3_4      $18+4
-.DEF    SPRITE_CARD_34X3_5      $20+4
-.DEF    SPRITE_CARD_34X3_6      $28+4
-.DEF    SPRITE_CARD_34X3_7      $30+4
-.DEF    SPRITE_CARD_34X3_8      $38+4
-.DEF    SPRITE_CARD_34X3_9      $40+4
-.DEF    SPRITE_CARD_34X3_10     $48+4
-.DEF    SPRITE_CARD_34X3_J      $50+4
-.DEF    SPRITE_CARD_34X3_Q      $58+4
-.DEF    SPRITE_CARD_34X3_K      $60+4
+.DEF    SPRITE_CARD_34X3        $48
+.DEF    SPRITE_CARD_34X3_A      $48+0
+.DEF    SPRITE_CARD_34X3_2      $48+2
+.DEF    SPRITE_CARD_34X3_3      $48+4
+.DEF    SPRITE_CARD_34X3_4      $48+6
+.DEF    SPRITE_CARD_34X3_5      $48+8
+.DEF    SPRITE_CARD_34X3_6      $48+10
+.DEF    SPRITE_CARD_34X3_7      $48+12
+.DEF    SPRITE_CARD_34X3_8      $48+14
+.DEF    SPRITE_CARD_34X3_9      $48+16
+.DEF    SPRITE_CARD_34X3_10     $48+18
+.DEF    SPRITE_CARD_34X3_J      $48+20
+.DEF    SPRITE_CARD_34X3_Q      $48+22
+.DEF    SPRITE_CARD_34X3_K      $48+24
 
 ;///////////////////////////////////////////////////////////////////////////////
 .ENDS
@@ -108,7 +112,7 @@ init:
         call    cursor.init
 
         ; set sprite palettes:
-        ld      A,      TILE_PALETTE
+        ld      A,      SPRITE_PALLETE
         ld      [OBP0], A
         ld      A,      SPRITE_PALLETE
         ld      [OBP1], A
@@ -157,9 +161,7 @@ update:
         ; unless the wait was increased from 40 ($28) to 41!
         ;
         ld      BC,     (41<<8) + <DMA
-        call    sprites.doDMA
-
-        ret
+        jp      sprites.doDMA
 
 
 tilePosToScrXY:
@@ -214,8 +216,15 @@ cardToSprite:
         ; keep an original copy of the card value in E
         ld      E,      A
 
-        xor     A
+        ; TODO: clear out any existing card-sprite
+        ld      A,      2
         ld      [used], A
+
+        ; change the cursor
+        ld      A,      $00+2
+        ld      [attrs.1.tile], A
+        ld      A,      $08+2
+        ld      [attrs.2.tile], A
 
         ; get starting X & Y position
         ld      HL,     cursor.cursor_y
@@ -225,11 +234,65 @@ cardToSprite:
 
         ; top-left corner: ordinal
         ;-----------------------------------------------------------------------
+        call    @right
         ld      A,      E
         and     %00001111               ; trim out the other bits
-        add     TILE3X4_CARD_1X1-1      ; offset the tile with the ordinal
-        ld      D,      A
+        rlca
+        push    AF                      ; save value for the botom-right
+        add     SPRITE_CARD_12X1-2      ; offset the tile with the ordinal
         call    pushSprite
+
+        ; top-middle:
+        ;-----------------------------------------------------------------------
+        call    @right
+        ld      A,      SPRITE_CARD_12X2; this has a fixed sprite tile
+        call    pushSprite
+
+        ; top-right: suit
+        ;-----------------------------------------------------------------------
+        call    @right
+        ld      A,      E
+        swap    A                       ; move the suit to the bottom nybble
+        and     %00000011               ; mask out the other bits
+        rlca
+        ld      D,      A               ; preserve this for the other corner
+        add     SPRITE_CARD_12X3
+        call    pushSprite
+
+        ; bottom-left:
+        ;-----------------------------------------------------------------------
+        call    @down
+        ld      A,      D
+        add     SPRITE_CARD_34X1
+        call    pushSprite
+
+        ; bottom-middle:
+        ;-----------------------------------------------------------------------
+        call    @right
+        ld      A,      SPRITE_CARD_34X2
+        call    pushSprite
+
+        ; bottom-right: suit
+        ;-----------------------------------------------------------------------
+        call    @right
+        pop     AF
+        add     SPRITE_CARD_34X3-2
+        call    pushSprite
+
+        ret
+
+        ; position next sprite to the right of the previous
+@right: ld      A,      8
+        add     A,      C
+        ld      C,      A
+        ret
+
+@down:  ld      A,      16
+        add     A,      B
+        ld      B,      A
+        ld      A,      -16
+        add     A,      C
+        ld      C,      A
         ret
 
 
@@ -237,17 +300,17 @@ pushSprite:
 ;===============================================================================
 ; define a sprite's attributes, adding it to the screen:
 ;
-; in:   BC      y & x position of sprite
-;       D       tile-number of sprite
+; in:   A       tile-number of sprite
+;       BC      y & x position of sprite
 ;-------------------------------------------------------------------------------
         push    AF
 
         ld      HL,     attrs           ; local sprite table
         ld      A,      [used]          ; get current available sprite index
-        add     A,      2               ; (skip cursor sprites)
         rlca                            ; x2
         rlca                            ; x4 (4 bytes per sprite)
         add     A,      L               ; add to base address
+        ld      L,      A               ; update lo-byte
         ld      A,      H               ; handle hi-byte...
         adc     0                       ; add the ripple
         ld      H,      A
@@ -258,7 +321,8 @@ pushSprite:
         ld      [HL+],  A
         pop     AF                      ; retrieve tile-index
         ld      [HL+],  A
-        ld      A,      %00000000       ; display attributes
+        ;;ld      A,      %00000000       ; display attributes
+        xor     A
         ld      [HL+],  A
         
         ; move to next sprite slot
