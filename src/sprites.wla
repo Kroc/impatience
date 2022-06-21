@@ -161,7 +161,7 @@ update:
         ; unless the wait was increased from 40 ($28) to 41!
         ;
         ld      BC,     (41<<8) + <DMA
-        jp      sprites.doDMA
+        jp      sprites.doDMA           ; this is in HRAM!
 
 
 tilePosToScrXY:
@@ -216,9 +216,9 @@ cardToSprite:
         ; keep an original copy of the card value in E
         ld      E,      A
 
-        ; TODO: clear out any existing card-sprite
-        ld      A,      2
-        ld      [used], A
+        ; clear the current card sprites
+        ; (this must not clobber E)
+        call    cursor.clearCards
 
         ; change the cursor
         ld      A,      $00+2
@@ -281,6 +281,7 @@ cardToSprite:
 
         ret
 
+        ;-----------------------------------------------------------------------
         ; position next sprite to the right of the previous
 @right: ld      A,      8
         add     A,      C
@@ -303,7 +304,7 @@ pushSprite:
 ; in:   A       tile-number of sprite
 ;       BC      y & x position of sprite
 ;-------------------------------------------------------------------------------
-        push    AF
+        push    AF                      ; tile-number is not first
 
         ld      HL,     attrs           ; local sprite table
         ld      A,      [used]          ; get current available sprite index

@@ -106,6 +106,25 @@ moveToScrXY:
         ret
 
 
+clearCards:
+;===============================================================================
+; remove the cards held by the cursor:
+;
+;-------------------------------------------------------------------------------
+        ; reset the sprites-in-use count
+        ld      A,              2
+        ld      [sprites.used], A
+        ; number of bytes to clear: 38 sprites
+        ; (cursor sprites are excluded),
+        ; times 4 bytes per sprite
+        ld      BC,     38 * _sizeof_Sprite
+        ; address of the third sprite in the local sprite table;
+        ; the first two sprites are the hand cursor
+        ld      HL,     sprites.attrs.3
+        ; zero all the bytes
+        jp      zero
+
+
 update:
 ;===============================================================================
 ; move the cursor one frame towards its destination:

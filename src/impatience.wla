@@ -74,8 +74,8 @@ zero:
 ; in:   HL      starting address to zero
 ;       BC      number of bytes to clear (1-based)
 ;
-; out:  HL, BC  (clobbered)
-;       A       (clobbered)
+; out:  BC, A   set to zero by nature of the routine
+;       HL      set to the address after the zeroed memory
 ;-------------------------------------------------------------------------------
         ; if the hi-byte is non-zero it's guaranteed that >255 bytes
         ; remain and we can simply zero 255 bytes at a time!
@@ -101,7 +101,7 @@ zero:
         ; we try zero 8 bytes at a time for speed, thus we have
         ; to check for when there's less than 8 bytes remaining
         ;
--       ld      A,      8               ; more than 8-bytes remaining?
+-       ld      A,      8               ; less than 8-bytes remaining?
         cp      C
         jr      c,      +               ; zero only one byte at a time
 
@@ -122,7 +122,7 @@ zero:
         ret
 
 +       xor     A                       ; (set A to zero)
-        ld      [HL+],  A
+-       ld      [HL+],  A
         dec     C
         jr      nz, -
         ret
