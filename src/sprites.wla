@@ -424,7 +424,7 @@ cardToSprite:
         ld      A,      E
         and     %00001111               ; trim out the other bits
         rlca
-        push    AF                      ; save value for the botom-right
+        ld      D,      A               ; save value for the botom-right
         add     SPRITE_CARD_12X1-2      ; offset the tile with the ordinal
         call    pushSprite
 
@@ -441,14 +441,14 @@ cardToSprite:
         swap    A                       ; move the suit to the bottom nybble
         and     %00000011               ; mask out the other bits
         rlca
-        ld      D,      A               ; preserve this for the other corner
-        add     SPRITE_CARD_12X3
+        ld      E,      A               ; preserve this for the other corner
+        add     SPRITE_CARD_12X3        ; (original value not needed again)
         call    pushSprite
 
         ; bottom-left:
         ;-----------------------------------------------------------------------
         call    @down
-        ld      A,      D
+        ld      A,      E
         add     SPRITE_CARD_34X1
         call    pushSprite
 
@@ -461,7 +461,7 @@ cardToSprite:
         ; bottom-right: suit
         ;-----------------------------------------------------------------------
         call    @right
-        pop     AF
+        ld      A,      D               ; retrieve suit from top-left corner
         add     SPRITE_CARD_34X3-2
         call    pushSprite
 
