@@ -111,6 +111,8 @@ tiles_sprites:
         cursor_x        BYTE            ; current cursor X-position
         cursor_dest_y   BYTE            ; new Y-position to move cursor to
         cursor_y        BYTE            ; current cursor Y-position
+        ;-----------------------------------------------------------------------
+        cursor_mode     BYTE
 .ENDS
 
 
@@ -136,22 +138,22 @@ init:
         ld      [HL+],  A               ; cursor_x = 0
         ld      [HL+],  A               ; cursor_dest_y = 0
         ld      [HL+],  A               ; cursor_y = 0
+        ld      [HL+],  A               ; cursor_mode = 0
 
         ; configure the cursor sprite:
         ld      HL,     attrs
         ld      A,      CURSOR_START_Y  ; starting Y-position
-        ld      [cursor_y],             A
-        ld      [cursor_dest_y],        A
+        ld      [cursor_y],     A
+        ld      [cursor_dest_y],A
         ld      [HL+],  A
         ld      A,      CURSOR_START_X  ; starting X-position
-        ld      [cursor_x],             A
-        ld      [cursor_dest_x],        A
+        ld      [cursor_x],     A
+        ld      [cursor_dest_x],A
         ld      [HL+],  A
         ld      A,      SPRITE_HAND_LHS ; tile-number
         ld      [HL+],  A
-        ;;ld      A,      %00000000
         xor     A
-        ld      [HL+],  A
+        ld      [HL+],  A               ; display attribute
 
         ld      A,      CURSOR_START_Y  ; starting Y-position
         ld      [HL+],  A
@@ -159,9 +161,7 @@ init:
         ld      [HL+],  A
         ld      A,      SPRITE_HAND_RHS ; tile-number
         ld      [HL+],  A
-        ;;ld      A,      %00000000
-        xor     A
-        ld      [HL+],  A
+        ld      [HL],   0               ; display attributes
 
         ; reset the sprites-in-use count
         ld      A,      38-1            ; (0-based)
@@ -171,7 +171,7 @@ init:
         ;-----------------------------------------------------------------------
         ld      A,      SPRITE_PALLETE
         ldh     [<OBP0], A
-        ;;ld      A,      SPRITE_PALLETE
+        ld      A,      TILE_PALETTE
         ldh     [<OBP1], A
 
         ld      HL,     LCDC
@@ -202,7 +202,11 @@ clearCards:
         ld      [attrs.1.tile], A
         ld      A,              SPRITE_HAND_RHS
         ld      [attrs.2.tile], A
-        ; reset the index of the next free sprite (0-based)
+        ; reset the cursor mode to free-hand
+        ld      HL,     cursor_mode
+        res     7,      [HL]
+        ; reset the index of the next free sprite (0-based). sprites must
+        ; be built from the last downward for sprite-priority reasons
         ld      A,      38-1
         ld      [free], A
         ; number of bytes to clear: 38 sprites
@@ -251,51 +255,113 @@ updateCursor:
 ;
 ; note that sprite position changes are written to the work RAM
 ; and this is automatically synced with OAM during vblank
-;
-; out:  BC, DE  (preserved)
-;       HL, A   (clobbered)
 ;-------------------------------------------------------------------------------
         ; is the cursor in its intended X-position?
         ;
         ; the destination X-position and current X-position are next to each
         ; other in RAM; we subtract them from each other to check for any
         ; difference
-        ld      HL,     sprites.cursor_dest_x   ; begin with destination X addr
+        ld      HL,     cursor_dest_x   ; begin with destination X addr
         ld      A,      [HL+]           ; read and increment addr to current-X
         sub     A,      [HL]            ; subtract destination-X from current-X
         jr      z,      @y              ; if equal, no horizontal movement
 
         ; move in the X-direction:
-        ; TODO: apply min/max speed?
-        ;
-        sra     A
-        sra     A
-        jr      nz,     +
-        inc     A
-+       add     A,      [HL]
+        ;-----------------------------------------------------------------------
+        sra     A                       ; limit the maximum speed
+        sra     A                       ; by dividing the distance by 4
+        jr      nz,     +               ; did dividing reduce it to zero?
+        inc     A                       ; move by at least 1 pixel
++       ld      D,      A               ; remember this "x-speed"
 
-        ld      [HL],                   A
-        ld      [sprites.attrs.1.x],    A
-        add     A,                      8
-        ld      [sprites.attrs.2.x],    A
+        ; is the cursor hand holding cards?
+        ld      HL,     cursor_mode
+        bit     7,      [HL]
+        jr      z,      +
+
+        ; move cards in hand:
+        ;-----------------------------------------------------------------------
+        ld      HL,     free
+        ld      C,      [HL]
+        inc     C
+
+        ; loop over the sprites assigned to the cards
+-       ld      A,      C
+        rlca                            ; x2
+        rlca                            ; x4 (4 bytes per sprite)
+        ld      HL,     attrs.3.x       ; use local sprite table
+        add     A,      L               ; add to base address
+        ld      L,      A               ; update lo-byte
+        ; HL is the address of the sprite entry in the local sprite table
+        ld      A,      [HL]
+        add     A,      D
+        ld      [HL],   A
+
+        inc     C
+        ld      A,      C
+        cp      38
+        jr      nz,     -
+
+        ; move the hand cursor: (sprites 1 & 2)
+        ;-----------------------------------------------------------------------
++       ld      HL,     cursor_x
+        ld      A,      D
+        add     A,      [HL]            ; add distance to current `cursor_x`
+        ld      [HL],           A       ; update the `cursor_x` variable
+        ld      [attrs.1.x],    A       ; update the sprite attributes table
+        add     A,              8       ; (the other half of the cursor too)
+        ld      [attrs.2.x],    A
 
         ;-----------------------------------------------------------------------
-@y:     inc     HL                      ; = cursor_dest_y
+@y:     inc     HL                      ; = `cursor_dest_y`
         ld      A,      [HL+]           ; read and increment addr to current-Y
         sub     A,      [HL]            ; subtract destination-Y from current-Y
         ret     z                       ; if equal, no vertical movement
         
         ; move in the Y-direction:
         ;
-        sra     A
-        sra     A
-        jr      nz,     +
-        inc     A
-+       add     A,      [HL]
+        sra     A                       ; limit the maximum speed
+        sra     A                       ; by dividing the distance by 4
+        jr      nz,     +               ; did dividing reduce it to zero?
+        inc     A                       ; move by at least 1 pixel
++       ld      D,      A               ; remember this "y-speed"
 
-        ld      [HL],                   A
-        ld      [sprites.attrs.1.y],    A
-        ld      [sprites.attrs.2.y],    A
+        ; is the cursor hand holding cards?
+        ld      HL,     cursor_mode
+        bit     7,      [HL]
+        jr      z,      +
+
+        ; move cards in hand:
+        ;-----------------------------------------------------------------------
+        ld      HL,     free
+        ld      C,      [HL]
+        inc     C
+
+        ; loop over the sprites assigned to the cards
+-       ld      A,      C
+        rlca                            ; x2
+        rlca                            ; x4 (4 bytes per sprite)
+        ld      HL,     attrs.3.y       ; use local sprite table
+        add     A,      L               ; add to base address
+        ld      L,      A               ; update lo-byte
+        ; HL is the address of the sprite entry in the local sprite table
+        ld      A,      [HL]
+        add     A,      D
+        ld      [HL],   A
+
+        inc     C
+        ld      A,      C
+        cp      38
+        jr      nz,     -
+
+        ; move the hand cursor: (sprites 1 & 2)
+        ;-----------------------------------------------------------------------
++       ld      HL,     cursor_y
+        ld      A,      D
+        add     A,      [HL]            ; add distance to current `cursor_y`
+        ld      [HL],           A       ; update the `cursor_y` variable
+        ld      [attrs.1.y],    A       ; update the sprite attributes table
+        ld      [attrs.2.y],    A       ; (and the other half of the cursor)
 
         ret
 
@@ -406,11 +472,14 @@ cardToSprite:
         ; (this must not clobber E)
         call    clearCards
 
-        ; change the cursor
-        ld      A,      $00+2
+        ; change the cursor to the holding hand
+        ld      A,      SPRITE_HOLD_LHS
         ld      [attrs.1.tile], A
-        ld      A,      $08+2
+        ld      A,      SPRITE_HOLD_RHS
         ld      [attrs.2.tile], A
+        ; change the cursor mode so that the cards move with the cursor
+        ld      HL,     cursor_mode
+        set     7,      [HL]
 
         ; get starting X & Y position
         ld      HL,     cursor_y
@@ -493,10 +562,10 @@ pushSprite:
 ;-------------------------------------------------------------------------------
         push    AF                      ; tile-number is not first
 
-        ld      HL,     attrs.3         ; local sprite table
         ld      A,      [free]          ; get current available sprite index
         rlca                            ; x2
         rlca                            ; x4 (4 bytes per sprite)
+        ld      HL,     attrs.3         ; use local sprite table
         add     A,      L               ; add to base address
         ld      L,      A               ; update lo-byte
         ; HL is the address of the sprite entry in the local sprite table
@@ -506,9 +575,7 @@ pushSprite:
         ld      [HL+],  A
         pop     AF                      ; retrieve tile-index
         ld      [HL+],  A
-        ;;ld      A,      %00000000       ; display attributes
-        xor     A
-        ld      [HL+],  A
+        ld      [HL],   0               ; display attributes
         
         ; move to next sprite slot
         ld      HL,     free
