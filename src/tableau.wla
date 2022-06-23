@@ -834,7 +834,7 @@ pointToCard:
         ld      A,      5
         add     A,      B
         ld      B,      A
-        jp      cursor.moveToScrXY
+        jp      sprites.moveCursorToScrXY
 
         ; retrieve the row/column of the pile
         ;-----------------------------------------------------------------------
@@ -865,7 +865,7 @@ pointToCard:
         call    sprites.tilePosToScrXY
         dec     C
         dec     C
-        jp      cursor.moveToScrXY
+        jp      sprites.moveCursorToScrXY
 
         ; empty pile:
         ;-----------------------------------------------------------------------
@@ -873,7 +873,7 @@ pointToCard:
         ;
 @empty: call    @pos                    ; get Pile row/col
         inc     B                       ; move down one row, to the middle
-        jp      cursor.moveToTile
+        jp      sprites.moveCursorToTile
 
 
 moveCursorDown:

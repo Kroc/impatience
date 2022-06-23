@@ -66,7 +66,8 @@ init:
 -       rst     rst_waitVBlank
         jr      -
 
-
+; TODO: use a `jp HL` to jump straight into the list of 256 instructions
+;
 zero:
 ;===============================================================================
 ; zero-out any area of RAM:
