@@ -50,7 +50,7 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
 ; cursor:
 ;===============================================================================
 .RAMSECTION \
-        "cursor"        RETURNORG
+        "Cursor"        RETURNORG
         ;-----------------------------------------------------------------------
         ; the address of the Pile struct that the cursor is pointing to;
         ; e.g. deck / depot; $0000 if cursor is free
@@ -99,20 +99,20 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
 ; the list of piles must not exceed 256 bytes
 ; as we increment only one register for speed!
 .RAMSECTION \
-        "layout"        ALIGN 256 SIZE 256 RETURNORG
+        "Layout"        ALIGN 256 SIZE 256 RETURNORG
         ;-----------------------------------------------------------------------
         ; a deck, where cards are drawn from
         deck            INSTANCEOF Pile
         ; a "discard" pile, where cards are thrown away
         discard         INSTANCEOF Pile
-        ; a "hand" for cards to be played, e.g. three-card-draw
+        ; a "hand" for cards to be played from, e.g. three-card-draw
         hand            INSTANCEOF Pile
         ; up to four foundation piles, where cards are stacked in order
         foundation1     INSTANCEOF Pile
         foundation2     INSTANCEOF Pile
         foundation3     INSTANCEOF Pile
         foundation4     INSTANCEOF Pile
-        ; up to eight depot piles, where cards are sorted
+        ; up to eight depot piles, where cards are sorted and sorted
         depot1          INSTANCEOF Pile
         depot2          INSTANCEOF Pile
         depot3          INSTANCEOF Pile
@@ -124,7 +124,7 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
 .ENDS
 
 .RAMSECTION \
-        "storage"       SIZE 1024       RETURNORG
+        "Storage"       SIZE 1024       RETURNORG
         ;-----------------------------------------------------------------------
         storage         DSB 1024
 .ENDS
@@ -192,6 +192,7 @@ clearTiles:
 
         ret
 
+
 clearPiles:
 ;===============================================================================
 ; clear all piles, card storage:
@@ -200,11 +201,11 @@ clearPiles:
 ;       BC, A   set to zero, by nature of looping
 ;       HL      (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      HL,     SECTIONSTART_tableau.layout
-        ld      BC,     (SECTIONEND_tableau.layout-SECTIONSTART_tableau.layout)+1
+        ld      HL,     SECTIONSTART_tableau.Layout
+        ld      BC,     (SECTIONEND_tableau.Layout-SECTIONSTART_tableau.Layout)+1
         call    zero
-        ld      HL,     SECTIONSTART_tableau.layout
-        ld      BC,     (SECTIONEND_tableau.layout-SECTIONSTART_tableau.layout)+1
+        ld      HL,     SECTIONSTART_tableau.Storage
+        ld      BC,     (SECTIONEND_tableau.Storage-SECTIONSTART_tableau.Storage)+1
         call    zero
 
         ; return the starting address of the card pool
@@ -600,7 +601,7 @@ drawPile:
         call    tilemap.getBufferAddr
         ; draw out the tiles for the deck
         ld      DE,     tilemap.tilemap_deck
-        jp      tilemap.writeTiles_3wide_5rows
+        jp      tilemap.writeTiles_5rows
 
         ; empty pile:
         ;-----------------------------------------------------------------------
@@ -611,7 +612,7 @@ drawPile:
         call    tilemap.getBufferAddr
         ; draw the empty pile tiles
         ld      DE,     tilemap.tilemap_empty
-        jp      tilemap.writeTiles_3wide_4rows
+        jp      tilemap.writeTiles_4rows
 
         ; get the position of the pile:
         ;-----------------------------------------------------------------------
@@ -649,9 +650,9 @@ drawCard:
         ; face-down cards do not differ between active & inactive
         ld      DE,     tilemap.tilemap_back
         ; if carry is set, we want to draw only one row
-        jp      c,      tilemap.writeTiles_3wide_1row
+        jp      c,      tilemap.writeTiles_1row
         ; otherwise draw the full card back
-        jp              tilemap.writeTiles_3wide_4rows
+        jp              tilemap.writeTiles_4rows
 
         ; face-up:
         ;-----------------------------------------------------------------------
@@ -945,7 +946,7 @@ moveCursorLeft:
         ; read the lo-byte of the address of the pile to the left
         ld      L,      [HL]
         ; set the hi-byte for the piles
-        ld      H,      >SECTIONSTART_tableau.layout
+        ld      H,      >SECTIONSTART_tableau.Layout
         
         ; move to the default card in the next pile
         jp      pointToPile
@@ -964,7 +965,7 @@ moveCursorRight:
         ; read the lo-byte of the address of the pile to the right
         ld      L,      [HL]
         ; set the hi-byte for the piles
-        ld      H,      >SECTIONSTART_tableau.layout
+        ld      H,      >SECTIONSTART_tableau.Layout
         
         ; move to the default card in the next pile
         jp      pointToPile

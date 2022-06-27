@@ -33,9 +33,9 @@
 
 .ROMDMG                         ; Super GameBoy flag at $146; DMG or SGB
 
-.CARTRIDGETYPE	        $03     ; select MBC1+RAM+Battery
+.CARTRIDGETYPE          $03     ; select MBC1+RAM+Battery
 
-.RAMSIZE	        $01     ; 2KB SRAM
+.RAMSIZE                $01     ; 2KB SRAM
 
 .DESTINATIONCODE        $01     ; non-Japanese
 
@@ -47,10 +47,10 @@
 ;===============================================================================
 ; GameBoys are little-Endian systems:
 ;
-.DEF	HI		$01
-.DEF	LO		$00
+.DEF    HI              $01
+.DEF    LO              $00
 
 ;===============================================================================
-.INC	"gb/gb_irqs.wla"        NAMESPACE "gb" ; interrupts (RSTs / IRQs)
+.INC    "gb/gb_irqs.wla"        NAMESPACE "gb" ; interrupts (RSTs / IRQs)
 .INC    "gb/gb_ppu.wla"         NAMESPACE "gb" ; picture-processing-unit (GPU)
 .INC    "gb/gb_io.wla"          NAMESPACE "gb" ; input/output registers

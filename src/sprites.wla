@@ -6,7 +6,7 @@
 ; this table has to be aligned to an 8-bit boundary because the DMA
 ; register only accepts a hi-byte and assumes $00 for the lo-byte
 ;
-.RAMSECTION "Attrs"     SLOT "WRAMLO" ALIGN 256         RETURNORG
+.RAMSECTION "Attrs"     ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
         attrs           INSTANCEOF Sprite 40            ; (160 bytes)
         ; how many sprites are free for use:
@@ -16,12 +16,12 @@
 .ENDS
 
 ; a few bytes in HRAM need to be reserved to hold a wait loop
-.RAMSECTION "DoDMA"     SLOT "HRAM"                     RETURNORG
+.RAMSECTION "DoDMA"     SLOT "HRAM"     RETURNORG
         doDMA           DSB 5
 .ENDS
 
 .SECTION "tiles_sprites" ALIGN 16
-;///////////////////////////////////////////////////////////////////////////////
+;###############################################################################
 
 .DEF    SPRITE_PALLETE  %01001100
 
@@ -95,7 +95,7 @@ tiles_sprites:
 .DEF    SPRITE_CARD_34X3_Q      $48+22
 .DEF    SPRITE_CARD_34X3_K      $48+24
 
-;///////////////////////////////////////////////////////////////////////////////
+;###############################################################################
 .ENDS
 
 ; default starting position of the cursor
@@ -112,7 +112,7 @@ tiles_sprites:
         cursor_dest_y   BYTE            ; new Y-position to move cursor to
         cursor_y        BYTE            ; current cursor Y-position
         ;-----------------------------------------------------------------------
-        cursor_mode     BYTE
+        cursor_mode     BYTE            ; to control different cursor behaviour
 .ENDS
 
 
