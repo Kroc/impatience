@@ -124,18 +124,7 @@ init:
         ;;call    tableau.addCard
 
         ;-----------------------------------------------------------------------
-        ld      HL,     tableau.deck
-        call    tableau.drawPile
-        ld      HL,     tableau.depot1
-        call    tableau.drawPile
-        ld      HL,     tableau.depot2
-        call    tableau.drawPile
-        ld      HL,     tableau.depot3
-        call    tableau.drawPile
-        ld      HL,     tableau.depot4
-        call    tableau.drawPile
-
-        ;-----------------------------------------------------------------------
+        call    tableau.refresh
         rst     rst_screenOff
         call    tilemap.refresh
         rst     rst_screenOn

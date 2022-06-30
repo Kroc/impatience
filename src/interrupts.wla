@@ -17,8 +17,7 @@
 
 ; RAM for remembering joypad state:
 ;
-.RAMSECTION \
-        "joypad"                RETURNORG
+.RAMSECTION "Joypad"            RETURNORG
         ;-----------------------------------------------------------------------
         joy_state               BYTE
 .ENDS
@@ -122,7 +121,7 @@ init_interrupts:
         ; clear interrupt handler work-RAM (note A = 0)
         ; TODO: This should validate its size against the RAMSECTION,
         ;       and/or use a generic zeroing routine
-        ld      HL,     SECTIONSTART_joypad
+        ld      HL,     SECTIONSTART_Joypad
         ld      [HL+],  A
 
         ; write the DMA routine into HRAM:

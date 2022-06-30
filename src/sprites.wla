@@ -20,7 +20,7 @@
         doDMA           DSB 5
 .ENDS
 
-.SECTION "tiles_sprites" ALIGN 16
+.SECTION "TilesSprites" ALIGN 16
 ;###############################################################################
 
 .DEF    SPRITE_PALLETE  %01001100
@@ -105,7 +105,7 @@ tiles_sprites:
 
 ; (NOTE: don't cross an 8-bit boundary for a micro-optimisation)
 ;
-.RAMSECTION "cursor"    SLOT "WRAMLO" BITWINDOW 8 RETURNORG
+.RAMSECTION "Cursor"    BITWINDOW 8     RETURNORG
         ;-----------------------------------------------------------------------
         cursor_dest_x   BYTE            ; new X-position to move cursor to
         cursor_x        BYTE            ; current cursor X-position
@@ -133,7 +133,7 @@ init:
         ;-----------------------------------------------------------------------
         ; clear variables:
         xor     A                       ; A = 0
-        ld      HL,     SECTIONSTART_sprites.cursor
+        ld      HL,     SECTIONSTART_sprites.Cursor
         ld      [HL+],  A               ; cursor_dest_x = 0
         ld      [HL+],  A               ; cursor_x = 0
         ld      [HL+],  A               ; cursor_dest_y = 0

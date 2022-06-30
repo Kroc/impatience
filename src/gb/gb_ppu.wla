@@ -1,6 +1,15 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
+; the screen size is given in tiles because
+; the GameBoy doesn't have a bitmap mode
+.DEF    SCREEN_WIDTH            20
+.DEF    SCREEN_HEIGHT           18
+; the GameBoy screen is 20x18 tiles,
+; but VRAM contains a 32x32 tilemap
+.DEF    TILEMAP_WIDTH           32
+.DEF    TILEMAP_HEIGHT          32
+
 ; hardware registers:
 ;===============================================================================
 ; <https://bgb.bircd.org/pandocs.htm>

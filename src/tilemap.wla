@@ -14,8 +14,8 @@
 
 .RAMSECTION "Buffers"   ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
-        front_buffer    DSB 32*32
-        back_buffer     DSB 32*32
+        front_buffer    DSB TILEMAP_WIDTH*TILEMAP_HEIGHT
+        back_buffer     DSB TILEMAP_WIDTH*TILEMAP_HEIGHT
 .ENDS
 
 ; include the tile graphics and map the various pieces of the card graphics
@@ -23,7 +23,7 @@
 ; the code-base. we want this aligned to one-tile (16-bytes) for some
 ; tile-copying micro-optimisations
 ;
-.SECTION "tiles_cards"  ALIGN 16        RETURNORG
+.SECTION "TilesCards"   ALIGN 16        RETURNORG
 ;###############################################################################
 
 .DEF    TILE_PALETTE    %11010010
@@ -459,7 +459,7 @@ refresh:
 update:
 ;===============================================================================
 ; compares the differences between the front & back buffers and generates
-; the list of VRAM changes (tile queue) to make during vblank
+; the list of VRAM changes (tile queue) to make during vblank:
 ;
 ;-------------------------------------------------------------------------------
         ; disable vblank interrupts whilst we update the queue;
@@ -511,8 +511,7 @@ update:
         ; get current update queue position:
         ;
         ; note that the queue index starts at the end of the queue memory
-        ; and works backwards due to the use of POP to read the queue
-        ; during vblank!
+        ; and works backwards due to the use of POP to read the queue!
         ;
         ; TODO: handle queue overflow. stop processing buffers, and wait
         ;       for vblank so that the queue can be refilled again?
@@ -525,13 +524,13 @@ update:
         ; write the data to the queue:
         ; TODO: has to be reversed for POPing
         ;
-        ; the tile data is written as two bytes even though we only use one;
-        ; surprisingly, this is for a critical optimisation during vblank
-        ;
         ld      [HL],   D               ; write hi-byte
         dec     L
         ld      [HL],   E               ; write lo-byte
         dec     L
+        ; the tile data is written as two bytes even though we only use one;
+        ; surprisingly, this is for a critical optimisation during vblank
+        ;
         ld      [HL-],  A               ; write tile to draw
         ld      [HL],   %10000000       ; write flags with zero-flag unset!
         

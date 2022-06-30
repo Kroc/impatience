@@ -43,14 +43,18 @@
 ; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32 playfield.
 ; for our purposes we place the menu on the left and the playfield next to it,
 ; therefore the playfield begins at X = 12 and not the top-left (X = 0)
-PLAYFIELD_TOP   = 0
-PLAYFIELD_LEFT  = MENU_WIDTH
-PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
+.DEF    TABLEAU_TOP     0
+.DEF    TABLEAU_LEFT    MENU_WIDTH
+.DEF    TABLEAU_ADDR    \
+        tilemap.front_buffer + (TABLEAU_TOP * TILEMAP_WIDTH) + TABLEAU_LEFT
+.DEF    TABLEAU_WIDTH   TILEMAP_WIDTH - MENU_WIDTH
+.DEF    TABLEAU_HEIGHT  TILEMAP_HEIGHT
 
 ; cursor:
 ;===============================================================================
-.RAMSECTION \
-        "Cursor"        RETURNORG
+; (musn't cross an 8-bit boundary for a micro-optinmisation)
+;
+.RAMSECTION "Cursor"    BITWINDOW 8     RETURNORG
         ;-----------------------------------------------------------------------
         ; the address of the Pile struct that the cursor is pointing to;
         ; e.g. deck / depot; $0000 if cursor is free
@@ -62,6 +66,8 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
 
 ; tableau piles:
 ;===============================================================================
+; an unasigned pile is not drawn
+.DEF    PILE_NONE       %00000000
 ; regardless of the number of cards in a "deck" pile,
 ; it always displays as one face-down card
 .DEF    PILE_DECK       %00000001
@@ -98,8 +104,7 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
 ;
 ; the list of piles must not exceed 256 bytes
 ; as we increment only one register for speed!
-.RAMSECTION \
-        "Layout"        ALIGN 256 SIZE 256 RETURNORG
+.RAMSECTION "Layout"    ALIGN 256 SIZE 256 RETURNORG
         ;-----------------------------------------------------------------------
         ; a deck, where cards are drawn from
         deck            INSTANCEOF Pile
@@ -112,7 +117,7 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
         foundation2     INSTANCEOF Pile
         foundation3     INSTANCEOF Pile
         foundation4     INSTANCEOF Pile
-        ; up to eight depot piles, where cards are sorted and sorted
+        ; up to twelve depot piles, where cards are sorted and sorted
         depot1          INSTANCEOF Pile
         depot2          INSTANCEOF Pile
         depot3          INSTANCEOF Pile
@@ -121,10 +126,13 @@ PLAYFIELD_ADDR  = tilemap.front_buffer + (PLAYFIELD_TOP * 32) + PLAYFIELD_LEFT
         depot6          INSTANCEOF Pile
         depot7          INSTANCEOF Pile
         depot8          INSTANCEOF Pile
+        depot9          INSTANCEOF Pile
+        depot10         INSTANCEOF Pile
+        depot11         INSTANCEOF Pile
+        depot12         INSTANCEOF Pile
 .ENDS
 
-.RAMSECTION \
-        "Storage"       SIZE 1024       RETURNORG
+.RAMSECTION "Storage"   SIZE 1024       RETURNORG
         ;-----------------------------------------------------------------------
         storage         DSB 1024
 .ENDS
@@ -169,16 +177,14 @@ clearTiles:
 ; clears the tableau area, i.e. where cards are played:
 ;
 ;-------------------------------------------------------------------------------
-        ; the background tile indices are 'signed', so what we think of as
-        ; the first tile, tile "0", is tile # "-1", i.e $80
         ld      A,      $7e
-        ld      HL,     PLAYFIELD_ADDR
-        ; number of tiles to skip to next row
-        ld      DE,     32-20
+        ld      HL,     TABLEAU_ADDR
+        ; (number of tiles to skip to next row)
+        ld      DE,     TILEMAP_WIDTH - SCREEN_WIDTH
 
         ;-----------------------------------------------------------------------
-        ld      C,      32      ; 32 rows
-@row:   ld      B,      20      ; 20 columns (13...32)
+        ld      C,      TABLEAU_HEIGHT
+@row:   ld      B,      TABLEAU_WIDTH
 @col:   ld      [HL+],  A       ; set cell to empty background tile
         dec     B
         jr      nz, @col
@@ -354,6 +360,56 @@ allocatePile:
         ret
 
 
+refresh:
+;===============================================================================
+; redraw the tableau:
+;-------------------------------------------------------------------------------
+        ; we're going to redraw all piles,
+        ; so clear the tabelau of tiles first
+        call    clearTiles
+        
+        ld      HL,     deck
+        call    drawPile
+        ld      HL,     discard
+        call    drawPile
+        ld      HL,     hand
+        call    drawPile
+        ld      HL,     foundation1
+        call    drawPile
+        ld      HL,     foundation2
+        call    drawPile
+        ld      HL,     foundation3
+        call    drawPile
+        ld      HL,     foundation4
+        call    drawPile
+        ld      HL,     depot1
+        call    drawPile
+        ld      HL,     depot2
+        call    drawPile
+        ld      HL,     depot3
+        call    drawPile
+        ld      HL,     depot4
+        call    drawPile
+        ld      HL,     depot5
+        call    drawPile
+        ld      HL,     depot6
+        call    drawPile
+        ld      HL,     depot7
+        call    drawPile
+        ld      HL,     depot8
+        call    drawPile
+        ld      HL,     depot9
+        call    drawPile
+        ld      HL,     depot10
+        call    drawPile
+        ld      HL,     depot11
+        call    drawPile
+        ld      HL,     depot12
+        call    drawPile
+
+        ret
+
+
 addCard:
 ;===============================================================================
 ; add a card to a pile:
@@ -449,8 +505,11 @@ removeCard:
 ; removes a card from a pile:
 ; the value of the card removed is returned
 ;
-; note that it is up to the caller to ensure that there are no holes left
-; in the pile!
+; note that it is up to the caller to ensure
+; that there are no holes left in the pile!
+;
+; removing a card will NOT change the screen;
+; call `tilemap.refresh` to redraw any modified piles
 ;
 ; in:   HL      address of the Pile
 ;       A       index (0-based) of the card to remove
@@ -487,7 +546,7 @@ getPilePool:
 ; given a Pile struct address, returns the address
 ; in the card pool where the pile's cards are stored
 ;
-; in:   HL      address of a Pile structure (e.g. deck, depot)
+; in:   HL      address of a Pile structure (e.g. `deck`, `depot`)
 ;
 ; out:  DE      address of the pile's card pool
 ;       HL, A   (preserved)
@@ -548,6 +607,11 @@ drawPile:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
+        ; TODO: should probably swap type/count bytes? (AGAIN)
+        inc     L
+        ld      A,      [HL-]
+        ret     z
+        
         ld      A,      [HL+]           ; read number of cards in pile
         and     A,      A               ; (set flags!)
         jr      z,      @empty          ; if zero, draw empty space
@@ -630,7 +694,7 @@ drawPile:
 
 drawCard:
 ;===============================================================================
-; draws a card, handling all of its different properties
+; draws a card, handling all of its different properties:
 ;
 ; in:   HL      address in the front-buffer to draw the card
 ;       A       the card to draw
@@ -732,9 +796,9 @@ getCursorPile:
         ; retrieve current pile location into DE
         ld      HL,     cursor_pile
         ld      E,      [HL]            ; pool address, lo-byte
-        inc     HL
+        inc     L
         ld      D,      [HL]            ; pool address, hi-byte
-        inc     HL
+        inc     L
 
         ; retrieve card number being pointed to
         ld      A,      [HL+]
@@ -795,10 +859,10 @@ pointToCard:
         ld      DE,     cursor_pile
         ld      A,      L
         ld      [DE],   A
-        inc     DE
+        inc     E
         ld      A,      H
         ld      [DE],   A
-        inc     DE
+        inc     E
         ; save the card number to point to: (0-based)
         ; note that DE remains on this variable
         ld      A,      C
@@ -915,6 +979,7 @@ moveCursorDown:
         inc     A
         jp      pointToCard
 
+
 moveCursorUp:
 ;===============================================================================
 ; move the cursor up, either going through a pile of cards,
@@ -931,6 +996,7 @@ moveCursorUp:
 
         dec     A
         jp      pointToCard
+
 
 moveCursorLeft:
 ;===============================================================================
@@ -950,6 +1016,7 @@ moveCursorLeft:
         
         ; move to the default card in the next pile
         jp      pointToPile
+
 
 moveCursorRight:
 ;===============================================================================
@@ -984,9 +1051,20 @@ pickCard:
         call    getCursorPile
         ; remove the card from the pile
         ; (this also returns the value)
+        ; TODO: this will need to re-validate the cards; potentially across
+        ; all Piles, as with Aces up where validation of cards depends upon
+        ; the cards atop the other piles
         call    removeCard
 
         ; create a sprite copy of the card(s)
         call    sprites.cardToSprite
-        
+
+        ; redraw the entire tableau; this may seem overkill but the removal
+        ; of one card may affect the validation of other piles which would
+        ; also need redrawing
+        call    tableau.refresh
+        ; compare the display buffers and queue up
+        ; the changes to be made during vblank
+        call    tilemap.update
+
         ret
