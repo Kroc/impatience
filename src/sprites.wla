@@ -223,7 +223,7 @@ updateCursor:
 ; and this is automatically synced with OAM during vblank
 ;
 ; out:  HL/BC/A (clobbered)
-;       DE      (preserved)
+;       DE      (preserved) -- MUST be preserved during vblank usage
 ;-------------------------------------------------------------------------------
         ; is the cursor in its intended X-position?
         ;

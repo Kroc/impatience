@@ -1,25 +1,6 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-; since we cannot modify VRAM during the display period,
-; changes are queued up and then applied during vblank
-;
-.STRUCT TileUpdate
-        vram_addr       WORD
-        tile            BYTE
-        flags           BYTE
-.ENDST
-
-; (NOTE: we rely on this starting at an $xx00 address for optimisation)
-.RAMSECTION "Queue"     ALIGN 256       RETURNORG
-        ;-----------------------------------------------------------------------
-        tile_queue      INSTANCEOF TileUpdate 32
-        ; a flag to indicate that tiles are waiting to be processed
-        queue_ready     BYTE
-        ; temporary address (lo-byte) used whilst pushing tiles to the queue
-        queue_index     BYTE
-.ENDS
-
 .RAMSECTION "Buffers"   ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
         front_buffer    DSB TILEMAP_WIDTH*TILEMAP_HEIGHT
@@ -287,7 +268,7 @@ clearQueue:
         ; ready flag must be cleared first so that VRAM tile updates
         ; do not occur whilst we are erasing the tile queue!
         xor     A                       ; (set A to zero)
-        ld      [queue_ready],  A
+        ldh     [<queue_ready], A
         ; erase the queue
         ld      HL,     tile_queue
         ld      BC,     _sizeof_tile_queue
@@ -473,8 +454,8 @@ update:
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         xor     A                       ; (set A to 0)
-        ld      [queue_ready],  A       ; disable tile updates during vblank
-        ld      [queue_index],  A       ; begin at start of queue
+        ldh     [<queue_ready], A       ; disable tile updates during vblank
+        ldh     [<queue_index], A       ; begin at start of queue
 
         ; start walking the buffers
         ld      HL,     back_buffer
@@ -504,49 +485,46 @@ update:
 
         ; queue the tile update:
         ;-----------------------------------------------------------------------
-        push    DE                      ; (backup front-buffer position)
+        ; the order of these pushes and which registers are used are critical;
+        ; we will be reading back the tile-value from the front-buffer later
+        ;
         push    HL                      ; (backup back-buffer position)
-
-        ; calculate the VRAM address from our current
-        ; index in the front & back buffers...
-        ld      HL,     VRAM_MAP1
-        add     HL,     BC              ; (only HL can do 16-bit adds)
-        ld      D,      H               ; put aside in DE; this is still
-        ld      E,      L               ; faster than `PUSH HL, POP DE`
+        push    DE                      ; (backup front-buffer position)
 
         ; get current update queue position:
-        ;
-        ; note that the queue index starts at the end of the queue memory
-        ; and works backwards due to the use of POP to read the queue!
-        ;
-        ; TODO: handle queue overflow. stop processing buffers, and wait
-        ;       for vblank so that the queue can be refilled again?
-        ;
         ld      HL,     queue_index
         ld      L,      [HL]            ; read the current queue index
         ld      H,      >tile_queue     ; set hi-byte, HL = free queue address
 
+        ; calculate the matching VRAM address from the front-buffer address
+        ld      A,      D                                               ;+4
+        sub     A,      >(front_buffer - VRAM_MAP1)                     ;+8
+        ld      D,      A                                               ;+4
+
         ; write the data to the queue:
         ; these bytes need to be written in the order that POP would read them
         ;
-        ld      [HL],   E               ; write lo-byte
+        ld      [HL],   E               ; write VRAM lo-byte
         inc     L
-        ld      [HL],   D               ; write hi-byte
+        ld      [HL],   D               ; write VRAM hi-byte
         inc     L
         ; the tile data is written as two bytes even though we only use one;
         ; surprisingly, this is for a critical optimisation during vblank.
         ; when this value is POPed, the first byte will become the cpu flags!
         ;
-        ld      [HL],   %10000000       ; write cpu flags!
-        inc     L
+        ld      A,      %10000000       ; write cpu flags!
+        ld      [HL+],  A
+        pop     DE                      ; (restore front-buffer position)
+        ld      A,      [DE]            ; read back tile-value
         ld      [HL+],  A               ; write tile to draw
-        
+
         ; write back the updated queue index
         ld      A,      L
-        ld      [queue_index],  A
+        ldh     [<queue_index], A
 
         pop     HL                      ; (restore back-buffer position)
-        pop     DE                      ; (restore front-buffer position)
+        
+        ; TODO: is the queue full?
         jr      @next
 
         ;-----------------------------------------------------------------------
@@ -562,5 +540,5 @@ update:
 
         ; queue is ready, allow tile updates from vblank
         dec     A                       ; (set A to $FF)
-        ld      [queue_ready],  A
+        ldh     [<queue_ready], A
         ret

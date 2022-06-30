@@ -8,6 +8,28 @@
         doDMA           DSB 5
 .ENDS
 
+; since we cannot modify VRAM during the display period,
+; changes are queued up and then applied during vblank
+;
+.STRUCT TileUpdate
+        vram_addr       WORD
+        tile            BYTE
+        flags           BYTE
+.ENDST
+
+; (NOTE: we rely on this starting at an $xx00 address for optimisation)
+.RAMSECTION "Queue"     ALIGN 256       RETURNORG
+        ;-----------------------------------------------------------------------
+        tile_queue      INSTANCEOF TileUpdate 32
+.ENDS
+
+.RAMSECTION "QReady"    SLOT "HRAM"     RETURNORG
+        ; a flag to indicate that tiles are waiting to be processed
+        queue_ready     BYTE
+        ; temporary address (lo-byte) used whilst pushing tiles to the queue
+        queue_index     BYTE
+.ENDS
+
 ; these are the *logical* button constants for the game, not the ones used by
 ; the hardware, which are split across two bytes. these are `bit` numbers
 ;
@@ -106,7 +128,9 @@ rst_screenOff:                                                          ;$18
 ;
 .SECTION "irq_vblank"
 ;###############################################################################
-        jp      irq_vblank
+        ; various documentation says that an IRQ takes 20 cycles        ;+20=20
+        ; (note the relative jump to save 4 cycles over JP)
+        jr      irq_vblank                                              ;+12=34
 ;###############################################################################
 .ENDS
 
@@ -153,19 +177,44 @@ init_interrupts:
         ret
 
 
-irq_vblank:
+irq_vblank:                                                                ;=34
 ;===============================================================================
         ; * * * start of time-critical code * * *
         ;-----------------------------------------------------------------------
-        push    AF
-        push    BC
-        push    HL
+        push    AF                                                      ;+16=50
+        push    BC                                                      ;+16=66
+        push    HL                                                      ;+16=82
+
+        ; any tile updates?
+        ;-----------------------------------------------------------------------
+        ldh     A,      [<queue_ready]                                  ;+12=
+        and     A,      A               ; (set flags!)                  ;+4 =
+        jr      z,      @skip                                           ;+8 =
+
+        ; backup current stack pointer: we don't use HL during the
+        ; tile-writing so we don't need to write the old SP to RAM!
+        ld      HL,     SP+0                                            ;+12=
+        ld      SP,     tile_queue                                      ;+8 =
+
+        ; read tiles and write to VRAM:
+-       pop     BC                      ; pop VRAM address from queue   ;+12=12
+        pop     AF                      ; pop tile / CPU flags          ;+12=24
+        ld      [BC],   A               ; write tile to VRAM            ;+8 =32
+        jr      z,      -               ; end of queue?                 ;+12=44
+
+        ; restore original stack pointer
+        ld      SP,     HL                                              ;+8
+
+        ; mark the queue as done
+        ; (don't process the same tile-queue twice)
+        xor     A                       ; (set A to zero)
+        ldh     [<queue_ready], A
 
         ; DMA the sprite attributes from work RAM into OAM:
-        ;-----------------------------------------------------------------------
+        ;=======================================================================
         ; the DMA register only accepts 8-bits, which will
         ; be the hi-byte of the address to copy from
-        ld      A,      >sprites.attrs
+@skip:  ld      A,      >sprites.attrs
         
         ; whilst the DMA is occuring the CPU can only access HRAM,
         ; therefore we must initialise the DMA and wait via a routine
@@ -180,37 +229,9 @@ irq_vblank:
         ;
         ld      BC,     (41<<8) + <DMA
         call    doDMA                   ; this is in HRAM!
-
-        ; any tile updates?
-        ;-----------------------------------------------------------------------
-        ld      A,      [tilemap.queue_ready]                           ;+16=16
-        and     A,      A               ; (set flags!)                  ;+4 =20
-        jr      z,      @skip                                           ;+8 =28
-
-        ; backup current stack pointer: we don't use HL during the
-        ; tile-writing so we don't need to write the old SP to RAM!
-        ld      HL,     SP+0                                            ;+12=40
-        ld      SP,     tilemap.tile_queue                              ;+8 =48
-
-        ; read tiles and write to VRAM:
--       pop     BC                      ; pop VRAM address from queue   ;+12=12
-        pop     AF                      ; pop tile / CPU flags          ;+12=24
-        ld      [BC],   A               ; write tile to VRAM            ;+8 =32
-        jr      z,      -               ; end of queue?                 ;+12=44
-
-        ; restore original stack pointer
-        ld      SP,     HL                                              ;+8
-
         ;-----------------------------------------------------------------------
         ; * * * end of time-critical code * * *
         ;
-        ; mark the queue as done
-        ; (don't process the same tile-queue twice)
-        xor     A                       ; (set A to zero)
-        ld      [tilemap.queue_ready],  A
-
-        ;;pop     HL
-@skip:  ;;push    HL
         ; move the cursor one frame towards its destination
         call    sprites.updateCursor
 
@@ -229,7 +250,7 @@ irq_vblank:
         ; result but real hardware is said to "take a few cycles" to settle;
         ; the original DMG bricks have *very* noisy circuits
         ;
-        ; TODO: test on real hardware: DMG, GBC, GBA
+        ; TODO: test on real hardware: DMG, GBC, GBA, DS
         ldh     A,      [<JOYP]
         ldh     A,      [<JOYP]
         ldh     A,      [<JOYP]
