@@ -26,8 +26,6 @@
 .RAMSECTION "QReady"    SLOT "HRAM"     RETURNORG
         ; a flag to indicate that tiles are waiting to be processed
         queue_ready     BYTE
-        ; temporary address (lo-byte) used whilst pushing tiles to the queue
-        queue_index     BYTE
 .ENDS
 
 ; these are the *logical* button constants for the game, not the ones used by

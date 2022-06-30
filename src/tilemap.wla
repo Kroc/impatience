@@ -455,90 +455,83 @@ update:
 ;-------------------------------------------------------------------------------
         xor     A                       ; (set A to 0)
         ldh     [<queue_ready], A       ; disable tile updates during vblank
-        ldh     [<queue_index], A       ; begin at start of queue
-
-        ; start walking the buffers
         ld      HL,     back_buffer
         ld      DE,     front_buffer
-        ld      BC,     0
+        ld      BC,     tile_queue
 
-        ; (jump into the functional part of the loop)
-        jr      @read
-        
         ;-----------------------------------------------------------------------
-@next:  inc     BC                      ; one less tile to process...
-        bit     2,      B
-        jr      nz,     @exit           ; all done? exit
-
-        inc     DE                      ; move forward in the front-buffer
-        inc     HL                      ; and keep the back-buffer in step
-
-        ; loop begins here...
-        ;
-@read:  ld      A,      [DE]            ; read tile from front-buffer
+        ; #1:
+@loop:  ld      A,      [DE]            ; read tile from front-buffer
         cp      [HL]                    ; compare with back-buffer
-        jr      z,      @next           ; if they're the same, keep scanning
+        call    nz,     @push           ; if they're different, add to queue
+        inc     E                       ; move forward in the front-buffer,
+        inc     L                       ; and keep the back-buffer in step
+        ; #2:
+        ld      A,      [DE]            ; read tile from front-buffer
+        cp      [HL]                    ; compare with back-buffer
+        call    nz,     @push           ; if they're different, add to queue
+        inc     E                       ; move forward in the front-buffer,
+        inc     L                       ; and keep the back-buffer in step
+        ; #3:
+        ld      A,      [DE]            ; read tile from front-buffer
+        cp      [HL]                    ; compare with back-buffer
+        call    nz,     @push           ; if they're different, add to queue
+        inc     E                       ; move forward in the front-buffer,
+        inc     L                       ; and keep the back-buffer in step
+        ; #4:
+        ld      A,      [DE]            ; read tile from front-buffer
+        cp      [HL]                    ; compare with back-buffer
+        call    nz,     @push           ; if they're different, add to queue
+        inc     E                       ; move forward in the front-buffer,
+        inc     L                       ; and keep the back-buffer in step
 
-        ; there's a difference! update the back-buffer
-        ; to match the front (for future comparisions)
-        ld      [HL],   A
+        ; by only incrementing the lo-byte, we can save cycles
+        jr      nz,     @loop
 
-        ; queue the tile update:
-        ;-----------------------------------------------------------------------
-        ; the order of these pushes and which registers are used are critical;
-        ; we will be reading back the tile-value from the front-buffer later
-        ;
-        push    HL                      ; (backup back-buffer position)
-        push    DE                      ; (backup front-buffer position)
-
-        ; get current update queue position:
-        ld      HL,     queue_index
-        ld      L,      [HL]            ; read the current queue index
-        ld      H,      >tile_queue     ; set hi-byte, HL = free queue address
-
-        ; calculate the matching VRAM address from the front-buffer address
-        ld      A,      D                                               ;+4
-        sub     A,      >(front_buffer - VRAM_MAP1)                     ;+8
-        ld      D,      A                                               ;+4
-
-        ; write the data to the queue:
-        ; these bytes need to be written in the order that POP would read them
-        ;
-        ld      [HL],   E               ; write VRAM lo-byte
-        inc     L
-        ld      [HL],   D               ; write VRAM hi-byte
-        inc     L
-        ; the tile data is written as two bytes even though we only use one;
-        ; surprisingly, this is for a critical optimisation during vblank.
-        ; when this value is POPed, the first byte will become the cpu flags!
-        ;
-        ld      A,      %10000000       ; write cpu flags!
-        ld      [HL+],  A
-        pop     DE                      ; (restore front-buffer position)
-        ld      A,      [DE]            ; read back tile-value
-        ld      [HL+],  A               ; write tile to draw
-
-        ; write back the updated queue index
-        ld      A,      L
-        ldh     [<queue_index], A
-
-        pop     HL                      ; (restore back-buffer position)
-        
-        ; TODO: is the queue full?
-        jr      @next
+        inc     D
+        inc     H
+        bit     2,      H
+        jr      nz,     @loop
 
         ;-----------------------------------------------------------------------
         ; the last entry in the queue must be zero-terminated
         ;
 @exit:  xor     A                       ; (set A to zero)
-        ld      HL,     queue_index
-        ld      L,      [HL]
-        ld      H,      >tile_queue
-        dec     L                       ; move past tile,
-        dec     L                       ; to cpu flags
-        ld      [HL],   A               ; write a zero to mark the end
+        dec     C                       ; move past tile,
+        dec     C                       ; to cpu flags
+        ld      [BC],   A               ; write a zero to mark the end
 
         ; queue is ready, allow tile updates from vblank
         dec     A                       ; (set A to $FF)
         ldh     [<queue_ready], A
+        ret
+
+        ; queue the tile update:
+        ;=======================================================================
+        ; there's a difference! update the back-buffer
+        ; to match the front (for future comparisions)
+@push:  ld      [HL],   A
+
+        ; write the data to the queue:
+        ; these bytes need to be written in the order that POP would read them
+        ld      A,      E
+        ld      [BC],   A               ; write VRAM lo-byte
+        inc     C
+        ; calculate the matching VRAM address from the front-buffer address
+        ld      A,      D
+        sub     A,      >(front_buffer - VRAM_MAP1)
+        ld      [BC],   A               ; write VRAM hi-byte
+        inc     C
+        ; the tile data is written as two bytes even though we only use one;
+        ; surprisingly, this is for a critical optimisation during vblank.
+        ; when this value is POPed, the first byte will become the cpu flags!
+        ;
+        ld      A,      %10000000       ; write cpu flags!
+        ld      [BC],   A
+        inc     C
+        ld      A,      [DE]            ; read back tile-value
+        ld      [BC],   A               ; write tile to draw
+        inc     C
+
+        ; TODO: is the queue full?
         ret
