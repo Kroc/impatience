@@ -15,11 +15,6 @@
         free            BYTE
 .ENDS
 
-; a few bytes in HRAM need to be reserved to hold a wait loop
-.RAMSECTION "DoDMA"     SLOT "HRAM"     RETURNORG
-        doDMA           DSB 5
-.ENDS
-
 .SECTION "TilesSprites" ALIGN 16
 ;###############################################################################
 
@@ -220,41 +215,15 @@ clearCards:
         jp      zero
 
 
-update:
-;===============================================================================
-; update sprites (during vblank):
-;
-;-------------------------------------------------------------------------------
-        ; handle the cursor:
-        call    updateCursor
-
-        ; DMA the sprite attributes from work RAM into OAM:
-        ;
-        ; the DMA register only accepts 8-bits, which will
-        ; be the hi-byte of the address to copy from
-        ld      A,      >attrs
-        
-        ; whilst the DMA is occuring the CPU can only access HRAM,
-        ; therefore we must initialise the DMA and wait via a routine
-        ; running from HRAM. the routine has been copied into HRAM during
-        ; `init_interrupts`. B must be set to the number of loop iterations
-        ; to wait and C is set to the lo-byte of the DMA register
-        ;
-        ; despite using the information given here,
-        ; <https://gbdev.io/pandocs/OAM_DMA_Transfer.html>,
-        ; the BGB emulator would break on bad access during DMA
-        ; unless the wait was increased from 40 ($28) to 41!
-        ;
-        ld      BC,     (41<<8) + <DMA
-        jp      doDMA                   ; this is in HRAM!
-
-
 updateCursor:
 ;===============================================================================
 ; move the cursor one frame towards its destination:
 ;
 ; note that sprite position changes are written to the work RAM
 ; and this is automatically synced with OAM during vblank
+;
+; out:  HL/BC/A (clobbered)
+;       DE      (preserved)
 ;-------------------------------------------------------------------------------
         ; is the cursor in its intended X-position?
         ;
@@ -272,7 +241,7 @@ updateCursor:
         sra     A                       ; by dividing the distance by 4
         jr      nz,     +               ; did dividing reduce it to zero?
         inc     A                       ; move by at least 1 pixel
-+       ld      D,      A               ; remember this "x-speed"
++       ld      B,      A               ; remember this "x-speed"
 
         ; is the cursor hand holding cards?
         ld      HL,     cursor_mode
@@ -294,7 +263,7 @@ updateCursor:
         ld      L,      A               ; update lo-byte
         ; HL is the address of the sprite entry in the local sprite table
         ld      A,      [HL]
-        add     A,      D
+        add     A,      B               ; add the speed differential
         ld      [HL],   A
 
         inc     C
@@ -305,7 +274,7 @@ updateCursor:
         ; move the hand cursor: (sprites 1 & 2)
         ;-----------------------------------------------------------------------
 +       ld      HL,     cursor_x
-        ld      A,      D
+        ld      A,      B
         add     A,      [HL]            ; add distance to current `cursor_x`
         ld      [HL],           A       ; update the `cursor_x` variable
         ld      [attrs.1.x],    A       ; update the sprite attributes table
@@ -324,7 +293,7 @@ updateCursor:
         sra     A                       ; by dividing the distance by 4
         jr      nz,     +               ; did dividing reduce it to zero?
         inc     A                       ; move by at least 1 pixel
-+       ld      D,      A               ; remember this "y-speed"
++       ld      B,      A               ; remember this "y-speed"
 
         ; is the cursor hand holding cards?
         ld      HL,     cursor_mode
@@ -346,7 +315,7 @@ updateCursor:
         ld      L,      A               ; update lo-byte
         ; HL is the address of the sprite entry in the local sprite table
         ld      A,      [HL]
-        add     A,      D
+        add     A,      B               ; add the speed differential
         ld      [HL],   A
 
         inc     C
@@ -357,7 +326,7 @@ updateCursor:
         ; move the hand cursor: (sprites 1 & 2)
         ;-----------------------------------------------------------------------
 +       ld      HL,     cursor_y
-        ld      A,      D
+        ld      A,      B
         add     A,      [HL]            ; add distance to current `cursor_y`
         ld      [HL],           A       ; update the `cursor_y` variable
         ld      [attrs.1.y],    A       ; update the sprite attributes table

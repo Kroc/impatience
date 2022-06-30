@@ -4,12 +4,20 @@
 ; since we cannot modify VRAM during the display period,
 ; changes are queued up and then applied during vblank
 ;
+.STRUCT TileUpdate
+        vram_addr       WORD
+        tile            BYTE
+        flags           BYTE
+.ENDST
+
+; (NOTE: we rely on this starting at an $xx00 address for optimisation)
 .RAMSECTION "Queue"     ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
-        ; (NOTE: we rely on this starting at an $xx00 address for optimisation)
-        tile_queue      DSB 128
+        tile_queue      INSTANCEOF TileUpdate 32
+        ; a flag to indicate that tiles are waiting to be processed
+        queue_ready     BYTE
         ; temporary address (lo-byte) used whilst pushing tiles to the queue
-        _queue_index    BYTE
+        queue_index     BYTE
 .ENDS
 
 .RAMSECTION "Buffers"   ALIGN 256       RETURNORG
@@ -25,7 +33,6 @@
 ;
 .SECTION "TilesCards"   ALIGN 16        RETURNORG
 ;###############################################################################
-
 .DEF    TILE_PALETTE    %11010010
 
 tiles_main:
@@ -89,12 +96,12 @@ tiles_main:
         MAP     "D"     = $7d           ; diamonds symbol
 .ENDA
 
-; 3x4 cards:
+; cards:
 ;===============================================================================
 ; foundation:
 ;-------------------------------------------------------------------------------
-; a foundation is a blank space on the playfield where cards are
-; "played off", into their final destination
+; a foundation is a blank space on the playfield where cards
+; are "played off", into their final destination
 ;
 .DEF    TILE_FNDT_1X1           $da     ; foundation, top-left
 .DEF    TILE_FNDT_1X2           $ea     ; foundation, top-centre
@@ -118,7 +125,6 @@ tiles_main:
 .DEF    TILE_DECK_0X3           $f1     ; deck, top-right
 
 ; the middle three rows of the deck repeat
-;
 .DEF    TILE_DECK_1X1           $d3     ; deck, middle-left (row 2)
 .DEF    TILE_DECK_1X2           $e3     ; deck, middle-centre (row 2)
 .DEF    TILE_DECK_1X3           $f3     ; deck, middle-right (row 2)
@@ -175,7 +181,6 @@ tiles_main:
 .DEF    TILE_CARD_1X2           $9a
 
 ; the top-right of a face-up card has the suit:
-;
 .DEF    TILE_CARD_1X3           $c0
 .DEF    TILE_CARD_1X3_SPD       $c2     ; Spades
 .DEF    TILE_CARD_1X3_CLB       $c4     ; Clubs
@@ -184,7 +189,6 @@ tiles_main:
 
 ; the left, centre and right of the middle
 ; portion of the card (two-rows) is blank:
-;
 .DEF    TILE_CARD_2X1           $81
 .DEF    TILE_CARD_2X2           $9b
 .DEF    TILE_CARD_2X3           $a0
@@ -193,7 +197,6 @@ tiles_main:
 .DEF    TILE_CARD_3X3           $a0
 
 ; the bottom-left of a face-up card has the suit:
-;
 .DEF    TILE_CARD_4X1           $c9
 .DEF    TILE_CARD_4X1_SPD       $c9     ; Spades
 .DEF    TILE_CARD_4X1_CLB       $cb     ; Clubs
@@ -204,7 +207,6 @@ tiles_main:
 .DEF    TILE_CARD_4X2           $9d
 
 ; the bottom-right of a face-up card has the ordinal:
-;
 .DEF    TILE_CARD_4X3           $a1
 .DEF    TILE_CARD_4X3_A         $a1     ; Ace
 .DEF    TILE_CARD_4X3_2         $a3     ; Two
@@ -268,8 +270,7 @@ init:
 
         call    tableau.clearTiles      ; clear the tableau (playing space)
         call    menu.clear              ; clear and draw the menu
-
-        call    refresh
+        call    refresh                 ; do a full screen refresh
 
         ; set palette:
         ld      A,      TILE_PALETTE
@@ -282,8 +283,12 @@ init:
 clearQueue:
 ;===============================================================================
 ; empty the tile-update queue, used to defer VRAM changes to vblank:
-;
 ;-------------------------------------------------------------------------------
+        ; ready flag must be cleared first so that VRAM tile updates
+        ; do not occur whilst we are erasing the tile queue!
+        xor     A                       ; (set A to zero)
+        ld      [queue_ready],  A
+        ; erase the queue
         ld      HL,     tile_queue
         ld      BC,     _sizeof_tile_queue
         jp      zero
@@ -301,7 +306,6 @@ copyMainTileset:
         ; number of tiles to copy, 0-based
         ; (each tile is 16-bytes)
         ld      B,      (tiles_main__size / 16) - 1
-
 
 copyTiles:
 ;===============================================================================
@@ -336,9 +340,9 @@ getBufferAddr:
 ; in:   B       y-position (row) in the tile-map (32x32)
 ;       C       x-position (column) in the tile-map (32x32)
 ;
-; out:  HL      address within the screen-buffer                         
-;       A, DE   (preserved)                                             
-;       BC      (clobbered)                                             ;cycles
+; out:  HL      address within the screen-buffer
+;       A, DE   (preserved)
+;       BC      (clobbered)
 ;-------------------------------------------------------------------------------
         ; we need to multiply Y (row) by 32
         ld      H,      0               ; prepare HL,
@@ -386,8 +390,10 @@ writeTiles:
 ; in:   DE      address with tiles to read from
 ;       HL      address to write to, where 3 tiles are written and then
 ;               the address is moved to the next row of the tilemap
+; out: carry    (preserved)
 ;-------------------------------------------------------------------------------
-        ld      BC,     29
+        ; number of bytes to add to the address to skip to the next screen row
+        ld      BC,     TILEMAP_WIDTH-3
 
         ld      A,      [DE]
         inc     DE
@@ -408,6 +414,9 @@ writeTiles:
 refresh:
 ;===============================================================================
 ; forces a full update of the background tilemap:
+;
+; SCREEN MUST BE OFF WHEN CALLING THIS ROUTINE!
+; (use `rst rst_screenOff`)
 ;
 ; normally updates to the tilemap are done partially -- only the tiles that
 ; have changed between the front & back buffers are written during vblank
@@ -461,45 +470,42 @@ update:
 ; compares the differences between the front & back buffers and generates
 ; the list of VRAM changes (tile queue) to make during vblank:
 ;
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; disable vblank interrupts whilst we update the queue;
-        ; we don't want the queue being emptied whilst we're writing to it!
-        ; TODO: we could use a flag to deny tile updates during vblank
-        ld      HL,     IRQ_ENABLE
-        res     0,      [HL]            ; turn off vblank interrupts (bit 0)
-        
-        ; set the position in the tile queue to the top;
-        ; entries will be written backward to be able to
-        ; make use of POP when reading!
-        ld      A,      _sizeof_tile_queue
-        ld      [_queue_index], A
+        xor     A                       ; (set A to 0)
+        ld      [queue_ready],  A       ; disable tile updates during vblank
+        ld      [queue_index],  A       ; begin at start of queue
 
         ; start walking the buffers
-        ld      HL,     front_buffer
-        ld      DE,     back_buffer
-        ld      BC,     _sizeof_front_buffer+1
+        ld      HL,     back_buffer
+        ld      DE,     front_buffer
+        ld      BC,     0
 
         ; (jump into the functional part of the loop)
         jr      @read
         
         ;-----------------------------------------------------------------------
-@next:  dec     BC                      ; one less tile to process...
-        jr      z,      @exit           ; all done? exit
+@next:  inc     BC                      ; one less tile to process...
+        bit     2,      B
+        jr      nz,     @exit           ; all done? exit
 
-        inc     DE                      ; move forward in the back-buffer
-        inc     HL                      ; and keep the front-buffer in step
+        inc     DE                      ; move forward in the front-buffer
+        inc     HL                      ; and keep the back-buffer in step
 
         ; loop begins here...
         ;
-@read:  ld      A,      [DE]            ; read tile from back-buffer
-        cp      [HL]                    ; compare with front-buffer
+@read:  ld      A,      [DE]            ; read tile from front-buffer
+        cp      [HL]                    ; compare with back-buffer
         jr      z,      @next           ; if they're the same, keep scanning
 
-        ; there's a difference!
-        ; queue the tile change:
+        ; there's a difference! update the back-buffer
+        ; to match the front (for future comparisions)
+        ld      [HL],   A
+
+        ; queue the tile update:
         ;-----------------------------------------------------------------------
-        push    DE                      ; (backup back-buffer position)
-        push    HL                      ; (backup front-buffer position)
+        push    DE                      ; (backup front-buffer position)
+        push    HL                      ; (backup back-buffer position)
 
         ; calculate the VRAM address from our current
         ; index in the front & back buffers...
@@ -516,65 +522,45 @@ update:
         ; TODO: handle queue overflow. stop processing buffers, and wait
         ;       for vblank so that the queue can be refilled again?
         ;
-        ld      HL,     _queue_index
-        dec     [HL]
+        ld      HL,     queue_index
         ld      L,      [HL]            ; read the current queue index
         ld      H,      >tile_queue     ; set hi-byte, HL = free queue address
 
         ; write the data to the queue:
-        ; TODO: has to be reversed for POPing
+        ; these bytes need to be written in the order that POP would read them
         ;
-        ld      [HL],   D               ; write hi-byte
-        dec     L
         ld      [HL],   E               ; write lo-byte
-        dec     L
+        inc     L
+        ld      [HL],   D               ; write hi-byte
+        inc     L
         ; the tile data is written as two bytes even though we only use one;
-        ; surprisingly, this is for a critical optimisation during vblank
+        ; surprisingly, this is for a critical optimisation during vblank.
+        ; when this value is POPed, the first byte will become the cpu flags!
         ;
-        ld      [HL-],  A               ; write tile to draw
-        ld      [HL],   %10000000       ; write flags with zero-flag unset!
+        ld      [HL],   %10000000       ; write cpu flags!
+        inc     L
+        ld      [HL+],  A               ; write tile to draw
         
         ; write back the updated queue index
         ld      A,      L
-        ld      [_queue_index], A
+        ld      [queue_index],  A
 
-        pop     HL                      ; (restore front buffer position)
-        push    DE                      ; (restore back-buffer position)
+        pop     HL                      ; (restore back-buffer position)
+        pop     DE                      ; (restore front-buffer position)
         jr      @next
 
         ;-----------------------------------------------------------------------
         ; the last entry in the queue must be zero-terminated
-@exit:  ld      HL,     _queue_index
+        ;
+@exit:  xor     A                       ; (set A to zero)
+        ld      HL,     queue_index
         ld      L,      [HL]
         ld      H,      >tile_queue
-        ld      [HL],   0               ; write a zero to mark the end
+        dec     L                       ; move past tile,
+        dec     L                       ; to cpu flags
+        ld      [HL],   A               ; write a zero to mark the end
 
-        ; re-enable vblank interrupts
-        ld      HL,     IRQ_ENABLE
-        set     0,      [HL]
+        ; queue is ready, allow tile updates from vblank
+        dec     A                       ; (set A to $FF)
+        ld      [queue_ready],  A
         ret
-
-;;        ; normal way to write a queue of disparate tiles:
-;;        ; data is VRAM:HI, LO, TILE where HL is current
-;;        ; address in queue and B is a counter:
-;;        ;
-;;-       ld      A,      [HL+]   ;+8 =8
-;;        ld      D,      A       ;+4 =12
-;;        ld      A,      [HL+]   ;+8 =20
-;;        ld      E,      A       ;+4 =24
-;;        ld      A,      [HL+]   ;+8 =32
-;;        ld      [DE],   A       ;+8 =40
-;;        dec     B               ;+4 =44
-;;        jr      nz,     -       ;+12=56
-;;
-;;        ; faster method using the stack to POP from the
-;;        ; queue instead. SP = queue address! note that
-;;        ; the tile is 2-bytes in the queue so that
-;;        ; `pop AF` can be used -- each queue entry
-;;        ; sets the flags with this byte; the end
-;;        ; of the queue is marked by a zero-byte!
-;;        ;
-;;-       pop     HL              ;+12=12
-;;        pop     AF              ;+12=24
-;;        ld      [HL],   A       ;+8 =32
-;;        jr      nz,     -       ;+12=44

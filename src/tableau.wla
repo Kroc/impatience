@@ -178,17 +178,17 @@ clearTiles:
 ;
 ;-------------------------------------------------------------------------------
         ld      A,      $7e
+        ; starting address of the tableau in the *front buffer*
         ld      HL,     TABLEAU_ADDR
         ; (number of tiles to skip to next row)
         ld      DE,     TILEMAP_WIDTH - SCREEN_WIDTH
 
         ;-----------------------------------------------------------------------
         ld      C,      TABLEAU_HEIGHT
-@row:   ld      B,      TABLEAU_WIDTH
-@col:   ld      [HL+],  A       ; set cell to empty background tile
-        dec     B
-        jr      nz, @col
-        
+@row:
+.REPEAT TABLEAU_WIDTH
+        ld      [HL+],  A       ; set cell to empty background tile
+.ENDR
         ; we only clear 20 out of 32 columns (menu area is preserved),
         ; so move to the next row by skipping ahead over the menu
         add     HL,     DE
@@ -405,9 +405,7 @@ refresh:
         ld      HL,     depot11
         call    drawPile
         ld      HL,     depot12
-        call    drawPile
-
-        ret
+        jp      drawPile
 
 
 addCard:
@@ -540,7 +538,7 @@ removeCard:
         pop     DE                      ; return the (starting) pool address
         ret
 
-        
+
 getPilePool:
 ;===============================================================================
 ; given a Pile struct address, returns the address
@@ -1052,7 +1050,7 @@ pickCard:
         ; remove the card from the pile
         ; (this also returns the value)
         ; TODO: this will need to re-validate the cards; potentially across
-        ; all Piles, as with Aces up where validation of cards depends upon
+        ; all Piles, as with Aces Up where validation of cards depends upon
         ; the cards atop the other piles
         call    removeCard
 

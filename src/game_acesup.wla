@@ -135,7 +135,7 @@ init:
 
         ; play loop:
         ;=======================================================================
-@main:  call handleControls
+@main:  call    handleControls
 
         jp @main
 

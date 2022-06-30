@@ -3,6 +3,11 @@
 ;
 .BANK 0
 
+; a few bytes in HRAM need to be reserved to hold a wait loop
+.RAMSECTION "DoDMA"     SLOT "HRAM"     RETURNORG
+        doDMA           DSB 5
+.ENDS
+
 ; these are the *logical* button constants for the game, not the ones used by
 ; the hardware, which are split across two bytes. these are `bit` numbers
 ;
@@ -126,7 +131,7 @@ init_interrupts:
 
         ; write the DMA routine into HRAM:
         ;-----------------------------------------------------------------------
-        ld      C,      <sprites.doDMA
+        ld      C,      <doDMA
         ld      B,      5               ; size of DMA routine
         ld      HL,     @dma
 -       ld      A,      [HL+]
@@ -138,7 +143,7 @@ init_interrupts:
         ret
 
         ; this is the DMA routine in HRAM:
-        ;
+        ;=======================================================================
         ; send the lo-byte of the address to copy from (A)
         ; to the DMA register $FF00+C(=$46)
 @dma:   ldh     [C],    A
@@ -150,13 +155,64 @@ init_interrupts:
 
 irq_vblank:
 ;===============================================================================
+        ; * * * start of time-critical code * * *
+        ;-----------------------------------------------------------------------
         push    AF
         push    BC
         push    HL
 
-        ; TODO: any tile updates?
-        ; update the sprites:
-        call    sprites.update
+        ; DMA the sprite attributes from work RAM into OAM:
+        ;-----------------------------------------------------------------------
+        ; the DMA register only accepts 8-bits, which will
+        ; be the hi-byte of the address to copy from
+        ld      A,      >sprites.attrs
+        
+        ; whilst the DMA is occuring the CPU can only access HRAM,
+        ; therefore we must initialise the DMA and wait via a routine
+        ; running from HRAM. the routine has been copied into HRAM during
+        ; `init_interrupts`. B must be set to the number of loop iterations
+        ; to wait and C is set to the lo-byte of the DMA register
+        ;
+        ; despite using the information given here,
+        ; <https://gbdev.io/pandocs/OAM_DMA_Transfer.html>,
+        ; the BGB emulator would break on bad access during DMA
+        ; unless the wait was increased from 40 ($28) to 41!
+        ;
+        ld      BC,     (41<<8) + <DMA
+        call    doDMA                   ; this is in HRAM!
+
+        ; any tile updates?
+        ;-----------------------------------------------------------------------
+        ld      A,      [tilemap.queue_ready]                           ;+16=16
+        and     A,      A               ; (set flags!)                  ;+4 =20
+        jr      z,      @skip                                           ;+8 =28
+
+        ; backup current stack pointer: we don't use HL during the
+        ; tile-writing so we don't need to write the old SP to RAM!
+        ld      HL,     SP+0                                            ;+12=40
+        ld      SP,     tilemap.tile_queue                              ;+8 =48
+
+        ; read tiles and write to VRAM:
+-       pop     BC                      ; pop VRAM address from queue   ;+12=12
+        pop     AF                      ; pop tile / CPU flags          ;+12=24
+        ld      [BC],   A               ; write tile to VRAM            ;+8 =32
+        jr      z,      -               ; end of queue?                 ;+12=44
+
+        ; restore original stack pointer
+        ld      SP,     HL                                              ;+8
+
+        ;-----------------------------------------------------------------------
+        ; * * * end of time-critical code * * *
+        ;
+        ; mark the queue as done
+        ; (don't process the same tile-queue twice)
+        xor     A                       ; (set A to zero)
+        ld      [tilemap.queue_ready],  A
+
+        ;;pop     HL
+@skip:  ;;push    HL
+        ; move the cursor one frame towards its destination
+        call    sprites.updateCursor
 
         ; read the joypad:
         ;=======================================================================
