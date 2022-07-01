@@ -177,7 +177,7 @@ clearTiles:
 ; clears the tableau area, i.e. where cards are played:
 ;
 ;-------------------------------------------------------------------------------
-        ld      A,      $7e
+        ld      A,      TILE_TABLEAU_BG
         ; starting address of the tableau in the *front buffer*
         ld      HL,     TABLEAU_ADDR
         ; (number of tiles to skip to next row)

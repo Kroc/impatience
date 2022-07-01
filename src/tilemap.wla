@@ -77,6 +77,8 @@ tiles_main:
         MAP     "D"     = $7d           ; diamonds symbol
 .ENDA
 
+.DEF    TILE_TABLEAU_BG         $7e
+
 ; cards:
 ;===============================================================================
 ; foundation:
@@ -259,20 +261,6 @@ init:
 
         rst     rst_screenOn
         ret
-
-
-clearQueue:
-;===============================================================================
-; empty the tile-update queue, used to defer VRAM changes to vblank:
-;-------------------------------------------------------------------------------
-        ; ready flag must be cleared first so that VRAM tile updates
-        ; do not occur whilst we are erasing the tile queue!
-        xor     A                       ; (set A to zero)
-        ldh     [<queue_ready], A
-        ; erase the queue
-        ld      HL,     tile_queue
-        ld      BC,     _sizeof_tile_queue
-        jp      zero
 
 
 copyMainTileset:
@@ -491,7 +479,7 @@ update:
         ; increment the high-bytes
         inc     D                       ; (front-buffer)
         inc     H                       ; (back-buffer)
-        
+
         ; have we reached the end of the loop?
         ; when bit 10 of the address (bit 2 of the hi-byte)
         ; is set, it means that we've hit exactly 1024

@@ -17,10 +17,12 @@
         flags           BYTE
 .ENDST
 
+.DEF    QUEUE_SIZE      32
+
 ; (NOTE: we rely on this starting at an $xx00 address for optimisation)
 .RAMSECTION "Queue"     ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
-        tile_queue      INSTANCEOF TileUpdate 32
+        tile_queue      INSTANCEOF TileUpdate QUEUE_SIZE
 .ENDS
 
 .RAMSECTION "QReady"    SLOT "HRAM"     RETURNORG
@@ -128,7 +130,7 @@ rst_screenOff:                                                          ;$18
 ;###############################################################################
         ; various documentation says that an IRQ takes 20 cycles        ;+20=20
         ; (note the relative jump to save 4 cycles over JP)
-        jr      irq_vblank                                              ;+12=34
+        jp      irq_vblank                                              ;+12=34
 ;###############################################################################
 .ENDS
 
@@ -184,16 +186,17 @@ irq_vblank:                                                                ;=34
         push    HL                                                      ;+16=82
 
         ; any tile updates?
-        ;-----------------------------------------------------------------------
-        ldh     A,      [<queue_ready]                                  ;+12=
-        and     A,      A               ; (set flags!)                  ;+4 =
-        jr      z,      @skip                                           ;+8 =
+        ;=======================================================================
+        ldh     A,      [<queue_ready]                                  ;+12=94
+        and     A,      A               ; (set flags!)                  ;+4 =98
+        jp      z,      @skip                                           ;+8 =106
 
         ; backup current stack pointer: we don't use HL during the
         ; tile-writing so we don't need to write the old SP to RAM!
-        ld      HL,     SP+0                                            ;+12=
-        ld      SP,     tile_queue                                      ;+8 =
+        ld      HL,     SP+0                                            ;+12=118
+        ld      SP,     tile_queue                                      ;+8 =126
 
+        ;-----------------------------------------------------------------------
         ; read tiles and write to VRAM:
 -       pop     BC                      ; pop VRAM address from queue   ;+12=12
         pop     AF                      ; pop tile / CPU flags          ;+12=24
@@ -202,6 +205,7 @@ irq_vblank:                                                                ;=34
 
         ; restore original stack pointer
         ld      SP,     HL                                              ;+8
+        ;-----------------------------------------------------------------------
 
         ; mark the queue as done
         ; (don't process the same tile-queue twice)
@@ -291,6 +295,9 @@ irq_vblank:                                                                ;=34
         pop     AF
         reti
 
+;###############################################################################
+.ENDS
+
 
 getButton:
 ;===============================================================================
@@ -320,5 +327,16 @@ getButton:
 
         ret
 
-;###############################################################################
-.ENDS
+
+clearQueue:
+;===============================================================================
+; empty the tile-update queue, used to defer VRAM changes to vblank:
+;-------------------------------------------------------------------------------
+        ; ready flag must be cleared first so that VRAM tile updates
+        ; do not occur whilst we are erasing the tile queue!
+        xor     A                       ; (set A to zero)
+        ldh     [<queue_ready], A
+        ; erase the queue
+        ld      HL,     tile_queue
+        ld      BC,     _sizeof_tile_queue
+        jp      zero
