@@ -5,8 +5,7 @@
 ;-------------------------------------------------------------------------------
 ; this table must not cross a page boundary!
 ;
-.SECTION \
-        "piles"                 BITWINDOW 8
+.SECTION "piles"                BITWINDOW 8     RETURNORG
 
 tableau.BeginPiles
         ; label,                type, max-cards,

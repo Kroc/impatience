@@ -47,7 +47,7 @@
         joy_state               BYTE
 .ENDS
 
-.SECTION "z80_rst_00"   SIZE 8
+.SECTION "z80_rst_00"   SIZE 8          RETURNORG
 ;###############################################################################
 
 rst_waitVBlank:                                                         ;$00
@@ -62,7 +62,7 @@ rst_waitVBlank:                                                         ;$00
 ;###############################################################################
 .ENDS
 
-.SECTION "z80_rst_08"   SIZE 8
+.SECTION "z80_rst_08"   SIZE 8          RETURNORG
 ;###############################################################################
 
 rst_haltVBlank:                                                         ;$08
@@ -86,7 +86,7 @@ rst_haltVBlank:                                                         ;$08
 ;###############################################################################
 .ENDS
 
-.SECTION "z80_rst_10"   SIZE 8
+.SECTION "z80_rst_10"   SIZE 8          RETURNORG
 ;###############################################################################
 
 rst_screenOn:                                                           ;$10
@@ -102,7 +102,7 @@ rst_screenOn:                                                           ;$10
 ;###############################################################################
 .ENDS
 
-.SECTION "z80_rst_18"   SIZE 8
+.SECTION "z80_rst_18"   SIZE 8          RETURNORG
 ;###############################################################################
 
 rst_screenOff:                                                          ;$18
@@ -124,7 +124,7 @@ rst_screenOff:                                                          ;$18
 ; this area only provides 8 bytes free before the next IRQ ($48),
 ; so we only have room to jump to a bigger routine
 ;
-.SECTION "irq_vblank"
+.SECTION "irq_vblank"                   RETURNORG
 ;###############################################################################
         ; various documentation says that an IRQ takes 20 cycles        ;+20=20
         ; (note the relative jump to save 4 cycles over JP)
@@ -132,7 +132,7 @@ rst_screenOff:                                                          ;$18
 ;###############################################################################
 .ENDS
 
-.SECTION "interrupts"   FREE
+.SECTION "interrupts"   FREE            RETURNORG
 ;###############################################################################
 
 init_interrupts:

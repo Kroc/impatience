@@ -485,11 +485,16 @@ update:
         inc     E                       ; move forward in the front-buffer,
         inc     L                       ; and keep the back-buffer in step
 
-        ; by only incrementing the lo-byte, we can save cycles
+        ; by only incrementing the lo-byte,
+        ; we can save cycles on every loop
         jr      nz,     @loop
-
-        inc     D
-        inc     H
+        ; increment the high-bytes
+        inc     D                       ; (front-buffer)
+        inc     H                       ; (back-buffer)
+        
+        ; have we reached the end of the loop?
+        ; when bit 10 of the address (bit 2 of the hi-byte)
+        ; is set, it means that we've hit exactly 1024
         bit     2,      H
         jr      nz,     @loop
 
@@ -514,18 +519,27 @@ update:
 
         ; write the data to the queue:
         ; these bytes need to be written in the order that POP would read them
-        ld      A,      E
+        ld      A,      L
         ld      [BC],   A               ; write VRAM lo-byte
         inc     C
-        ; calculate the matching VRAM address from the front-buffer address
-        ld      A,      D
-        sub     A,      >(front_buffer - VRAM_MAP1)
+        ; calculate the matching VRAM address hi-byte from the back-buffer
+        ; address. since HL & DE are already used as the back/front buffer,
+        ; and we don't have another register free, we can simply adjust the
+        ; back buffer address down to the VRAM address using the difference
+        ; since both share the same lo-byte (both are aligned)
+        ld      A,      H
+        ; back buffer is $C400 and VRAM_MAP1 is $9800, so we subtract
+        ; the difference. the same could be done with the front-buffer,
+        ; but I chose the back buffer to minimise use of DE
+        sub     A,      >(back_buffer - VRAM_MAP1)
         ld      [BC],   A               ; write VRAM hi-byte
         inc     C
         ; the tile data is written as two bytes even though we only use one;
         ; surprisingly, this is for a critical optimisation during vblank.
         ; when this value is POPed, the first byte will become the cpu flags!
-        ;
+        ; all valid entries in the queue have the zero-flag set; when a zero
+        ; byte is encounted (NOTE: this equates to zero-flag UNSET), then
+        ; the queue has reached the end
         ld      A,      %10000000       ; write cpu flags!
         ld      [BC],   A
         inc     C

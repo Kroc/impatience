@@ -15,7 +15,7 @@
         free            BYTE
 .ENDS
 
-.SECTION "TilesSprites" ALIGN 16
+.SECTION "TilesSprites" ALIGN 16        RETURNORG
 ;###############################################################################
 
 .DEF    SPRITE_PALLETE  %01001100
