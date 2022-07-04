@@ -233,7 +233,7 @@ irq_vblank:                                                                ;=34
         ; * * * end of time-critical code * * *
         ;
         ; move the cursor one frame towards its destination
-        call    sprites.updateCursor
+        call    cursor.update
 
         ; read the joypad:
         ;=======================================================================

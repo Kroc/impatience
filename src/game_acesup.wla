@@ -136,7 +136,7 @@ init:
         
         ; move the cursor to the bottom card in the first depot pile
         ld      HL,     tableau.depot1
-        call    tableau.pointToPile
+        call    cursor.pointToPile
 
         ; play loop:
         ;=======================================================================
@@ -160,30 +160,30 @@ handleControls:
         bit     BUTTON_DOWN,    A
         jr      z,      +
 
-        jp      tableau.moveCursorDown
+        jp      cursor.moveDown
 
         ; cursor up?
 +       bit     BUTTON_UP,      A
         jr      z,      +
 
-        jp      tableau.moveCursorUp
+        jp      cursor.moveUp
 
         ; cursor left?
 +       bit     BUTTON_LEFT,    A
         jr      z,      +
 
-        jp      tableau.moveCursorLeft
+        jp      cursor.moveLeft
 
         ; cursor right?
 +       bit     BUTTON_RIGHT,   A
         jr      z,      +
 
-        jp      tableau.moveCursorRight
+        jp      cursor.moveRight
 
         ; A button?
 +       bit     BUTTON_A,       A
         jr      z,      +
 
-        jp      tableau.pickPile
+        jp      cursor.pickPile
 
 +       ret

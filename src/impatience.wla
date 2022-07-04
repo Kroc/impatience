@@ -6,8 +6,6 @@
 
 .INC    "strings.wla"           ; string & text routines
 .INC    "interrupts.wla"
-.INC    "tilemap.wla"           NAMESPACE "tilemap"
-.INC    "sprites.wla"           NAMESPACE "sprites"
 
 
 init:
@@ -152,6 +150,10 @@ fill:
 .ENDS
 
 ;===============================================================================
+.INC    "tilemap.wla"           NAMESPACE "tilemap"
 .INC    "menu.wla"              NAMESPACE "menu"
 .INC    "tableau.wla"           NAMESPACE "tableau"
+.INC    "sprites.wla"           NAMESPACE "sprites"
+.INC    "cursor.wla"            NAMESPACE "cursor"
+
 .INC    "game_acesup.wla"       NAMESPACE "acesup"
