@@ -535,7 +535,7 @@ removeCard:
         jr      nc,     +               ; E overflows?
         inc     D                       ; ripple to D
 +       ld      E,      A
-        
+
         ; read and erase the card:
         ; (changing the size of the pile alone isn't enough as
         ; the list of cards in the pool must be zero-terminated)
@@ -655,11 +655,11 @@ getPilePos:
         ld      B,      0
         ld      C,      Pile.row
         add     HL,     BC
-        
+
         ld      B,      [HL]
         inc     L
         ld      C,      [HL]
-        
+
         pop     HL
         ret
 
@@ -680,7 +680,7 @@ drawPile:
         ld      A,      [HL-]
         and     A,      A
         ret     z
-        
+
         ld      A,      [HL+]           ; read number of cards in pile
         and     A,      A               ; (set flags!)
         jr      z,      @empty          ; if zero, draw empty space
@@ -793,7 +793,7 @@ drawCard:
         ; if set, we draw only the first row
 @face:  push    AF
         ld      BC,     TILEMAP_WIDTH-3 ; amount to skip to next row
-        
+
         ; top-left corner: ordinal
         ld      D,      A               ; make a copy of the original value
         and     %00001111               ; trim out the other bits

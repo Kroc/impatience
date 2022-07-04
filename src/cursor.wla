@@ -98,13 +98,20 @@ init:
 
 clearHand:
 ;===============================================================================
-; removes the cards from the cursor hand:
+; removes the cards from the cursor hand / pile:
 ;
 ; WARNING: the cards should be "dropped" on to another pile
 ; before calling this otherwise they will be permenantly lost!
+;
+; out:  DE      (preserved) -- required for `pickPile`
+;       A, HL   (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      HL,     hand_pile
-        call    tableau.emptyPile
+        xor     A                       ; (set A to zero)
+        ld      HL,     hand_pile.count ; set the pile card count to zero
+        ld      [HL],   A
+        ; zero out the list of cards in the private cursor pool
+        ld      HL,     hand_cards
+        call    fill@f{_sizeof_hand_cards}
 
         ; fall through to below to clear the sprites
         ;
@@ -113,9 +120,8 @@ clearSprites:
 ;===============================================================================
 ; remove the card sprites held by the cursor:
 ;
-; out:  A       (clobbered)
-;       HL      (clobbered)
-;       BC, DE  (preserved)
+; out:  BC, DE  (preserved)
+;       A, HL   (clobbered)
 ;-------------------------------------------------------------------------------
         ; reset the hand sprite to the default cursor
         ld      A,      SPRITE_HAND_LHS
@@ -144,8 +150,8 @@ update:
 ; note that sprite position changes are written to the work RAM
 ; and this is automatically synced with OAM during vblank
 ;
-; out:  HL/BC/A (clobbered)
-;       DE      (preserved) -- MUST be preserved during vblank usage
+; out:  DE      (preserved) -- MUST be preserved during vblank usage
+;       HL/BC/A (clobbered)
 ;-------------------------------------------------------------------------------
         ; calculate the X & Y speed to move the cursor:
         ;
@@ -519,7 +525,7 @@ pickPile:
         ; initialise sprites:
         ;-----------------------------------------------------------------------
         ; before we use HL/BC, clear out any cards currently in the cursor
-        call    clearSprites
+        call    clearHand
 
         ; change the cursor to the holding hand
         ld      A,      SPRITE_HOLD_LHS
