@@ -1,8 +1,6 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-; cursor:
-;===============================================================================
 ; default starting position of the cursor
 ; (for the GameBoy's screen)
 .DEF    CURSOR_START_X  80
@@ -21,12 +19,43 @@
         ;-----------------------------------------------------------------------
         ; the address of the Pile struct that the cursor is pointing to;
         ; e.g. deck / depot; $0000 if cursor is free
-        cursor_pile     WORD
+        pile_point      WORD
         ; the number of the card in the pile the cursor is pointing at.
         ; note that this is 0-based and not 1-based like the pile size!
-        cursor_card     BYTE
+        card_point      BYTE
         ;-----------------------------------------------------------------------
         temp            BYTE
+        ;-----------------------------------------------------------------------
+        ; when the cursor picks up a pile of cards, they are removed from
+        ; the original pile and have to be stored elsewhere, so this Pile
+        ; exist specifically for the cards in the cursor hand. the storage
+        ; pool is not used so that the cursor's pile has a fixed address
+        ; that makes it easier to work with
+        ;
+        ; TODO: is 13 cards enough? what's the largest pile
+        ;       that can be picked up in a game?
+        hand_pile       INSTANCEOF Pile
+        hand_cards      DSB 13+1         ; +1 for zero-terminator!
+.ENDS
+
+; the pile used to hold cards in the hand needs a template;
+; we need to ensure that this template doesn't cross an 8-bit boundary
+;
+.SECTION "CursorPiles"          BITWINDOW 8     RETURNORG
+;###############################################################################
+; force this template to use the fixed pool address!
+.REDEF  __pool_addr             cursor.hand_cards
+
+        ; label,                type, max-cards,
+        ; row,                  col,
+        ; pile-left,            pile-right,
+        ; pile-up,              pile-down
+tableau.DefinePile \
+        pile_template,          PILE_COLUMN | PILE_HORZ, 13, \
+        TILEMAP_HEIGHT-4,       TABLEAU_LEFT + 1, \
+        0,                      0, \
+        0,                      0
+;###############################################################################
 .ENDS
 
 
@@ -59,12 +88,30 @@ init:
         ld      A,      SPRITE_HAND_RHS ; tile-number
         ld      [HL+],  A
         ld      [HL],   0               ; display attributes
-        ret
+        
+        ; configure the pile for holding cards in the cursor hand
+        ;-----------------------------------------------------------------------
+        ld      BC,     pile_template   ; the ROM template to copy from
+        ld      HL,     hand_pile       ; where to copy the template in RAM
+        jp      tableau.allocatePile
 
 
-clearCards:
+clearHand:
 ;===============================================================================
-; remove the cards held by the cursor:
+; removes the cards from the cursor hand:
+;
+; WARNING: the cards should be "dropped" on to another pile
+; before calling this otherwise they will be permenantly lost!
+;-------------------------------------------------------------------------------
+        ld      HL,     hand_pile
+        call    tableau.emptyPile
+
+        ; fall through to below to clear the sprites
+        ;
+
+clearSprites:
+;===============================================================================
+; remove the card sprites held by the cursor:
 ;
 ; out:  A       (clobbered)
 ;       HL      (clobbered)
@@ -184,7 +231,7 @@ getCursorPile:
 ;       DE      ; (clobbered)
 ;-------------------------------------------------------------------------------
         ; retrieve current pile location into DE
-        ld      HL,     cursor_pile
+        ld      HL,     pile_point
         ld      E,      [HL]            ; read pile address, lo-byte
         inc     L
         ld      D,      [HL]            ; read pile address, hi-byte
@@ -246,7 +293,7 @@ pointToCard:
         ; (put aside card number to point to)
         ld      C,      A
         ; save the address of the pile to point to:
-        ld      DE,     cursor_pile
+        ld      DE,     pile_point
         ld      A,      L
         ld      [DE],   A
         inc     E
@@ -472,7 +519,7 @@ pickPile:
         ; initialise sprites:
         ;-----------------------------------------------------------------------
         ; before we use HL/BC, clear out any cards currently in the cursor
-        call    clearCards
+        call    clearSprites
 
         ; change the cursor to the holding hand
         ld      A,      SPRITE_HOLD_LHS
@@ -569,7 +616,7 @@ pickPile:
         ; bottom half of last card:
         ;=======================================================================
         ; since sprites are 8x16, the last card is two sprites high;
-        ; move down another 8px to make it 16px
+        ; move down another 8px to make it 16px below the top half
 +       ld      A,      B
         add     A,      8
         ld      B,      A
@@ -578,7 +625,7 @@ pickPile:
         ;-----------------------------------------------------------------------
         ld      [HL],   %00000000       ; set sprite display attribute
         dec     L
-        ld      A,      [temp]
+        ld      A,      [temp]          ; retrieve the last card value
         swap    A                       ; move the suit to the bottom nybble
         and     %00000011               ; mask out the other bits
         rlca                            ; x2 tile index due to 8x16 sprites
@@ -605,7 +652,7 @@ pickPile:
         ;-----------------------------------------------------------------------
         ld      [HL],   %00000000       ; set sprite display attribute
         dec     L                       ; (move to sprite tile byte)
-        ld      A,      [temp]
+        ld      A,      [temp]          ; retrieve the last card value
         and     %00001111               ; trim out the other bits of card value
         rlca                            ; x2 tile index due to 8x16 sprites
         add     SPRITE_CARD_34X3-2      ; offset the tile with the ordinal

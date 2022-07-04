@@ -550,6 +550,33 @@ removeCard:
         ret
 
 
+emptyPile:
+;===============================================================================
+; empties a pile of cards (all cards are deleted!)
+;
+; in:   HL      address of a Pile structure (e.g. `deck`, `depot`)
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+        ld      [HL],   0               ; set card count for the Pile to zero
+        inc     L                       ; skip count field
+        inc     L                       ; skip type field
+        ld      C,      [HL]            ; read capacity field
+        inc     L
+        ld      E,      [HL]            ; read the pool address, lo-byte
+        inc     L
+        ld      D,      [HL]            ; read the pool address, hi-byte
+
+        ; the cards for a pile must be zero-terminated,
+        ; so we add 1 to the count
+@clear: inc     C
+        xor     A                       ; (set A to zero)
+-       ld      [DE],   A               ; clear one byte
+        inc     DE                      ; move to the next byte
+        dec     C                       ; one less byte to fill
+        jr      nz, -                   ; have we done all of them?
+        ret
+
+
 getPile:
 ;===============================================================================
 ; retrieves some basic Pile properties:

@@ -1,12 +1,11 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-; create template card piles for the intial setup of the game
-;-------------------------------------------------------------------------------
-; this table must not cross a page boundary!
+; create template card piles for the intial setup of the game:
+; NOTE: this table must not cross a page boundary!
 ;
-.SECTION "piles"                BITWINDOW 8     RETURNORG
-
+.SECTION "AcesUpPiles"          BITWINDOW 8     RETURNORG
+;###############################################################################
 tableau.BeginPiles
         ; label,                type, max-cards,
         ; row,                  col,
@@ -14,35 +13,35 @@ tableau.BeginPiles
         ; pile-up,              pile-down
 tableau.DefinePile \
         acesup_deck,            PILE_DECK, 52, \
-        1,                      MENU_WIDTH + 1, \
+        1,                      TABLEAU_LEFT + 1, \
         tableau.depot4,         tableau.depot1, \
         tableau.deck,           tableau.deck
 ;;tableau.DefinePile \
 ;;        acesup_discard,         PILE_DECK, 52, \
-;;        6,                      MENU_WIDTH + 1, \
+;;        6,                      TABLEAU_LEFT + 1, \
 ;;        tableau.depot4,         tableau.depot1, \
 ;;        tableau.deck,           tableau.discard \
 tableau.DefinePile \
         acesup_depot1,          PILE_COLUMN, 13, \
-        1,                      MENU_WIDTH + 5, \
+        1,                      TABLEAU_LEFT + 5, \
         tableau.deck,           tableau.depot2, \
         tableau.depot1,         tableau.depot1
 tableau.DefinePile \
         acesup_depot2,          PILE_COLUMN, 13, \
-        1,                      MENU_WIDTH + 8 \
+        1,                      TABLEAU_LEFT + 8 \
         tableau.depot1,         tableau.depot3, \
         tableau.depot2,         tableau.depot2
 tableau.DefinePile \
         acesup_depot3,          PILE_COLUMN, 13, \
-        1,                      MENU_WIDTH + 11 \
+        1,                      TABLEAU_LEFT + 11 \
         tableau.depot2,         tableau.depot4, \
         tableau.depot3,         tableau.depot3
 tableau.DefinePile \
         acesup_depot4,          PILE_COLUMN, 13, \
-        1,                      MENU_WIDTH + 14 \
+        1,                      TABLEAU_LEFT + 14 \
         tableau.depot3,         tableau.deck, \
         tableau.depot4,         tableau.depot4
-
+;###############################################################################
 .ENDS
 
 
@@ -56,7 +55,7 @@ init:
         xor     A
         ldh     [<SCY], A
 
-        ; setup the playfield for the game
+        ; setup the tableau layout for the game
         ;-----------------------------------------------------------------------
         ; completely clear the table of cards, both the piles and the storage
         ; pool of all cards on the table. DE will be set to the beginning
