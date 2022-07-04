@@ -17,6 +17,11 @@ tableau.DefinePile \
         1,                      MENU_WIDTH + 1, \
         tableau.depot4,         tableau.depot1, \
         tableau.deck,           tableau.deck
+;;tableau.DefinePile \
+;;        acesup_discard,         PILE_DECK, 52, \
+;;        6,                      MENU_WIDTH + 1, \
+;;        tableau.depot4,         tableau.depot1, \
+;;        tableau.deck,           tableau.discard \
 tableau.DefinePile \
         acesup_depot1,          PILE_COLUMN, 13, \
         1,                      MENU_WIDTH + 5, \
@@ -62,6 +67,7 @@ init:
         ; allocate the deck:
         ld      BC,     acesup_deck
         call    tableau.allocateDeck
+        ;;call    tableau.allocatePile    ; discard pile
 
         ; allocate the depots:
         ld      HL,     tableau.depot1
@@ -178,6 +184,6 @@ handleControls:
 +       bit     BUTTON_A,       A
         jr      z,      +
 
-        jp      tableau.pickCard
+        jp      tableau.pickPile
 
 +       ret

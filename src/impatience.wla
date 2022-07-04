@@ -49,11 +49,11 @@ init:
         ld      HL,     VRAM
         ld      BC,     8192
         call    zero
-
         ; clear sprite registers: (OAM)
         ld      HL,     OAM
-        ld      BC,     (40 * 4)
-        call    zero
+        ; because the number of bytes to clear is fixed,
+        ; we can jump into `fill` at the exact place needed
+        call    fill@f{40 * 4}
 
         ei
 
@@ -66,8 +66,7 @@ init:
 -       rst     rst_waitVBlank
         jr      -
 
-; TODO: use a `jp HL` to jump straight into the list of 256 instructions
-;
+
 zero:
 ;===============================================================================
 ; zero-out any area of RAM:
@@ -77,6 +76,7 @@ zero:
 ;
 ; out:  BC, A   set to zero by nature of the routine
 ;       HL      set to the address after the zeroed memory
+;       DE      (preserved)
 ;-------------------------------------------------------------------------------
         ; if the hi-byte is non-zero it's guaranteed that >255 bytes
         ; remain and we can simply zero 255 bytes at a time!
@@ -84,12 +84,8 @@ zero:
         cp      B                       ; (set flags!)
         jp      z,      +
 
-        ; since the auto-incrementing `ldi` instruction is only 1 byte,
--       ; this is very memory efficient for the speed it provides
-.REPEAT 256
-        ld      [HL+],  A
-.ENDR
-        dec     B                       ; one page copied, any remain?
+-       call    fill                    ; erase 256 bytes in a stride
+        dec     B                       ; one page wiped, any remain?
         jp      nz,     -               ; keep copying until B=0
 
         ; if the lo-byte is $00 then there are no individual
@@ -127,6 +123,33 @@ zero:
         dec     C
         jr      nz, -
         ret
+
+
+.SECTION "Fill256"      ALIGN 256       RETURNORG
+;###############################################################################
+
+fill:
+;===============================================================================
+; writes 256 bytes of RAM with a single value:
+; used by `zero` to fast-fill 256 bytes at a time
+;
+; if the number of bytes needed to be written is constant, you can jump into
+; the exact position required, these are marked by `@f...` child-labels with
+; the appropriate number of bytes1-256, e.g. `call fill@f160`
+;
+; in:   HL      starting address
+;       A       value to write
+;
+; out:  HL      automatically incremented to the next RAM address
+;       A       (preserved)
+;       BC, DE  (preserved)
+;-------------------------------------------------------------------------------
+.REPEAT 256     INDEX R
+@f{256-R}:
+        ld      [HL+],  A
+.ENDR   ret
+;###############################################################################
+.ENDS
 
 ;===============================================================================
 .INC    "menu.wla"              NAMESPACE "menu"

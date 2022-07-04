@@ -52,7 +52,7 @@
 
 ; cursor:
 ;===============================================================================
-; (musn't cross an 8-bit boundary for a micro-optinmisation)
+; (musn't cross an 8-bit boundary for a micro-optimisation)
 ;
 .RAMSECTION "Cursor"    BITWINDOW 8     RETURNORG
         ;-----------------------------------------------------------------------
@@ -102,8 +102,13 @@
 
 ; define some RAM to hold cards during a game:
 ;
+; the Piles store metadata with an address that points to the pool
+; where the actual cards in the pile are stored; this is so that
+; piles that are not being used do not require card storage
+;
 ; the list of piles must not exceed 256 bytes
 ; as we increment only one register for speed!
+;
 .RAMSECTION "Layout"    ALIGN 256 SIZE 256 RETURNORG
         ;-----------------------------------------------------------------------
         ; a deck, where cards are drawn from
@@ -132,6 +137,10 @@
         depot12         INSTANCEOF Pile
 .ENDS
 
+; the card pool is where the actual cards are stored; each Pile contains an
+; address for the pool. the end of each pile in the pool is zero-terminated
+; to minimise the need for counting registers
+;
 .RAMSECTION "Storage"   SIZE 1024       RETURNORG
         ;-----------------------------------------------------------------------
         storage         DSB 1024
@@ -154,19 +163,21 @@
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 .DSTRUCT \1 INSTANCEOF Pile VALUES
-        count:          .BYTE   0       ; (assigned at run-time)
-        type:           .BYTE   \2
-        limit:          .BYTE   \3
-        pool:           .WORD   __pool_addr
-        row:            .BYTE   \4
-        col:            .BYTE   \5
-        left:           .BYTE   <\6
-        right:          .BYTE   <\7
-        up:             .BYTE   <\8
-        down:           .BYTE   <\9
+        count:          .BYTE 0         ; (assigned at run-time)
+        type:           .BYTE \2
+        limit:          .BYTE \3
+        pool:           .WORD __pool_addr
+        row:            .BYTE \4
+        col:            .BYTE \5
+        left:           .BYTE <\6
+        right:          .BYTE <\7
+        up:             .BYTE <\8
+        down:           .BYTE <\9
 .ENDST
 
-.REDEF  __pool_addr     __pool_addr+\3
+; move to the next available address in the pool;
+; we include an extra byte for a zero terminator
+.REDEF  __pool_addr     __pool_addr+\3+1
 
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 .ENDM
@@ -207,17 +218,22 @@ clearPiles:
 ;       BC, A   set to zero, by nature of looping
 ;       HL      (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      HL,     SECTIONSTART_tableau.Layout
-        ld      BC,     (SECTIONEND_tableau.Layout-SECTIONSTART_tableau.Layout)+1
-        call    zero
-        ld      HL,     SECTIONSTART_tableau.Storage
-        ld      BC,     (SECTIONEND_tableau.Storage-SECTIONSTART_tableau.Storage)+1
-        call    zero
-
-        ; return the starting address of the card pool
-        ; (used for allocating piles)
+        ; return the starting address of the card pool (used for allocating
+        ; piles). neither of the clear routines affect DE, allowing us to
+        ; optimise the tail call
         ld      DE,     storage
-        ret
+
+        ; the tableau layout of piles is guaranteed to be less than 256 bytes
+        ; so we can use `fill` instead of `zero` in this instance
+        xor     A                       ; (set A to zero)
+        ld      HL,     SECTIONSTART_tableau.Layout
+        call    fill@f{SECTIONEND_tableau.Layout-SECTIONSTART_tableau.Layout}
+
+        ; clear the card pool, this is 1KB
+        ; (this must be zeroed because piles must be zero-terminated)
+        ld      HL,     SECTIONSTART_tableau.Storage
+        ld      BC,     SECTIONEND_tableau.Storage-SECTIONSTART_tableau.Storage
+        jp     zero
 
 
 allocateDeck:
@@ -233,14 +249,14 @@ allocateDeck:
         call    allocatePile
 
         push    BC                      ; preserve new ROM address
-        
+
         ; fill the deck with cards:
         ;-----------------------------------------------------------------------
         ; calling `addCard` 52 times would be needlessly slow,
         ; so we're going to manually write the pile size
-        ld      A,      52
+        ld      A,              52
         ld      [deck.count],   A
-        
+
         ; C will be our suit counter;
         ; 0=spades, 1=clubs, 2=hearts, 3=diamonds
         ld      C,      0
@@ -346,6 +362,9 @@ allocatePile:
         push    BC                      ; preserve current ROM address
         push    DE                      ; keep original pool address
 
+        ; the cards for a pile must be zero-terminated,
+        ; so we add 1 to the count
+        inc     A
         ld      B,      A               ; copy card-limit to counter
         xor     A                       ; (write zeroes)
 
@@ -356,7 +375,6 @@ allocatePile:
 
         pop     DE                      ; restore original pool address
         pop     BC                      ; restore current ROM address
-        
         ret
 
 
@@ -367,7 +385,7 @@ refresh:
         ; we're going to redraw all piles,
         ; so clear the tabelau of tiles first
         call    clearTiles
-        
+
         ld      HL,     deck
         call    drawPile
         ld      HL,     discard
@@ -528,7 +546,11 @@ removeCard:
         jr      nc,     +               ; E overflows?
         inc     D                       ; ripple to D
 +       ld      E,      A
+        
         ; read and erase the card:
+        ; (changing the size of the pile alone isn't enough as
+        ; the list of cards in the pool must be zero-terminated)
+        ;
         ld      A,      [DE]            ; read the card value from the pool
         push    AF                      ; keep card value
         xor     A                       ; set A to zero
@@ -537,6 +559,35 @@ removeCard:
         pop     AF                      ; return the card value
         pop     DE                      ; return the (starting) pool address
         ret
+
+
+getPile:
+;===============================================================================
+; retrieves some basic Pile properties:
+;
+; in:   HL      address of a Pile structure (e.g. `deck`, `depot`)
+;
+; out:  A       number of cards in the pile, 1-based
+;       B       Pile type (e.g. `PILE_DECK`)
+;       C       maximum capacity of the pile, 1-based
+;       DE      address in the card pool for the pile
+;               (where the cards in the pile are stored)
+;       HL      (preserved)
+;-------------------------------------------------------------------------------
+;;        ld      A,      [HL+]           ; card count
+;;        ld      B,      [HL]            ; pile type
+;;        inc     L
+;;        ld      C,      [HL]            ; pile capacity
+;;        inc     L
+;;        ld      E,      [HL]            ; pool address, lo-byte
+;;        inc     L
+;;        ld      D,      [HL]            ; pool address, hi-byte
+;;        
+;;        dec     L                       ; restore HL:
+;;        dec     L                       ;  this is still faster than
+;;        dec     L                       ;  PUSH and POPing HL
+;;        dec     L
+;;        ret
 
 
 getPilePool:
@@ -601,6 +652,9 @@ drawPile:
 ;===============================================================================
 ; draws a pile on the screen-buffer:
 ;
+; TODO: if we can always forward HL to the next pile
+;       it will help with refreshing the tableau
+;
 ; in:   HL      address of the Pile structure
 ;
 ; out:  *       (clobbered)
@@ -608,6 +662,7 @@ drawPile:
         ; TODO: should probably swap type/count bytes? (AGAIN)
         inc     L
         ld      A,      [HL-]
+        and     A,      A
         ret     z
         
         ld      A,      [HL+]           ; read number of cards in pile
@@ -721,7 +776,7 @@ drawCard:
         ; remember the state of the carry flag;
         ; if set, we draw only the first row
 @face:  push    AF
-        ld      BC,     32-3            ; amount to skip to next row
+        ld      BC,     TILEMAP_WIDTH-3 ; amount to skip to next row
         
         ; top-left corner: ordinal
         ld      D,      A               ; make a copy of the original value
@@ -793,9 +848,9 @@ getCursorPile:
 ;-------------------------------------------------------------------------------
         ; retrieve current pile location into DE
         ld      HL,     cursor_pile
-        ld      E,      [HL]            ; pool address, lo-byte
+        ld      E,      [HL]            ; read pile address, lo-byte
         inc     L
-        ld      D,      [HL]            ; pool address, hi-byte
+        ld      D,      [HL]            ; read pile address, hi-byte
         inc     L
 
         ; retrieve card number being pointed to
@@ -1036,33 +1091,204 @@ moveCursorRight:
         jp      pointToPile
 
 
-pickCard:
+pickPile:
 ;===============================================================================
-; attempt to pick up a card:
+; attempt to pick up a pile:
 ;
-; the card will be validated and, if it can be picked,
-; it will be removed from the pile and placed in the cursor
+; this will attempt to pick up all the cards from the one
+; currently pointed to, down to the top of the pile
 ;
 ;-------------------------------------------------------------------------------
         ; retrieve current pile location (HL),
         ; and the card index being pointed at (A)
         call    getCursorPile
-        ; remove the card from the pile
-        ; (this also returns the value)
-        ; TODO: this will need to re-validate the cards; potentially across
-        ; all Piles, as with Aces Up where validation of cards depends upon
-        ; the cards atop the other piles
-        call    removeCard
+        ; put aside the current card index whilst
+        ; we get the number of cards in the pile
+        ld      C,      A
 
-        ; create a sprite copy of the card(s)
-        call    sprites.cardToSprite
+        ; is the pile empty?
+        ;-----------------------------------------------------------------------
+        ld      A,      [HL]            ; read card count
+        and     A,      A               ; (set flags!)
+        jp      z,      @err            ; if pile is empty, exit
 
+        ; adjust card count:
+        ;-----------------------------------------------------------------------
+        ; because we are removing all cards from the current, down,
+        ; the current index effectively becomes the new card-count
+        ; i.e. we trim the size of the pile early to avoid wasting
+        ; registers reducing it one-by-one during looping
+        ld      [HL],   C
+
+        ; position index in pool:
+        ;-----------------------------------------------------------------------
+        inc     L                       ; skip over card count
+        inc     L                       ; skip over pile type (TODO: for now)
+        inc     L                       ; skip over pile capacity
+        ld      A,      [HL+]           ; get pool address, lo-byte
+        add     A,      C               ; add our index to it
+        ld      D,      [HL]            ; get pool address, hi-byte
+        jr      nc,     +               ; overflow adding the index?
+        inc     D                       ; ripple to hi-byte
++       ld      E,      A               ; DE = addr of index card
+
+        ; initialise sprites:
+        ;-----------------------------------------------------------------------
+        ; before we use HL/BC, clear out any cards currently in the cursor
+        call    sprites.clearCards
+
+        ; change the cursor to the holding hand
+        ld      A,      SPRITE_HOLD_LHS
+        ld      [sprites.attrs.1.tile], A
+        ld      A,      SPRITE_HOLD_RHS
+        ld      [sprites.attrs.2.tile], A
+        ; change the cursor mode so that the cards move with the cursor
+        ld      HL,     sprites.cursor_mode
+        set     7,      [HL]
+
+        ; set our starting X/Y position for building card sprites:
+        ld      A,      [sprites.cursor_y]
+        ld      B,      A               ; B will be the Y-position (px)
+        ld      A,      [sprites.cursor_x]
+        add     A,      8               ; add 8 to X to fit in the cursor hand
+        ld      C,      A               ; C will be the X-position (px)
+
+        ; because all sprites are in 8x16 mode, we will need to overlap
+        ; sprites where cards stack in a pile and due to sprite-priority,
+        ; we have to assign sprites from the top of memory, downards
+        ; (literally writing the sprite attributes backwards)
+        ld      HL,     sprites.attrs.40.attr
+
+        ; convert cards to sprites:
+        ;-----------------------------------------------------------------------
+        ; seed the loop with the first card value
+        ld      A,      [DE]
+
+        ; we must remember the current card value so that after
+        ; the zero-terminator is encountered, we can construct
+        ; the bottom-half of the last card (not covered)
+@loop:  ld      [sprites.temp], A
+
+        ; create sprites for the top half of each card:
+        ; (only the last card has a bottom half)
+        ;=======================================================================
+        ; top-left corner: ordinal
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L                       ; (move to sprite tile byte)
+        and     %00001111               ; trim out the other bits of card value
+        rlca                            ; x2 tile index due to 8x16 sprites
+        add     SPRITE_CARD_12X1-2      ; offset the tile with the ordinal
+        ld      [HL-],  A               ; set the sprite's tile
+        ld      A,      C
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
+        ;-----------------------------------------------------------------------
+        ; top-middle:
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L                       ; (move to sprite tile byte)
+        ld      A,      SPRITE_CARD_12X2; this one has a fixed sprite tile
+        ld      [HL-],  A
+        ld      A,      C               ; position this sprite next
+        add     A,      8               ; to the previous one
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
+        ;-----------------------------------------------------------------------
+        ; top-right: suit
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L
+        ld      A,      [DE]            ; retrieve our original card value
+        swap    A                       ; move the suit to the bottom nybble
+        and     %00000011               ; mask out the other bits
+        rlca                            ; x2 tile index due to 8x16 sprites
+        add     SPRITE_CARD_12X3        ; offset the tile with the suit
+        ld      [HL-],  A
+        ld      A,      C               ; position this sprite next
+        add     A,      16              ; to the previous one
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
+
+        ; move to the next row
+        ld      A,      B
+        add     A,      8
+        ld      B,      A
+
+        ;-----------------------------------------------------------------------
+        ; erase the card to keep the list zero-terminated
+        xor     A                       ; (set A to zero)
+        ld      [DE],   A               ; erase current card,
+        inc     DE                      ; and move to next card
+        ; read a card value from the pool; if this is the
+        ; zero terminator, we've reached the end of the pile
+        ld      A,      [DE]
+        and     A,      A
+        jr      nz,     @loop           ; keep looping until last card
+
+        ; bottom half of last card:
+        ;=======================================================================
+        ; since sprites are 8x16, the last card is two sprites high;
+        ; move down another 8px to make it 16px
++       ld      A,      B
+        add     A,      8
+        ld      B,      A
+        ;-----------------------------------------------------------------------
+        ; bottom-left: suit
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L
+        ld      A,      [sprites.temp]
+        swap    A                       ; move the suit to the bottom nybble
+        and     %00000011               ; mask out the other bits
+        rlca                            ; x2 tile index due to 8x16 sprites
+        add     SPRITE_CARD_34X1        ; offset the tile with the suit
+        ld      [HL-],  A
+        ld      A,      C
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
+        ;-----------------------------------------------------------------------
+        ; bottom-middle:
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L                       ; (move to sprite tile byte)
+        ld      A,      SPRITE_CARD_34X2; this one has a fixed sprite tile
+        ld      [HL-],  A
+        ld      A,      C               ; position this sprite next
+        add     A,      8               ; to the previous one
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
+        ;-----------------------------------------------------------------------
+        ; bottom-right corner: ordinal
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L                       ; (move to sprite tile byte)
+        ld      A,      [sprites.temp]
+        and     %00001111               ; trim out the other bits of card value
+        rlca                            ; x2 tile index due to 8x16 sprites
+        add     SPRITE_CARD_34X3-2      ; offset the tile with the ordinal
+        ld      [HL-],  A               ; set the sprite's tile
+        ld      A,      C               ; position this sprite next
+        add     A,      16              ; to the previous one
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
+
+        ;-----------------------------------------------------------------------
         ; redraw the entire tableau; this may seem overkill but the removal
         ; of one card may affect the validation of other piles which would
         ; also need redrawing
-        call    tableau.refresh
+        call    refresh
         ; compare the display buffers and queue up
         ; the changes to be made during vblank
-        call    tilemap.update
+        jp      tilemap.update
 
-        ret
+        ; cannot pick this pile:
+        ;=======================================================================
+        ; TODO: we should implement a sound / cursor shake
+@err:   ret

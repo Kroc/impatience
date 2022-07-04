@@ -9,10 +9,6 @@
 .RAMSECTION "Attrs"     ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
         attrs           INSTANCEOF Sprite 40            ; (160 bytes)
-        ; how many sprites are free for use:
-        ; the first two sprites must be the hand cursor, and the cards must be
-        ; assigned from the last sprite downward for sprite-priority reasons
-        free            BYTE
 .ENDS
 
 .SECTION "TilesSprites" ALIGN 16        RETURNORG
@@ -108,6 +104,8 @@ tiles_sprites:
         cursor_y        BYTE            ; current cursor Y-position
         ;-----------------------------------------------------------------------
         cursor_mode     BYTE            ; to control different cursor behaviour
+
+        temp            BYTE
 .ENDS
 
 
@@ -158,10 +156,6 @@ init:
         ld      [HL+],  A
         ld      [HL],   0               ; display attributes
 
-        ; reset the sprites-in-use count
-        ld      A,      38-1            ; (0-based)
-        ld      [free], A
-
         ; set sprite palettes:
         ;-----------------------------------------------------------------------
         ld      A,      SPRITE_PALLETE
@@ -183,14 +177,20 @@ clearAttrs:
 ;
 ;-------------------------------------------------------------------------------
         ld      HL,     attrs
-        ld      BC,     SECTIONEND_sprites.Attrs-SECTIONSTART_sprites.Attrs
-        jp      zero
+        xor     A                       ; (set A to zero)
+        
+        ; because the number of bytes to clear is fixed,
+        ; we can jump into `fill` at the exact place needed
+        jp      fill@f{SECTIONEND_sprites.Attrs-SECTIONSTART_sprites.Attrs}
 
 
 clearCards:
 ;===============================================================================
 ; remove the cards held by the cursor:
 ;
+; out:  A       (clobbered)
+;       HL      (clobbered)
+;       BC, DE  (preserved)
 ;-------------------------------------------------------------------------------
         ; reset the hand sprite to the default cursor
         ld      A,              SPRITE_HAND_LHS
@@ -200,19 +200,16 @@ clearCards:
         ; reset the cursor mode to free-hand
         ld      HL,     cursor_mode
         res     7,      [HL]
-        ; reset the index of the next free sprite (0-based). sprites must
-        ; be built from the last downward for sprite-priority reasons
-        ld      A,      38-1
-        ld      [free], A
-        ; number of bytes to clear: 38 sprites
-        ; (cursor sprites are excluded),
-        ; times 4 bytes per sprite
-        ld      BC,     38 * _sizeof_Sprite
         ; address of the third sprite in the local sprite table;
         ; the first two sprites are the hand cursor
         ld      HL,     attrs.3
-        ; zero all the bytes
-        jp      zero
+        ; because the number of bytes to clear is fixed we can jump into
+        ; `fill` at the exact place needed. this is done not only for speed,
+        ; but also to preserve BC. the number of bytes to clear is 38 sprites
+        ; (cursor sprites are excluded), times 4 bytes per sprite
+        ;
+        xor     A                       ; (set A to zero)
+        jp      fill@f{38*_sizeof_Sprite}
 
 
 updateCursor:
@@ -225,107 +222,71 @@ updateCursor:
 ; out:  HL/BC/A (clobbered)
 ;       DE      (preserved) -- MUST be preserved during vblank usage
 ;-------------------------------------------------------------------------------
-        ; is the cursor in its intended X-position?
+        ; calculate the X & Y speed to move the cursor:
         ;
-        ; the destination X-position and current X-position are next to each
-        ; other in RAM; we subtract them from each other to check for any
-        ; difference
+        ld      BC,     0               ; default X (C) & Y (B) speed is zero
+        
+        ; calculate X-speed:
+        ;-----------------------------------------------------------------------
+        ; is the cursor in its intended X-position? the destination X-position
+        ; and current X-position are next to each other in RAM; we subtract
+        ; them from each other to check for any difference
+        ;
         ld      HL,     cursor_dest_x   ; begin with destination X addr
         ld      A,      [HL+]           ; read and increment addr to current-X
         sub     A,      [HL]            ; subtract destination-X from current-X
-        jr      z,      @y              ; if equal, no horizontal movement
-
-        ; move in the X-direction:
-        ;-----------------------------------------------------------------------
+        jr      z,      +               ; if equal, no horizontal movement
         sra     A                       ; limit the maximum speed
         sra     A                       ; by dividing the distance by 4
-        jr      nz,     +               ; did dividing reduce it to zero?
+        jr      nz,     +               ; if dividing reduced it to zero,
         inc     A                       ; move by at least 1 pixel
-+       ld      B,      A               ; remember this "x-speed"
++       ld      C,      A               ; remember this "x-speed"
 
-        ; is the cursor hand holding cards?
-        ld      HL,     cursor_mode
-        bit     7,      [HL]
-        jr      z,      +
-
-        ; move cards in hand:
+        ; calculate Y-speed:
         ;-----------------------------------------------------------------------
-        ld      HL,     free
-        ld      C,      [HL]
-        inc     C
+        ; is the cursor in its intended Y-position? the destination Y-position
+        ; and current Y-position are next to each other in RAM; we subtract
+        ; them from each other to check for any difference
+        ;
+        inc     L                       ; move to `cursor_dest_y`
+        ld      A,      [HL+]           ; read and increment addr to current-Y
+        sub     A,      [HL]            ; subtract destination-Y from current-Y
+        jr      z,      +               ; if equal, no vertical movement
+        sra     A                       ; limit the maximum speed
+        sra     A                       ; by dividing the distance by 4
+        jr      nz,     +               ; if dividing reduced it to zero,
+        inc     A                       ; move by at least 1 pixel
++       ld      B,      A               ; remember "y-speed"
 
-        ; loop over the sprites assigned to the cards
--       ld      A,      C
-        rlca                            ; x2
-        rlca                            ; x4 (4 bytes per sprite)
-        ld      HL,     attrs.3.x       ; use local sprite table
-        add     A,      L               ; add to base address
-        ld      L,      A               ; update lo-byte
-        ; HL is the address of the sprite entry in the local sprite table
-        ld      A,      [HL]
+        ; any movement at all?
+        or      C                       ; combine X-speed (C) & Y-speed (A)
+        ret     z                       ; if zero, no movement to be done
+
+        ; move card sprites:
+        ;-----------------------------------------------------------------------
+        ld      HL,     attrs.40.attr
+-       dec     L                       ; skip sprite display attributes byte
+        ld      A,      [HL-]           ; read sprite tile
+        and     A,      A               ; (set flags!)
+        jr      z,      +               ; stop at the last card sprite
+        ld      A,      [HL]            ; read sprite X-position
+        add     A,      C               ; add the speed differential
+        ld      [HL-],  A               ; update sprite X-position
+        ld      A,      [HL]            ; read sprite Y-position
         add     A,      B               ; add the speed differential
-        ld      [HL],   A
-
-        inc     C
-        ld      A,      C
-        cp      38
-        jr      nz,     -
+        ld      [HL-],  A               ; update sprite Y-position
+        jr      -
 
         ; move the hand cursor: (sprites 1 & 2)
         ;-----------------------------------------------------------------------
 +       ld      HL,     cursor_x
-        ld      A,      B
+        ld      A,      C
         add     A,      [HL]            ; add distance to current `cursor_x`
         ld      [HL],           A       ; update the `cursor_x` variable
         ld      [attrs.1.x],    A       ; update the sprite attributes table
         add     A,              8       ; (the other half of the cursor too)
         ld      [attrs.2.x],    A
-
-        ;-----------------------------------------------------------------------
-@y:     inc     HL                      ; = `cursor_dest_y`
-        ld      A,      [HL+]           ; read and increment addr to current-Y
-        sub     A,      [HL]            ; subtract destination-Y from current-Y
-        ret     z                       ; if equal, no vertical movement
-        
-        ; move in the Y-direction:
-        ;
-        sra     A                       ; limit the maximum speed
-        sra     A                       ; by dividing the distance by 4
-        jr      nz,     +               ; did dividing reduce it to zero?
-        inc     A                       ; move by at least 1 pixel
-+       ld      B,      A               ; remember this "y-speed"
-
-        ; is the cursor hand holding cards?
-        ld      HL,     cursor_mode
-        bit     7,      [HL]
-        jr      z,      +
-
-        ; move cards in hand:
-        ;-----------------------------------------------------------------------
-        ld      HL,     free
-        ld      C,      [HL]
-        inc     C
-
-        ; loop over the sprites assigned to the cards
--       ld      A,      C
-        rlca                            ; x2
-        rlca                            ; x4 (4 bytes per sprite)
-        ld      HL,     attrs.3.y       ; use local sprite table
-        add     A,      L               ; add to base address
-        ld      L,      A               ; update lo-byte
-        ; HL is the address of the sprite entry in the local sprite table
-        ld      A,      [HL]
-        add     A,      B               ; add the speed differential
-        ld      [HL],   A
-
-        inc     C
-        ld      A,      C
-        cp      38
-        jr      nz,     -
-
-        ; move the hand cursor: (sprites 1 & 2)
-        ;-----------------------------------------------------------------------
-+       ld      HL,     cursor_y
+        ld      HL,     cursor_y
         ld      A,      B
         add     A,      [HL]            ; add distance to current `cursor_y`
         ld      [HL],           A       ; update the `cursor_y` variable
@@ -424,130 +385,5 @@ moveCursorToScrXY:
         inc     L
         inc     L
         ld      [HL],   B               ; set distination Y-position
-        
-        ret
-
-
-cardToSprite:
-;===============================================================================
-; converts a card into a sprite and places it into the cursor's hand:
-;
-; in:   A       the card to create a sprite version of
-;-------------------------------------------------------------------------------
-        ; keep an original copy of the card value in E
-        ld      E,      A
-
-        ; clear the current card sprites
-        ; (this must not clobber E)
-        call    clearCards
-
-        ; change the cursor to the holding hand
-        ld      A,      SPRITE_HOLD_LHS
-        ld      [attrs.1.tile], A
-        ld      A,      SPRITE_HOLD_RHS
-        ld      [attrs.2.tile], A
-        ; change the cursor mode so that the cards move with the cursor
-        ld      HL,     cursor_mode
-        set     7,      [HL]
-
-        ; get starting X & Y position
-        ld      HL,     cursor_y
-        ld      B,      [HL]
-        ld      HL,     cursor_x
-        ld      C,      [HL]
-
-        ; top-left corner: ordinal
-        ;-----------------------------------------------------------------------
-        call    @right
-        ld      A,      E
-        and     %00001111               ; trim out the other bits
-        rlca
-        ld      D,      A               ; save value for the botom-right
-        add     SPRITE_CARD_12X1-2      ; offset the tile with the ordinal
-        call    pushSprite
-
-        ; top-middle:
-        ;-----------------------------------------------------------------------
-        call    @right
-        ld      A,      SPRITE_CARD_12X2; this has a fixed sprite tile
-        call    pushSprite
-
-        ; top-right: suit
-        ;-----------------------------------------------------------------------
-        call    @right
-        ld      A,      E
-        swap    A                       ; move the suit to the bottom nybble
-        and     %00000011               ; mask out the other bits
-        rlca
-        ld      E,      A               ; preserve this for the other corner
-        add     SPRITE_CARD_12X3        ; (original value not needed again)
-        call    pushSprite
-
-        ; bottom-left:
-        ;-----------------------------------------------------------------------
-        call    @down
-        ld      A,      E
-        add     SPRITE_CARD_34X1
-        call    pushSprite
-
-        ; bottom-middle:
-        ;-----------------------------------------------------------------------
-        call    @right
-        ld      A,      SPRITE_CARD_34X2
-        call    pushSprite
-
-        ; bottom-right: suit
-        ;-----------------------------------------------------------------------
-        call    @right
-        ld      A,      D               ; retrieve suit from top-left corner
-        add     SPRITE_CARD_34X3-2
-        call    pushSprite
-
-        ret
-
-        ;-----------------------------------------------------------------------
-        ; position next sprite to the right of the previous
-@right: ld      A,      8
-        add     A,      C
-        ld      C,      A
-        ret
-
-        ; position next sprite on the next row
-@down:  ld      A,      16              ; unlike BG tiles, sprites are 8x16
-        add     A,      B
-        ld      B,      A
-        ld      A,      -16             ; move back from 3rd column to 1st
-        add     A,      C
-        ld      C,      A
-        ret
-
-
-pushSprite:
-;===============================================================================
-; define a sprite's attributes, adding it to the screen:
-;
-; in:   A       tile-number of sprite
-;       BC      y & x position of sprite
-;-------------------------------------------------------------------------------
-        push    AF                      ; tile-number is not first
-
-        ld      A,      [free]          ; get current available sprite index
-        rlca                            ; x2
-        rlca                            ; x4 (4 bytes per sprite)
-        ld      HL,     attrs.3         ; use local sprite table
-        add     A,      L               ; add to base address
-        ld      L,      A               ; update lo-byte
-        ; HL is the address of the sprite entry in the local sprite table
-        ld      A,      B               ; y-position
-        ld      [HL+],  A
-        ld      A,      C               ; x-position
-        ld      [HL+],  A
-        pop     AF                      ; retrieve tile-index
-        ld      [HL+],  A
-        ld      [HL],   0               ; display attributes
-        
-        ; move to next sprite slot
-        ld      HL,     free
-        dec     [HL]
         
         ret
