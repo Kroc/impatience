@@ -367,54 +367,6 @@ allocatePile:
         ret
 
 
-refresh:
-;===============================================================================
-; redraw the tableau:
-;-------------------------------------------------------------------------------
-        ; we're going to redraw all piles,
-        ; so clear the tabelau of tiles first
-        call    clearTiles
-
-        ld      HL,     deck
-        call    drawPile
-        ld      HL,     discard
-        call    drawPile
-        ld      HL,     hand
-        call    drawPile
-        ld      HL,     foundation1
-        call    drawPile
-        ld      HL,     foundation2
-        call    drawPile
-        ld      HL,     foundation3
-        call    drawPile
-        ld      HL,     foundation4
-        call    drawPile
-        ld      HL,     depot1
-        call    drawPile
-        ld      HL,     depot2
-        call    drawPile
-        ld      HL,     depot3
-        call    drawPile
-        ld      HL,     depot4
-        call    drawPile
-        ld      HL,     depot5
-        call    drawPile
-        ld      HL,     depot6
-        call    drawPile
-        ld      HL,     depot7
-        call    drawPile
-        ld      HL,     depot8
-        call    drawPile
-        ld      HL,     depot9
-        call    drawPile
-        ld      HL,     depot10
-        call    drawPile
-        ld      HL,     depot11
-        call    drawPile
-        ld      HL,     depot12
-        jp      drawPile
-
-
 addCard:
 ;===============================================================================
 ; add a card to a pile:
@@ -662,6 +614,126 @@ getPilePos:
 
         pop     HL
         ret
+
+
+movePile
+;===============================================================================
+; take the cards from one pile and move them to the top of another:
+;
+; in:   HL      source Pile
+;       DE      destination Pile
+;       A       index in the source pile to start from
+;               (i.e. take 2nd card onwards) -- 0 based
+;
+; out:  HL      destination pile address
+;       DE      destination pile pool address
+;       BC/A    (clobbered)
+;-------------------------------------------------------------------------------
+        ; put aside the destination pile for now, we'll come back to it
+        push    DE
+
+        ; because we are removing all cards from the index down in
+        ; the source pile, the number of cards simply becomes the index
+        ld      [HL],   A
+
+        ; calculate source address:
+        ;-----------------------------------------------------------------------
+        ; from the source pile (HL) get the address
+        ; where the list of cards is stored (DE)
+        call    getPilePool
+        ; offset into the source pile's pool
+        ;(where to begin removing cards)
+        add     A,      E               ; add index to the lo-byte
+        jr      nc,     +               ; did that overflow?
+        inc     D                       ; increment hi-byte
++       ld      E,      A               ; DE = index card in pile
+
+        ; source address has been determined, put it aside
+        ld      B,      D
+        ld      C,      E
+
+        ; calucalte destination address:
+        ;-----------------------------------------------------------------------
+        ; retrieve our destination pile
+        pop     HL
+        ; get the pool address (DE) and the number
+        ; of cards currently in the pile (A)
+        ld      A,      [HL]            ; first byte is card count
+        call    getPilePool             ; get pile pool address in DE
+        push    DE                      ; (return destination pool address)
+        add     A,      E               ; add index to the lo-byte
+        jr      nc,     +               ; did that overflow?
+        inc     D                       ; increment hi-byte
++       ld      E,      A               ; DE = first empty space after cards
+
+        ; move cards between piles:
+        ;-----------------------------------------------------------------------
+        ; we use BC for the source address because HL is at the destination
+        ; pile's card count and we need to increment that for each new card
+        ; added to the pile
+        ;
+-       ld      A,      [BC]            ; get a card form source pile
+        and     A,      A               ; (set flags!)
+        jr      z,      +               ; if zero, we've reached the end!
+
+        ld      [DE],   A               ; add card to destination pile
+        inc     DE                      ; move to next destination addr
+        inc     [HL]                    ; increment destination pile card count
+        xor     A                       ; set A to zero
+        ld      [BC],   A               ; remove card from source pile
+        inc     BC                      ; move to next card in source pile
+        jr      -
+
++       pop     DE                      ; return destination pool address
+        ret
+
+
+refresh:
+;===============================================================================
+; redraw the tableau:
+;-------------------------------------------------------------------------------
+        ; we're going to redraw all piles,
+        ; so clear the tabelau of tiles first
+        call    clearTiles
+
+        ld      HL,     deck
+        call    drawPile
+        ld      HL,     discard
+        call    drawPile
+        ld      HL,     hand
+        call    drawPile
+        ld      HL,     foundation1
+        call    drawPile
+        ld      HL,     foundation2
+        call    drawPile
+        ld      HL,     foundation3
+        call    drawPile
+        ld      HL,     foundation4
+        call    drawPile
+        ld      HL,     depot1
+        call    drawPile
+        ld      HL,     depot2
+        call    drawPile
+        ld      HL,     depot3
+        call    drawPile
+        ld      HL,     depot4
+        call    drawPile
+        ld      HL,     depot5
+        call    drawPile
+        ld      HL,     depot6
+        call    drawPile
+        ld      HL,     depot7
+        call    drawPile
+        ld      HL,     depot8
+        call    drawPile
+        ld      HL,     depot9
+        call    drawPile
+        ld      HL,     depot10
+        call    drawPile
+        ld      HL,     depot11
+        call    drawPile
+        ld      HL,     depot12
+        jp      drawPile
 
 
 drawPile:

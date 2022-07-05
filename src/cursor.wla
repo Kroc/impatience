@@ -492,8 +492,6 @@ pickPile:
         ; retrieve current pile location (HL),
         ; and the card index being pointed at (A)
         call    getCursorPile
-        ; put aside the current card index whilst
-        ; we get the number of cards in the pile
         ld      C,      A
 
         ; is the pile empty?
@@ -502,31 +500,19 @@ pickPile:
         and     A,      A               ; (set flags!)
         jp      z,      @err            ; if pile is empty, exit
 
-        ; adjust card count:
+        ; move pile to cursor's pile:
         ;-----------------------------------------------------------------------
-        ; because we are removing all cards from the current, down,
-        ; the current index effectively becomes the new card-count
-        ; i.e. we trim the size of the pile early to avoid wasting
-        ; registers reducing it one-by-one during looping
-        ld      [HL],   C
-
-        ; position index in pool:
-        ;-----------------------------------------------------------------------
-        inc     L                       ; skip over card count
-        inc     L                       ; skip over pile type (TODO: for now)
-        inc     L                       ; skip over pile capacity
-        ld      A,      [HL+]           ; get pool address, lo-byte
-        add     A,      C               ; add our index to it
-        ld      D,      [HL]            ; get pool address, hi-byte
-        jr      nc,     +               ; overflow adding the index?
-        inc     D                       ; ripple to hi-byte
-+       ld      E,      A               ; DE = addr of index card
+        ; move all the cards in the source pile, from
+        ; the index card down, to the cursor's pile:
+        ld      DE,     hand_pile
+        ld      A,      C
+        ; the destination pile's address is returned in HL, and the 
+        ; destination pile's pool address in DE, which is where we
+        ; want to start creating sprites from
+        call    tableau.movePile
 
         ; initialise sprites:
         ;-----------------------------------------------------------------------
-        ; before we use HL/BC, clear out any cards currently in the cursor
-        call    clearHand
-
         ; change the cursor to the holding hand
         ld      A,      SPRITE_HOLD_LHS
         ld      [sprites.attrs.1.tile], A
@@ -602,21 +588,17 @@ pickPile:
         ld      [HL-],  A               ; write sprite X-position
         ld      A,      B
         ld      [HL-],  A               ; write sprite Y-position
-
         ; move to the next row
-        ld      A,      B
         add     A,      8
         ld      B,      A
 
         ;-----------------------------------------------------------------------
-        ; erase the card to keep the list zero-terminated
-        xor     A                       ; (set A to zero)
-        ld      [DE],   A               ; erase current card,
-        inc     DE                      ; and move to next card
         ; read a card value from the pool; if this is the
         ; zero terminator, we've reached the end of the pile
+        ;
+        inc     DE                      ; move to next card
         ld      A,      [DE]
-        and     A,      A
+        and     A,      A               ; (set flags!)
         jr      nz,     @loop           ; keep looping until last card
 
         ; bottom half of last card:
@@ -674,7 +656,7 @@ pickPile:
         ; of one card may affect the validation of other piles which would
         ; also need redrawing
         call    tableau.refresh
-        ; compare the display buffers and queue up
+        ; compare the display buffers and queue
         ; the changes to be made during vblank
         jp      tilemap.update
 
