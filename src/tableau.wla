@@ -733,27 +733,29 @@ refresh:
         ld      HL,     depot11
         call    drawPile
         ld      HL,     depot12
-        jp      drawPile
-
+        
+        ; just fall through to routine below
+        ;
 
 drawPile:
 ;===============================================================================
 ; draws a pile on the screen-buffer:
 ;
-; TODO: if we can always forward HL to the next pile
-;       it will help with refreshing the tableau
-;
 ; in:   HL      address of the Pile structure
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; TODO: should probably swap type/count bytes? (AGAIN)
+        ld      C,      [HL]           ; read number of cards in pile
         inc     L
-        ld      A,      [HL-]
+
+        ; we automatically skip unallocated piles (type is 0)
+        ; this is because the tableau attempts to draw all piles
+        ; and only those a particular game uses should be drawn
+        ld      A,      [HL]
         and     A,      A
         ret     z
 
-        ld      A,      [HL+]           ; read number of cards in pile
+        ld      A,      C               ; return to number of cards in pile
         and     A,      A               ; (set flags!)
         jr      z,      @empty          ; if zero, draw empty space
 
