@@ -627,7 +627,8 @@ movePile
 ;
 ; out:  HL      destination pile address
 ;       DE      destination pile pool address
-;       BC/A    (clobbered)
+;       A       destination pile updated last card index
+;       BC      (clobbered)
 ;-------------------------------------------------------------------------------
         ; put aside the destination pile for now, we'll come back to it
         push    DE
@@ -685,6 +686,8 @@ movePile
         jr      -
 
 +       pop     DE                      ; return destination pool address
+        ld      A,      [HL]            ; return last card index
+        dec     A                       ; (0-based)
         ret
 
 

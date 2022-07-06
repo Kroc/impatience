@@ -79,6 +79,8 @@ handleControls:
         ; between vblanks until a new button is pressed
         call    getButton
 
+        ; TODO: soft reset (A+B+SELECT+START)
+
         ; cursor down?
         bit     BUTTON_DOWN,    A
         jr      z,      +
@@ -107,7 +109,9 @@ handleControls:
 +       bit     BUTTON_A,       A
         jr      z,      +
 
-        jp      cursor.pickPile
+        jp      cursor.doAction
+
+        ; TODO: B button? (undo?)
 
 +       ret
 

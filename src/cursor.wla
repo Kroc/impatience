@@ -6,6 +6,9 @@
 .DEF    CURSOR_START_X  80
 .DEF    CURSOR_START_Y  72
 
+.DEF    MODE_FREE       0               ; cursor is free to move
+.DEF    MODE_HOLD       %10000000       ; cursor is holding cards
+
 ; (musn't cross an 8-bit boundary for a micro-optimisation)
 ;
 .RAMSECTION "Cursor"    BITWINDOW 8     RETURNORG
@@ -89,7 +92,7 @@ init:
         ld      A,      SPRITE_HAND_RHS ; tile-number
         ld      [HL+],  A
         ld      [HL],   0               ; display attributes
-        
+
         ; configure the pile for holding cards in the cursor hand
         ;-----------------------------------------------------------------------
         ld      BC,     pile_template   ; the ROM template to copy from
@@ -131,7 +134,7 @@ clearSprites:
         ld      [sprites.attrs.2.tile], A
         ; reset the cursor mode to free-hand
         ld      HL,     mode
-        res     7,      [HL]
+        ld      [HL],   MODE_FREE
         ; address of the third sprite in the local sprite table;
         ; the first two sprites are the hand cursor
         ld      HL,     sprites.attrs.3
@@ -157,7 +160,7 @@ update:
         ; calculate the X & Y speed to move the cursor:
         ;
         ld      BC,     0               ; default X (C) & Y (B) speed is zero
-        
+
         ; calculate X-speed:
         ;-----------------------------------------------------------------------
         ; is the cursor in its intended X-position? the destination X-position
@@ -233,23 +236,18 @@ getPointPile:
 ;===============================================================================
 ; returns the address of the Pile struct the cursor is pointing to:
 ;
-; out:  HL      ; address of the Pile the cursor is pointing at
-;       A       ; card number being pointed to, 0-based
-;       DE      ; (clobbered)
+; out:  HL      address of the Pile the cursor is pointing at
+;       A       card number being pointed to, 0-based
+;       DE      (preserved)
 ;-------------------------------------------------------------------------------
-        ; retrieve current pile location into DE
+        ; retrieve address of pile being pointed at
         ld      HL,     pile_point
-        ld      E,      [HL]            ; read pile address, lo-byte
-        inc     L
-        ld      D,      [HL]            ; read pile address, hi-byte
-        inc     L
-
+        ld      A,      [HL+]           ; read pile address, lo-byte
+        ld      H,      [HL]            ; read pile address, hi-byte
+        ld      L,      A
         ; retrieve card number being pointed to
-        ld      A,      [HL+]
-        
-        ld      H,      D
-        ld      L,      E
-        
+        ld      A,      [card_point]
+
         ret
 
 
@@ -301,7 +299,7 @@ moveUp:
         ; and the card index being pointed at (A)
         call    getPointPile
         and     A,      A               ; (set flags!)
-        
+
         ; is the current position 0? i.e. at the
         ; bottom (top, visually) of the pile?
         ret     z
@@ -325,7 +323,7 @@ moveLeft:
         ld      L,      [HL]
         ; set the hi-byte for the piles
         ld      H,      >SECTIONSTART_tableau.Layout
-        
+
         ; move to the default card in the next pile
         jp      pointToPile
 
@@ -345,7 +343,7 @@ moveRight:
         ld      L,      [HL]
         ; set the hi-byte for the piles
         ld      H,      >SECTIONSTART_tableau.Layout
-        
+
         ; move to the default card in the next pile
         ;;jp      pointToPile
         ;
@@ -474,7 +472,7 @@ pointToCard:
         ;
 @empty: call    @pos                    ; get Pile row/col
         inc     B                       ; move down one row, to the middle
-        
+
         ; fall through to the move routine below!
         ;
 
@@ -525,8 +523,23 @@ moveToScrXY:
         inc     L
         inc     L
         ld      [HL],   B               ; set distination Y-position
-        
+
         ret
+
+
+doAction:
+;===============================================================================
+; button pressed; pick up a pile or drop held cards, according to context:
+;
+;-------------------------------------------------------------------------------
+        ld      A,      [mode]  ; get cursor mode
+        and     A,      A       ; (set flags!)
+
+        ; if the cursor is free (not holding any cards),
+        ; attempt to pick up the pile being pointed at
+        jr      z,      pickPile
+        ; the cursor is holding cards, try dropping them
+        jp      dropPile
 
 
 pickPile:
@@ -570,7 +583,7 @@ pickPile:
         ld      [sprites.attrs.2.tile], A
         ; change the cursor mode so that the cards move with the cursor
         ld      HL,     mode
-        set     7,      [HL]
+        ld      [HL],   MODE_HOLD
 
         ; set our starting X/Y position for building card sprites:
         ld      A,      [ypos]
@@ -724,3 +737,41 @@ pickPile:
         ;=======================================================================
         ; TODO: we should implement a sound / cursor shake
 @err:   ret
+
+
+dropPile:
+;===============================================================================
+; drop the cards in the cursor's hand onto the current pile:
+;
+;-------------------------------------------------------------------------------
+        ; TODO: disallow pointing to the inner cards
+        ;       of a pile when cursor is holding cards
+        ;
+        ; remove the cards shown in the cursor's hand!
+        call    clearSprites
+
+        ; retrieve current pile being pointed at
+        ; into DE, as it's the destination
+        ld      HL,     pile_point
+        ld      E,      [HL]            ; read pile address, lo-byte
+        inc     L
+        ld      D,      [HL]            ; read pile address, hi-byte
+
+        ; move the pile of cards in the cursor's hand
+        ; on to the top of the pile being pointed at
+        ld      HL,     hand_pile
+        xor     A                       ; A = 0, move all cards in hand
+        call    tableau.movePile
+
+        ; with the pile changed, the cursor needs
+        ; to be moved again to the top of the pile
+        call    pointToCard
+
+        ; redraw the entire tableau; this may seem overkill but the removal
+        ; of one card may affect the validation of other piles which would
+        ; also need redrawing
+        ; TODO: should validation be part of drawing, or a separate routine?
+        call    tableau.refresh
+        ; compare the display buffers and queue
+        ; the changes to be made during vblank
+        jp      tilemap.update

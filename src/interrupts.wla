@@ -72,6 +72,7 @@ rst_haltVBlank:                                                         ;$08
         ;                                                               ; bytes:
         ; stop the CPU until an interrupt occurs!
         ; (this will save battery life)
+        ; TODO: do we need a NOP after HALT?
 -       halt                                                            ;+1=1
         ; read the IRQ flags register at $FF0F:
         ; (using HRAM instruction saves 1 byte over `ld A, [IRQ_FLAGS]`,
@@ -130,7 +131,7 @@ rst_screenOff:                                                          ;$18
 ;###############################################################################
         ; various documentation says that an IRQ takes 20 cycles        ;+20=20
         ; (note the relative jump to save 4 cycles over JP)
-        jp      irq_vblank                                              ;+12=34
+        jr      irq_vblank                                              ;+12=34
 ;###############################################################################
 .ENDS
 
