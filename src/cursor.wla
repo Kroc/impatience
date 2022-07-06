@@ -548,6 +548,8 @@ pickPile:
         and     A,      A               ; (set flags!)
         jp      z,      @err            ; if pile is empty, exit
 
+        ; TODO: validate pick
+
         ; move pile to cursor's pile:
         ;-----------------------------------------------------------------------
         ; move all the cards in the source pile, from
@@ -712,6 +714,7 @@ pickPile:
         ; redraw the entire tableau; this may seem overkill but the removal
         ; of one card may affect the validation of other piles which would
         ; also need redrawing
+        ; TODO: should validation be part of drawing, or a separate routine?
         call    tableau.refresh
         ; compare the display buffers and queue
         ; the changes to be made during vblank
