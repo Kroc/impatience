@@ -71,6 +71,69 @@
 .DEF    PILE_HORZ       %10000000
 .DEF    PILE_ROW        PILE_COLUMN | PILE_HORZ
 
+; TODO:types of pile validation:
+;
+; ascending by suit, A-first, i.e. foundations in most games
+; descending by alternating colour, e.g. standard Klondike depots
+; draw by three hand, i.e. klondike
+; descending by suit, e.g. fortune's favour
+; descending by same colour, move by same suit only, e.g. Whitehead
+
+; deck behaviour:
+; -     0 redeals
+; -     1 redeal
+; -     infinite redeals
+
+; lock behaviour:
+; -     cards can be picked up again
+; -     cards cannot be picked up again,
+;       e.g. foundations in Russian Solitaire
+; pile order:
+; -     ascending
+; -     descending
+; -     both! e.g. Golf
+; wrapping:
+; -     allowed (K -> A / A -> K)
+; -     disallowed
+; stacking requirement:
+; -     same colour, e.g. Whitehead
+; -     alternating colour, e.g. Klondike
+; -     same suit, e.g. Fortune's Favour
+; empty-space behaviour:
+; -     Ace only, e.g. Klondike foundations
+; -     king only, e.g. Klondike depots
+; -     a specific card, determined by draw
+; -     any card
+; -     auto, from deck, e.g. Fortune's Favour
+; sequences:
+; -     disallowed (1-card only)
+; -     same suit only, e.g. Whitehead
+; matching requirement:
+; -     lowest rank of same suit, i.e. Aces Up
+; -     add to 13, e.g. Pyramid
+
+; outliers:
+; -     Pyramid! (strange pile spread and cards must add to 13)
+; -     Three peaks
+
+; games:
+; -     Aces Up / Russian Aces / Fortunes / Deck
+; -     Klondike
+; -     Easthaven
+; -     Fortune's Favour
+; -     Whitehead?
+; -     Flortine Patience / Four Seasons
+; -     Pile On
+; -     Simplex
+
+; deck-specific properties:
+; *     redeal-count, 0, 1, ... $FF (infinite)
+
+; foundation-specific properties:
+; *     lock
+
+
+
 .STRUCT Pile
         ;-----------------------------------------------------------------------
         ; we place the card count byte first so that we can easily identify
@@ -104,8 +167,6 @@
         deck            INSTANCEOF Pile
         ; a "discard" pile, where cards are thrown away
         discard         INSTANCEOF Pile
-        ; a "hand" for cards to be played from, e.g. three-card-draw
-        hand            INSTANCEOF Pile
         ; up to four foundation piles, where cards are stacked in order
         foundation1     INSTANCEOF Pile
         foundation2     INSTANCEOF Pile
@@ -124,6 +185,8 @@
         depot10         INSTANCEOF Pile
         depot11         INSTANCEOF Pile
         depot12         INSTANCEOF Pile
+        ; a "hand" for cards to be played from, e.g. three-card-draw
+        hand            INSTANCEOF Pile
 .ENDS
 
 ; the card pool is where the actual cards are stored; each Pile contains an
@@ -703,8 +766,6 @@ refresh:
         call    drawPile
         ld      HL,     discard
         call    drawPile
-        ld      HL,     hand
-        call    drawPile
         ld      HL,     foundation1
         call    drawPile
         ld      HL,     foundation2
@@ -736,6 +797,8 @@ refresh:
         ld      HL,     depot11
         call    drawPile
         ld      HL,     depot12
+        call    drawPile
+        ld      HL,     hand
         
         ; just fall through to routine below
         ;

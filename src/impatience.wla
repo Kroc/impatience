@@ -59,7 +59,9 @@ init:
         ;-----------------------------------------------------------------------
         call    sprites.init
         call    tilemap.init
-        call    acesup.init
+
+        ;;call    acesup.init
+        call    fortunes.init
 
         ; play loop:
         ;=======================================================================
@@ -207,3 +209,4 @@ fill:
 .INC    "cursor.wla"            NAMESPACE "cursor"
 
 .INC    "game_acesup.wla"       NAMESPACE "acesup"
+.INC    "game_fortunes.wla"     NAMESPACE "fortunes"

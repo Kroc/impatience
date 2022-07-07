@@ -257,7 +257,7 @@ init:
 
         ; set palette:
         ld      A,      TILE_PALETTE
-        ld      [BGP],  A
+        ldh     [<BGP], A
 
         rst     rst_screenOn
         ret

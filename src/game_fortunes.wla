@@ -1,0 +1,234 @@
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+;
+; create template card piles for the intial setup of the game:
+; NOTE: this table must not cross a page boundary!
+;
+.SECTION "FortunesPiles"        BITWINDOW 8     RETURNORG
+;###############################################################################
+;
+;       .---. .---. .---. .---. .---. .---.
+;       |DCK| |DSC| | F | | F | | F | | F |
+;       |   | |   | | 1 | | 2 | | 3 | | 4 |
+;       '---' '---' '---' '---' '---' '---'
+;       .---. .---. .---. .---. .---. .---.
+;       | D | | D | | D | | D | | D | | D |
+;       | 1 | | 2 | | 3 | | 4 | | 5 | | 6 |
+;       '---' '---' '---' '---' '---' '---'
+;       .---. .---. .---. .---. .---. .---.
+;       | D | | D | | D | | D | | D | | D |
+;       | 7 | | 8 | | 9 | | 10| | 11| | 12|
+;       '---' '---' '---' '---' '---' '---'
+;
+tableau.BeginPiles
+        ; label,                type, max-cards,
+        ; row,                  col,
+        ; pile-left,            pile-right,
+        ; pile-up,              pile-down
+tableau.DefinePile \
+        fortunes_deck,          PILE_DECK, 52, \
+        1,                      TABLEAU_LEFT + 1, \
+        tableau.foundation4,    tableau.discard, \
+        tableau.depot7,         tableau.depot1
+tableau.DefinePile \
+        fortunes_discard,       PILE_DECK, 52, \
+        1,                      TABLEAU_LEFT + 4, \
+        tableau.deck,           tableau.foundation1, \
+        tableau.depot8,         tableau.depot2
+;
+; foundations:
+;
+tableau.DefinePile \
+        fortunes_foundation1,   PILE_FOUNDATION, 13, \
+        1,                      TABLEAU_LEFT + 7, \
+        tableau.discard,        tableau.foundation2, \
+        tableau.depot9,         tableau.depot3
+tableau.DefinePile \
+        fortunes_foundation2,   PILE_FOUNDATION, 13, \
+        1,                      TABLEAU_LEFT + 10, \
+        tableau.foundation1,    tableau.foundation3, \
+        tableau.depot10,        tableau.depot4
+tableau.DefinePile \
+        fortunes_foundation3,   PILE_FOUNDATION, 13, \
+        1,                      TABLEAU_LEFT + 13, \
+        tableau.foundation2,    tableau.foundation4, \
+        tableau.depot11,        tableau.depot5
+tableau.DefinePile \
+        fortunes_foundation4,   PILE_FOUNDATION, 13, \
+        1,                      TABLEAU_LEFT + 16, \
+        tableau.foundation3,    tableau.deck, \
+        tableau.depot12,        tableau.depot6
+;
+; first row of depots:
+;
+tableau.DefinePile \
+        fortunes_depot1,        PILE_COLUMN, 1, \
+        7,                      TABLEAU_LEFT + 1, \
+        tableau.depot6,         tableau.depot2, \
+        tableau.deck,           tableau.depot7
+tableau.DefinePile \
+        fortunes_depot2,        PILE_COLUMN, 1, \
+        7,                      TABLEAU_LEFT + 4, \
+        tableau.depot1,         tableau.depot3, \
+        tableau.discard,        tableau.depot8
+tableau.DefinePile \
+        fortunes_depot3,        PILE_COLUMN, 1, \
+        7,                      TABLEAU_LEFT + 7, \
+        tableau.depot2,         tableau.depot4, \
+        tableau.foundation1,    tableau.depot9
+tableau.DefinePile \
+        fortunes_depot4,        PILE_COLUMN, 1, \
+        7,                      TABLEAU_LEFT + 10, \
+        tableau.depot3,         tableau.depot5, \
+        tableau.foundation2,    tableau.depot10
+tableau.DefinePile \
+        fortunes_depot5,        PILE_COLUMN, 1, \
+        7,                      TABLEAU_LEFT + 13, \
+        tableau.depot4,         tableau.depot6, \
+        tableau.foundation3,    tableau.depot11
+tableau.DefinePile \
+        fortunes_depot6,        PILE_COLUMN, 1, \
+        7,                      TABLEAU_LEFT + 16, \
+        tableau.depot5,         tableau.depot1, \
+        tableau.foundation4,    tableau.depot12
+;
+; second row of depots:
+;
+tableau.DefinePile \
+        fortunes_depot7,        PILE_COLUMN, 1, \
+        12,                     TABLEAU_LEFT + 1, \
+        tableau.depot12,        tableau.depot8, \
+        tableau.depot1,         tableau.deck
+tableau.DefinePile \
+        fortunes_depot8,        PILE_COLUMN, 1, \
+        12,                     TABLEAU_LEFT + 4, \
+        tableau.depot7,         tableau.depot9, \
+        tableau.depot2,         tableau.discard
+tableau.DefinePile \
+        fortunes_depot9,        PILE_COLUMN, 1, \
+        12,                     TABLEAU_LEFT + 7, \
+        tableau.depot8,         tableau.depot10, \
+        tableau.depot3,         tableau.foundation1
+tableau.DefinePile \
+        fortunes_depot10,       PILE_COLUMN, 1, \
+        12,                     TABLEAU_LEFT + 10, \
+        tableau.depot9,         tableau.depot11, \
+        tableau.depot4,         tableau.foundation2
+tableau.DefinePile \
+        fortunes_depot11,       PILE_COLUMN, 1, \
+        12,                     TABLEAU_LEFT + 13, \
+        tableau.depot10,        tableau.depot12, \
+        tableau.depot5,         tableau.foundation3
+tableau.DefinePile \
+        fortunes_depot12,       PILE_COLUMN, 1, \
+        12,                     TABLEAU_LEFT + 16, \
+        tableau.depot11,        tableau.depot7, \
+        tableau.depot6,         tableau.foundation4
+;###############################################################################
+.ENDS
+
+
+init:
+;===============================================================================
+        rst     rst_waitVBlank
+        
+        ; temp: set scroll offset to move menu off-screen
+        ld      A,      MENU_WIDTH * 8
+        ldh     [<SCX], A
+        xor     A
+        ldh     [<SCY], A
+
+        ; setup the tableau layout for the game
+        ;-----------------------------------------------------------------------
+        ; completely clear the table of cards, both the piles and the storage
+        ; pool of all cards on the table. DE will be set to the beginning
+        ; of the storage pool, as needed by the allocation routines
+        ;
+        call    tableau.clearPiles
+
+        ; allocate the deck:
+        ld      BC,     fortunes_deck
+        call    tableau.allocateDeck
+        ; (and discard pile)
+        call    tableau.allocatePile
+        ; allocate the foundations:
+        call    tableau.allocatePile    ; foundation 1
+        call    tableau.allocatePile    ; foundation 2
+        call    tableau.allocatePile    ; foundation 3
+        call    tableau.allocatePile    ; foundation 4
+        ; allocate the depots:
+        call    tableau.allocatePile    ; depot 1
+        call    tableau.allocatePile    ; depot 2
+        call    tableau.allocatePile    ; depot 3
+        call    tableau.allocatePile    ; depot 4
+        call    tableau.allocatePile    ; depot 5
+        call    tableau.allocatePile    ; depot 6
+        call    tableau.allocatePile    ; depot 7
+        call    tableau.allocatePile    ; depot 8
+        call    tableau.allocatePile    ; depot 9
+        call    tableau.allocatePile    ; depot 10
+        call    tableau.allocatePile    ; depot 11
+        call    tableau.allocatePile    ; depot 12
+
+        ; populate sample cards
+        ;-----------------------------------------------------------------------
+        ld      HL,     tableau.foundation1
+        ld      A,      CARD_A | SUIT_CLUB
+        call    tableau.addCard
+        ld      HL,     tableau.foundation2
+        ld      A,      CARD_A | SUIT_SPADE
+        call    tableau.addCard
+        ld      HL,     tableau.foundation3
+        ld      A,      CARD_A | SUIT_HEART
+        call    tableau.addCard
+        ld      HL,     tableau.foundation4
+        ld      A,      CARD_A | SUIT_DIAMOND
+        call    tableau.addCard
+        ; depots, first row
+        ld      HL,     tableau.depot1
+        ld      A,      CARD_6 | SUIT_DIAMOND
+        call    tableau.addCard
+        ld      HL,     tableau.depot2
+        ld      A,      CARD_Q | SUIT_DIAMOND
+        call    tableau.addCard
+        ld      HL,     tableau.depot3
+        ld      A,      CARD_Q | SUIT_HEART
+        call    tableau.addCard
+        ld      HL,     tableau.depot4
+        ld      A,      CARD_J | SUIT_DIAMOND
+        call    tableau.addCard
+        ld      HL,     tableau.depot5
+        ld      A,      CARD_4 | SUIT_HEART
+        call    tableau.addCard
+        ld      HL,     tableau.depot6
+        ld      A,      CARD_X | SUIT_SPADE
+        call    tableau.addCard
+        ; depots, second row
+        ld      HL,     tableau.depot7
+        ld      A,      CARD_8 | SUIT_SPADE
+        call    tableau.addCard
+        ld      HL,     tableau.depot8
+        ld      A,      CARD_X | SUIT_DIAMOND
+        call    tableau.addCard
+        ld      HL,     tableau.depot9
+        ld      A,      CARD_9 | SUIT_CLUB
+        call    tableau.addCard
+        ld      HL,     tableau.depot10
+        ld      A,      CARD_3 | SUIT_HEART
+        call    tableau.addCard
+        ld      HL,     tableau.depot11
+        ld      A,      CARD_K | SUIT_CLUB
+        call    tableau.addCard
+        ld      HL,     tableau.depot12
+        ld      A,      CARD_K | SUIT_SPADE
+        call    tableau.addCard
+
+        ;-----------------------------------------------------------------------
+        call    tableau.refresh
+        rst     rst_screenOff
+        call    tilemap.refresh
+        rst     rst_screenOn
+
+        ; move the cursor to the card in the first depot pile
+        ld      HL,     tableau.depot1
+        jp      cursor.pointToPile

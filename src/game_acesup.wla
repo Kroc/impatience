@@ -6,6 +6,16 @@
 ;
 .SECTION "AcesUpPiles"          BITWINDOW 8     RETURNORG
 ;###############################################################################
+;
+;       .---.   .---. .---. .---. .---.
+;       |DCK|   | D | | D | | D | | D |
+;       |   |   | 1 | | 2 | | 3 | | 4 |
+;       '---'   '---' '---' '---' '---'
+;       .---.
+;       |DSC|
+;       |   |
+;       '---'
+;
 tableau.BeginPiles
         ; label,                type, max-cards,
         ; row,                  col,
@@ -16,11 +26,11 @@ tableau.DefinePile \
         1,                      TABLEAU_LEFT + 1, \
         tableau.depot4,         tableau.depot1, \
         tableau.deck,           tableau.deck
-;;tableau.DefinePile \
-;;        acesup_discard,         PILE_DECK, 52, \
-;;        6,                      TABLEAU_LEFT + 1, \
-;;        tableau.depot4,         tableau.depot1, \
-;;        tableau.deck,           tableau.discard \
+tableau.DefinePile \
+        acesup_discard,         PILE_DECK, 52, \
+        7,                      TABLEAU_LEFT + 1, \
+        tableau.depot4,         tableau.depot1, \
+        tableau.deck,           tableau.discard
 tableau.DefinePile \
         acesup_depot1,          PILE_COLUMN, 13, \
         1,                      TABLEAU_LEFT + 5, \
@@ -66,7 +76,7 @@ init:
         ; allocate the deck:
         ld      BC,     acesup_deck
         call    tableau.allocateDeck
-        ;;call    tableau.allocatePile    ; discard pile
+        call    tableau.allocatePile    ; (and discard pile)
 
         ; allocate the depots:
         ld      HL,     tableau.depot1
@@ -132,7 +142,7 @@ init:
         rst     rst_screenOff
         call    tilemap.refresh
         rst     rst_screenOn
-        
+
         ; move the cursor to the bottom card in the first depot pile
         ld      HL,     tableau.depot1
         jp      cursor.pointToPile
