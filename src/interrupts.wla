@@ -135,45 +135,9 @@ rst_screenOff:                                                          ;$18
 ;###############################################################################
 .ENDS
 
-.SECTION "interrupts"   FREE            RETURNORG
-;###############################################################################
-
-init_interrupts:
-;===============================================================================
-        ; clear the interrupt registers:
-        ; we don't want unexpected interrupts firing due to
-        ; dirty state (e.g. device was rebooted mid-game)
-        ;
-        xor     A                       ; (sets A to 0)
-        ldh     [<IRQ_ENABLE],   A      ; disallow each type of interrupt
-        ldh     [<IRQ_FLAGS],    A      ; clear any 'pending' interrupts
-
-        ; clear interrupt handler work-RAM (note A = 0)
-        ld      HL,     SECTIONSTART_Joypad
-        ld      [HL+],  A
-
-        ; write the DMA routine into HRAM:
-        ;-----------------------------------------------------------------------
-        ld      C,      <doDMA
-        ld      B,      5               ; size of DMA routine
-        ld      HL,     @dma
--       ld      A,      [HL+]
-        ldh     [C],    A
-        inc     C
-        dec     B
-        jr      nz, -
-
-        ret
-
-        ; this is the DMA routine in HRAM:
-        ;=======================================================================
-        ; send the lo-byte of the address to copy from (A)
-        ; to the DMA register $FF00+C(=$46)
-@dma:   ldh     [C],    A
-        ; wait for DMA to complete...
--       dec     B                       ; decrement wait counter
-        jr      nz, -                   ; keep waiting?
-        ret
+; we place the IRQ handler as low down as possible to allow
+; for the relative jump from the IRQ vector to save 4 cycles :P
+.ORGA   $61
 
 
 irq_vblank:                                                                ;=34
@@ -294,8 +258,48 @@ irq_vblank:                                                                ;=34
         pop     AF
         reti
 
-;###############################################################################
-.ENDS
+
+; any additional code must go at $0150 onwards as the Nintendo
+; header occupies $0100-$014F and we can't overwrite that
+.ORGA   $150
+
+
+init_interrupts:
+;===============================================================================
+        ; clear the interrupt registers:
+        ; we don't want unexpected interrupts firing due to
+        ; dirty state (e.g. device was rebooted mid-game)
+        ;
+        xor     A                       ; (sets A to 0)
+        ldh     [<IRQ_ENABLE],   A      ; disallow each type of interrupt
+        ldh     [<IRQ_FLAGS],    A      ; clear any 'pending' interrupts
+
+        ; clear interrupt handler work-RAM (note A = 0)
+        ld      HL,     SECTIONSTART_Joypad
+        ld      [HL+],  A
+
+        ; write the DMA routine into HRAM:
+        ;-----------------------------------------------------------------------
+        ld      C,      <doDMA
+        ld      B,      5               ; size of DMA routine
+        ld      HL,     @dma
+-       ld      A,      [HL+]
+        ldh     [C],    A
+        inc     C
+        dec     B
+        jr      nz, -
+
+        ret
+
+        ; this is the DMA routine in HRAM:
+        ;=======================================================================
+        ; send the lo-byte of the address to copy from (A)
+        ; to the DMA register $FF00+C(=$46)
+@dma:   ldh     [C],    A
+        ; wait for DMA to complete...
+-       dec     B                       ; decrement wait counter
+        jr      nz, -                   ; keep waiting?
+        ret
 
 
 getButton:

@@ -1,0 +1,231 @@
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+;
+; create template card piles for the intial setup of the game:
+; NOTE: this table must not cross a page boundary!
+;
+.SECTION "KlondikePiles"        BITWINDOW 8     RETURNORG
+;###############################################################################
+;
+;       .---. .---.       .---. .---. .---. .---.
+;       |DCK| |HND|       | F | | F | | F | | F |
+;       |   | |   |       | 1 | | 2 | | 3 | | 4 |
+;       '---' '---'       '---' '---' '---' '---'
+;       .---. .---. .---. .---. .---. .---. .---.
+;       | D | | D | | D | | D | | D | | D | | D |
+;       | 1 | | 2 | | 3 | | 4 | | 5 | | 6 | | 7 |
+;       '---' '---' '---' '---' '---' '---' '---'
+;
+tableau.BeginPiles
+        ; label,                type, max-cards,
+        ; row,                  col,
+        ; pile-left,            pile-right,
+        ; pile-up,              pile-down
+tableau.DefinePile \
+        klondike_deck,          PILE_DECK, 52, \
+        1,                      TABLEAU_LEFT, \
+        tableau.foundation4,    tableau.hand, \
+        tableau.depot1,         tableau.depot1
+tableau.DefinePile \
+        klondike_hand,          PILE_COLUMN | PILE_HORZ, 3, \
+        1,                      TABLEAU_LEFT + 3, \
+        tableau.deck,           tableau.foundation1, \
+        tableau.depot2,         tableau.depot2
+;
+; foundations:
+;
+tableau.DefinePile \
+        klondike_foundation1,   PILE_FOUNDATION, 13, \
+        1,                      TABLEAU_LEFT + 9, \
+        tableau.hand,           tableau.foundation2, \
+        tableau.depot4,         tableau.depot4
+tableau.DefinePile \
+        klondike_foundation2,   PILE_FOUNDATION, 13, \
+        1,                      TABLEAU_LEFT + 12, \
+        tableau.foundation1,    tableau.foundation3, \
+        tableau.depot5,         tableau.depot5
+tableau.DefinePile \
+        klondike_foundation3,   PILE_FOUNDATION, 13, \
+        1,                      TABLEAU_LEFT + 15, \
+        tableau.foundation2,    tableau.foundation4, \
+        tableau.depot6,         tableau.depot6
+tableau.DefinePile \
+        klondike_foundation4,   PILE_FOUNDATION, 13, \
+        1,                      TABLEAU_LEFT + 18, \
+        tableau.foundation3,    tableau.deck, \
+        tableau.depot7,         tableau.depot7
+;
+; depots:
+;
+tableau.DefinePile \
+        klondike_depot1,        PILE_COLUMN, 13, \
+        5,                      TABLEAU_LEFT, \
+        tableau.depot7,         tableau.depot2, \
+        tableau.deck,           tableau.deck
+tableau.DefinePile \
+        klondike_depot2,        PILE_COLUMN, 13, \
+        5,                      TABLEAU_LEFT + 3, \
+        tableau.depot1,         tableau.depot3, \
+        tableau.hand,           tableau.hand
+tableau.DefinePile \
+        klondike_depot3,        PILE_COLUMN, 13, \
+        5,                      TABLEAU_LEFT + 6, \
+        tableau.depot2,         tableau.depot4, \
+        tableau.hand,           tableau.hand
+tableau.DefinePile \
+        klondike_depot4,        PILE_COLUMN, 13, \
+        5,                      TABLEAU_LEFT + 9, \
+        tableau.depot3,         tableau.depot5, \
+        tableau.foundation1,    tableau.foundation1
+tableau.DefinePile \
+        klondike_depot5,        PILE_COLUMN, 13, \
+        5,                      TABLEAU_LEFT + 12, \
+        tableau.depot4,         tableau.depot6, \
+        tableau.foundation2,    tableau.foundation2
+tableau.DefinePile \
+        klondike_depot6,        PILE_COLUMN, 13, \
+        5,                      TABLEAU_LEFT + 15, \
+        tableau.depot5,         tableau.depot7, \
+        tableau.foundation3,    tableau.foundation3
+tableau.DefinePile \
+        klondike_depot7,        PILE_COLUMN, 13, \
+        5,                     TABLEAU_LEFT + 18, \
+        tableau.depot6,         tableau.depot1, \
+        tableau.foundation4,    tableau.foundation4
+;###############################################################################
+.ENDS
+
+
+init:
+;===============================================================================
+        rst     rst_waitVBlank
+        
+        ; temp: set scroll offset to move menu off-screen
+        ld      A,      MENU_WIDTH * 8
+        ldh     [<SCX], A
+        xor     A
+        ldh     [<SCY], A
+
+        ; setup the tableau layout for the game
+        ;-----------------------------------------------------------------------
+        ; completely clear the table of cards, both the piles and the storage
+        ; pool of all cards on the table. DE will be set to the beginning
+        ; of the storage pool, as needed by the allocation routines
+        ;
+        call    tableau.clearPiles
+
+        ; allocate the deck:
+        ld      BC,     klondike_deck
+        call    tableau.allocateDeck
+        ; allocate the hand (draw 1 / 3)
+        ld      HL,     tableau.hand
+        ld      BC,     klondike_hand
+        call    tableau.allocatePile
+        ; allocate the foundations:
+        ld      HL,     tableau.foundation1
+        ld      BC,     klondike_foundation1
+        call    tableau.allocatePile    ; foundation 1
+        call    tableau.allocatePile    ; foundation 2
+        call    tableau.allocatePile    ; foundation 3
+        call    tableau.allocatePile    ; foundation 4
+        ; allocate the depots:
+        call    tableau.allocatePile    ; depot 1
+        call    tableau.allocatePile    ; depot 2
+        call    tableau.allocatePile    ; depot 3
+        call    tableau.allocatePile    ; depot 4
+        call    tableau.allocatePile    ; depot 5
+        call    tableau.allocatePile    ; depot 6
+        call    tableau.allocatePile    ; depot 7
+        
+        ; populate sample cards
+        ;-----------------------------------------------------------------------
+        ; hand:
+        ld      HL,     tableau.hand
+        ld      A,      CARD_5 | SUIT_DIAMOND
+        call    tableau.addCard
+        ; foundations:
+        ld      HL,     tableau.foundation1
+        ld      A,      CARD_A | SUIT_CLUB
+        call    tableau.addCard
+        ld      HL,     tableau.foundation2
+        ld      A,      CARD_A | SUIT_SPADE
+        call    tableau.addCard
+        ld      HL,     tableau.foundation3
+        ld      A,      CARD_A | SUIT_HEART
+        call    tableau.addCard
+        ld      HL,     tableau.foundation4
+        ld      A,      CARD_A | SUIT_DIAMOND
+        call    tableau.addCard
+        ; depots:
+        ld      HL,     tableau.depot1
+        ld      A,      CARD_4 | SUIT_SPADE
+        call    tableau.addCard
+        ld      HL,     tableau.depot2
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_8 | SUIT_CLUB
+        call    tableau.addCard
+        ld      HL,     tableau.depot3
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_7 | SUIT_HEART
+        call    tableau.addCard
+        ld      HL,     tableau.depot4
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_2 | SUIT_CLUB
+        call    tableau.addCard
+        ld      HL,     tableau.depot5
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_DIAMOND
+        call    tableau.addCard
+        ld      HL,     tableau.depot6
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_X | SUIT_SPADE
+        call    tableau.addCard
+        ld      HL,     tableau.depot7
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        call    tableau.addCard
+        ld      A,      CARD_3 | SUIT_DIAMOND
+        call    tableau.addCard
+
+        ;-----------------------------------------------------------------------
+        call    tableau.refresh
+        rst     rst_screenOff
+        call    tilemap.refresh
+        rst     rst_screenOn
+
+        ld      HL,     tableau.deck
+        jp      cursor.pointToPile

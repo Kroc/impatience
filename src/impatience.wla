@@ -4,9 +4,7 @@
 ; GameBoy hardware definitions
 .INC    "gb/gb_cpu.wla"         NAMESPACE "gb"
 
-.INC    "strings.wla"           ; string & text routines
 .INC    "interrupts.wla"
-
 
 init:
 ;===============================================================================
@@ -61,7 +59,8 @@ init:
         call    tilemap.init
 
         ;;call    acesup.init
-        call    fortunes.init
+        ;;call    fortunes.init
+        call    klondike.init
 
         ; play loop:
         ;=======================================================================
@@ -202,6 +201,7 @@ fill:
 .ENDS
 
 ;===============================================================================
+.INC    "strings.wla"           ; string & text routines
 .INC    "tilemap.wla"           NAMESPACE "tilemap"
 .INC    "menu.wla"              NAMESPACE "menu"
 .INC    "tableau.wla"           NAMESPACE "tableau"
@@ -210,3 +210,4 @@ fill:
 
 .INC    "game_acesup.wla"       NAMESPACE "acesup"
 .INC    "game_fortunes.wla"     NAMESPACE "fortunes"
+.INC    "game_klondike.wla"     NAMESPACE "klondike"
