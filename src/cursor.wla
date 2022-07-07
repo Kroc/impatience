@@ -251,63 +251,6 @@ getPointPile:
         ret
 
 
-moveDown:
-;===============================================================================
-; move the cursor down, either going through a pile of cards,
-; or downward to the nearest pile below the current one
-;-------------------------------------------------------------------------------
-        call    getPointPile            ; retrieve current pile location
-        ld      B,      A               ; card number pointed at (0-based)
-
-        ; first byte is the number of cards in the pile
-        ld      A,      [HL+]
-        and     A,      A               ; (set flags!)
-        ; if there are no cards in the pile we can move to the pile below
-        ret     z                       ; TODO: move to next pile below
-
-        ; next byte is the type of Pile
-        ld      A,      [HL-]           ; (return HL to card-count)
-        ; for types of piles that have no spread (e.g. decks / foundations),
-        ; there are no cards to step through, just move to the next pile:
-        and     PILE_DECK | PILE_FOUNDATION
-        ret     nz                      ; TODO: move to next pile below
-
-        ; have we reached the bottom of the column?
-        ;-----------------------------------------------------------------------
-        ; retrieve the card count again
-@col:   ld      A,      [HL]
-        ; compare A (number of cards) with B (current card)
-        dec     A                       ; pile-size is 1-based,
-        cp      B                       ; but current card is 0-based
-        
-        ; if they are not equal, the pointer has not reached
-        ; the top of the pile (visually, bottom on screen)
-        ret     z
-
-        ; move down one card
-@card:  ld      A,      B
-        inc     A
-        jp      pointToCard
-
-
-moveUp:
-;===============================================================================
-; move the cursor up, either going through a pile of cards,
-; or upwards to the nearest pile above the current one
-;-------------------------------------------------------------------------------
-        ; retrieve current pile location (HL),
-        ; and the card index being pointed at (A)
-        call    getPointPile
-        and     A,      A               ; (set flags!)
-
-        ; is the current position 0? i.e. at the
-        ; bottom (top, visually) of the pile?
-        ret     z
-
-        dec     A
-        jp      pointToCard
-
-
 moveLeft:
 ;===============================================================================
 ; move the cursor left
@@ -322,7 +265,7 @@ moveLeft:
         ; read the lo-byte of the address of the pile to the left
         ld      L,      [HL]
         ; set the hi-byte for the piles
-        ld      H,      >SECTIONSTART_tableau.Layout
+        ld      H,      >tableau.layout
 
         ; move to the default card in the next pile
         jp      pointToPile
@@ -341,11 +284,87 @@ moveRight:
         add     HL,     BC
         ; read the lo-byte of the address of the pile to the right
         ld      L,      [HL]
-        ; set the hi-byte for the piles
-        ld      H,      >SECTIONSTART_tableau.Layout
+        ; set the fixed hi-byte for the piles
+        ld      H,      >tableau.layout
 
         ; move to the default card in the next pile
-        ;;jp      pointToPile
+        jp      pointToPile
+
+
+moveUp:
+;===============================================================================
+; move the cursor up, either going through a pile of cards,
+; or upwards to the nearest pile above the current one
+;-------------------------------------------------------------------------------
+        ; retrieve current pile location (HL),
+        ; and the card index being pointed at (A)
+        call    getPointPile
+        and     A,      A               ; (set flags!)
+
+        ; is the current position 0? i.e. at the
+        ; bottom (top, visually) of the pile?
+        jr      z,      @pile
+
+        dec     A
+        jp      pointToCard
+
+        ; move up to the next pile:
+        ;-----------------------------------------------------------------------
+@pile:  ld      BC,     Pile.up         ; read the `up` field that
+        add     HL,     BC              ;  tells us the pile to move to
+        ld      L,      [HL]            ; (read the lo-byte of the Pile)
+        ld      H,      >tableau.layout ; the hi-byte is fixed
+        jp      pointToPile
+
+
+moveDown:
+;===============================================================================
+; move the cursor down, either going through a pile of cards,
+; or downward to the nearest pile below the current one
+;-------------------------------------------------------------------------------
+        call    getPointPile            ; retrieve current pile location
+        ld      C,      A               ; card number pointed at (0-based)
+
+        ; first byte is the number of cards in the pile
+        ld      A,      [HL]
+        and     A,      A               ; (set flags!)
+        ; if there are no cards in the pile
+        ; we can move to the pile below
+        jr      z,      @pile
+
+        ; next byte is the type of Pile
+        inc     L                       ; move to `type` field
+        ld      A,      [HL-]           ; (return HL to card-count)
+        ; for types of piles that have no spread (e.g. decks / foundations),
+        ; there are no cards to step through, just move to the next pile:
+        and     PILE_DECK | PILE_FOUNDATION
+        jr      nz,     @pile
+
+        ; have we reached the bottom of the column?
+        ;-----------------------------------------------------------------------
+        ; are we pointing at the last card in the pile?
+        ; a neat trick is used here to both do the comparison and effectively
+        ; add 1 to the card index to be able to move to the next card, *if*
+        ; we're not at the end of the pile
+        ;
+@col:   ld      A,      C               ; index of current-card (0-based)
+        inc     A                       ; adjust to 1-based but also next card!
+        cp      [HL]                    ; compare against card-count (1-based)
+        
+        ; if they are not equal, the pointer has not reached the top of
+        ; the pile (visually, bottom on screen). move the cursor to the
+        ; next card by using the 1-based index as 0-based!
+        jp      nz,     pointToCard
+
+        ; move down to the next pile:
+        ;-----------------------------------------------------------------------
+@pile:  ld      BC,     Pile.down       ; read the `down` field that
+        add     HL,     BC              ;  tells us the pile to move to
+        ld      L,      [HL]            ; (read the lo-byte of the Pile)
+        ld      H,      >tableau.layout ; hi-byte is fixed
+
+        ; fall through to below
+        ; to point to the new pile!
         ;
 
 pointToPile:

@@ -57,38 +57,41 @@ tableau.DefinePile \
 ;
 ; depots:
 ;
+; note that the maximum number of cards a pile can held is 13
+; (a full K to A sequence) plus the number of unturned cards
+; which varies across the depots
 tableau.DefinePile \
-        klondike_depot1,        PILE_COLUMN, 13, \
+        klondike_depot1,        PILE_COLUMN, 13+0, \
         5,                      TABLEAU_LEFT, \
         tableau.depot7,         tableau.depot2, \
         tableau.deck,           tableau.deck
 tableau.DefinePile \
-        klondike_depot2,        PILE_COLUMN, 13, \
+        klondike_depot2,        PILE_COLUMN, 13+1, \
         5,                      TABLEAU_LEFT + 3, \
         tableau.depot1,         tableau.depot3, \
         tableau.hand,           tableau.hand
 tableau.DefinePile \
-        klondike_depot3,        PILE_COLUMN, 13, \
+        klondike_depot3,        PILE_COLUMN, 13+2, \
         5,                      TABLEAU_LEFT + 6, \
         tableau.depot2,         tableau.depot4, \
         tableau.hand,           tableau.hand
 tableau.DefinePile \
-        klondike_depot4,        PILE_COLUMN, 13, \
+        klondike_depot4,        PILE_COLUMN, 13+3, \
         5,                      TABLEAU_LEFT + 9, \
         tableau.depot3,         tableau.depot5, \
         tableau.foundation1,    tableau.foundation1
 tableau.DefinePile \
-        klondike_depot5,        PILE_COLUMN, 13, \
+        klondike_depot5,        PILE_COLUMN, 13+4, \
         5,                      TABLEAU_LEFT + 12, \
         tableau.depot4,         tableau.depot6, \
         tableau.foundation2,    tableau.foundation2
 tableau.DefinePile \
-        klondike_depot6,        PILE_COLUMN, 13, \
+        klondike_depot6,        PILE_COLUMN, 13+5, \
         5,                      TABLEAU_LEFT + 15, \
         tableau.depot5,         tableau.depot7, \
         tableau.foundation3,    tableau.foundation3
 tableau.DefinePile \
-        klondike_depot7,        PILE_COLUMN, 13, \
+        klondike_depot7,        PILE_COLUMN, 13+6, \
         5,                     TABLEAU_LEFT + 18, \
         tableau.depot6,         tableau.depot1, \
         tableau.foundation4,    tableau.foundation4

@@ -163,6 +163,10 @@
 ;
 .RAMSECTION "Layout"    ALIGN 256 SIZE 256 RETURNORG
         ;-----------------------------------------------------------------------
+        ; this label is purely to avoid having to use `SECTIONSTART_...`
+        ; for the tableau layout; it doesn't occupy these bytes --
+        ; the `.` means the address isn't advanced, like a union
+        layout         .DSB _sizeof_Pile * 19
         ; a deck, where cards are drawn from
         deck            INSTANCEOF Pile
         ; a "discard" pile, where cards are thrown away
@@ -278,7 +282,7 @@ clearPiles:
         ; the tableau layout of piles is guaranteed to be less than 256 bytes
         ; so we can use `fill` instead of `zero` in this instance
         xor     A                       ; (set A to zero)
-        ld      HL,     SECTIONSTART_tableau.Layout
+        ld      HL,     tableau.layout
         call    fill@f{SECTIONEND_tableau.Layout-SECTIONSTART_tableau.Layout}
 
         ; clear the card pool, this is 1KB
