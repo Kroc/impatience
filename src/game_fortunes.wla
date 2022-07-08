@@ -186,26 +186,26 @@ init:
         call    tableau.addCard
         ; depots, first row
         ld      HL,     tableau.depot1
-        ld      A,      CARD_6 | SUIT_DIAMOND
+        ld      A,      CARD_6 | SUIT_DIAMOND | CARD_INACTIVE
         call    tableau.addCard
         ld      HL,     tableau.depot2
-        ld      A,      CARD_Q | SUIT_DIAMOND
+        ld      A,      CARD_Q | SUIT_DIAMOND | CARD_INACTIVE
         call    tableau.addCard
         ld      HL,     tableau.depot3
-        ld      A,      CARD_Q | SUIT_HEART
+        ld      A,      CARD_Q | SUIT_HEART | CARD_INACTIVE
         call    tableau.addCard
         ld      HL,     tableau.depot4
         ld      A,      CARD_J | SUIT_DIAMOND
         call    tableau.addCard
         ld      HL,     tableau.depot5
-        ld      A,      CARD_4 | SUIT_HEART
+        ld      A,      CARD_4 | SUIT_HEART | CARD_INACTIVE
         call    tableau.addCard
         ld      HL,     tableau.depot6
-        ld      A,      CARD_X | SUIT_SPADE
+        ld      A,      CARD_X | SUIT_SPADE | CARD_INACTIVE
         call    tableau.addCard
         ; depots, second row
         ld      HL,     tableau.depot7
-        ld      A,      CARD_8 | SUIT_SPADE
+        ld      A,      CARD_8 | SUIT_SPADE | CARD_INACTIVE
         call    tableau.addCard
         ld      HL,     tableau.depot8
         ld      A,      CARD_X | SUIT_DIAMOND
@@ -217,10 +217,10 @@ init:
         ld      A,      CARD_3 | SUIT_HEART
         call    tableau.addCard
         ld      HL,     tableau.depot11
-        ld      A,      CARD_K | SUIT_CLUB
+        ld      A,      CARD_K | SUIT_CLUB | CARD_INACTIVE
         call    tableau.addCard
         ld      HL,     tableau.depot12
-        ld      A,      CARD_K | SUIT_SPADE
+        ld      A,      CARD_K | SUIT_SPADE | CARD_INACTIVE
         call    tableau.addCard
 
         ;-----------------------------------------------------------------------

@@ -13,11 +13,11 @@
 ;
 .DEF    CARD_NONE       %00000000
 
-.DEF    CARD_FRONT      %00000000       ; face-up card
-.DEF    CARD_BACK       %10000000       ; face-down card
-
 .DEF    CARD_ACTIVE     %00000000       ; card is playable
-.DEF    CARD_INACTIVE   %01000000       ; card is disabled
+.DEF    CARD_INACTIVE   %10000000       ; card is disabled
+
+.DEF    CARD_FRONT      %00000000       ; face-up card
+.DEF    CARD_BACK       %01000000       ; face-down card
 
 ; suits:                %--0----- = black
 .DEF    SUIT_SPADE      %00000000
@@ -916,14 +916,12 @@ drawCard:
 ;
 ; out:  carry   (preserved)
 ;       BC, DE  (clobbered)
-;
-; TODO: inactive
 ;-------------------------------------------------------------------------------
-        bit     7,      A               ; is the card face-down?
+        bit     6,      A               ; is the card face-down?
         jr      z,      @face           ; if not, skip onto drawing face-up
 
         ; face-down:
-        ;-----------------------------------------------------------------------
+        ;=======================================================================
         ; face-down cards do not differ between active & inactive
         ld      DE,     tilemap.tilemap_back
         ; if carry is set, we want to draw only one row
@@ -932,67 +930,107 @@ drawCard:
         jp              tilemap.writeTiles_4rows
 
         ; face-up:
-        ;-----------------------------------------------------------------------
+        ;=======================================================================
         ; remember the state of the carry flag;
         ; if set, we draw only the first row
 @face:  push    AF
         ld      BC,     TILEMAP_WIDTH-3 ; amount to skip to next row
+        ld      D,      A               ; keep a copy of the original value
 
+        ; "inactive" (disabled) card?
+        ;
+        ; the highest bit of the card value is used to indicate an "inactive"
+        ; card -- one that cannot be played. these are drawn in "greyed-out"
+        ; graphics. because the original mono GameBoy only has 1 background
+        ; tile palette, we can't just recolour existing tiles and instead
+        ; have to provide a second "inactive" set of card tiles in VRAM
+        ;
+        ; I've arranged VRAM such that the "active" and "inactive" card tiles
+        ; are exactly... $80 apart! in practice, this works in reverse because
+        ; background tiles begin at $80 to $ff for the lower block and then
+        ; $00 to $7f for the upper block (this due to sprites sharing half
+        ; the tile data). since we need to add the opposite of bit 7 to
+        ; tile indices we use XOR instead of OR to apply it
+        ;
+        and     %10000000               ; isolate the "inactive" bit,
+        ld      E,      A               ; and put it aside
+        ;-----------------------------------------------------------------------
         ; top-left corner: ordinal
-        ld      D,      A               ; make a copy of the original value
+        ;-----------------------------------------------------------------------
+        ld      A,      D               ; return to the original card value
         and     %00001111               ; trim out the other bits
         rlca
         add     TILE_CARD_1X1-2         ; offset the tile with the ordinal
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A               ; write the tile and advance
-
+        ;-----------------------------------------------------------------------
         ; top-middle:
+        ;-----------------------------------------------------------------------
         ld      A,      TILE_CARD_1X2
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A
-
+        ;-----------------------------------------------------------------------
         ; top-right corner: suit
+        ;-----------------------------------------------------------------------
         ld      A,      D
         swap    A                       ; move the suit to the bottom nybble
         and     %00000011               ; mask out the other bits
         rlca
-        ld      E,      A               ; remember the suit for later too
         add     TILE_CARD_1X3
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A
         add     HL,     BC              ; move to the next row
 
         ; should we only draw the first row?
         pop     AF                      ; restore carry
         ret     c                       ; return now if carry-set
-
+        ;-----------------------------------------------------------------------
         ; middle:
+        ;-----------------------------------------------------------------------
         ld      A,      TILE_CARD_2X1
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A
         ld      A,      TILE_CARD_2X2
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A
         ld      A,      TILE_CARD_2X3
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A
         add     HL,     BC              ; move to the next row
         ld      A,      TILE_CARD_2X1
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A
         ld      A,      TILE_CARD_2X2
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A
         ld      A,      TILE_CARD_2X3
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A
         add     HL,     BC              ; move to the next row
-
+        ;-----------------------------------------------------------------------
         ; bottom-left: suit
-        ld      A,      E               ; retrieve suit from earlier
+        ;-----------------------------------------------------------------------
+        ld      A,      D
+        swap    A                       ; move the suit to the bottom nybble
+        and     %00000011               ; mask out the other bits
+        rlca
         add     TILE_CARD_4X1
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A
-
+        ;-----------------------------------------------------------------------
         ; bottom-middle:
+        ;-----------------------------------------------------------------------
         ld      A,      TILE_CARD_4X2
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A
-
+        ;-----------------------------------------------------------------------
         ; bottom-right: ordinal
+        ;-----------------------------------------------------------------------
         ld      A,      D               ; retrieve ordinal from earlier
         and     %00001111               ; trim out the other bits
         rlca
         add     TILE_CARD_4X3-2         ; offset the tile with the ordinal
+        xor     E                       ; add the inactive bit, if present
         ld      [HL+],  A               ; write the tile and advance
 
         ret

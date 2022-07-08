@@ -170,9 +170,8 @@ irq_vblank:                                                                ;=34
         ld      SP,     HL                                              ;+8
         ;-----------------------------------------------------------------------
 
-        ; mark the queue as done
-        ; (don't process the same tile-queue twice)
-        xor     A                       ; (set A to zero)
+        ; mark the queue as done (don't process the same tile-queue twice)
+        ; note that A is already zero by nature of the loop exit condition!
         ldh     [<queue_ready], A
 
         ; DMA the sprite attributes from work RAM into OAM:
