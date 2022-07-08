@@ -27,7 +27,7 @@ tableau.DefinePile \
         tableau.foundation4,    tableau.hand, \
         tableau.depot1,         tableau.depot1
 tableau.DefinePile \
-        klondike_hand,          PILE_COLUMN | PILE_HORZ, 3, \
+        klondike_hand,          PILE_HAND, 3, \
         1,                      TABLEAU_LEFT + 3, \
         tableau.deck,           tableau.foundation1, \
         tableau.depot2,         tableau.depot2

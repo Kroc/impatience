@@ -337,12 +337,11 @@ moveDown:
         ld      A,      [HL-]           ; (return HL to card-count)
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; there are no cards to step through, just move to the next pile:
-        and     PILE_DECK | PILE_FOUNDATION
+        and     PILE_STACK
         jr      nz,     @pile
 
         ; have we reached the bottom of the column?
         ;-----------------------------------------------------------------------
-        ; are we pointing at the last card in the pile?
         ; a neat trick is used here to both do the comparison and effectively
         ; add 1 to the card index to be able to move to the next card, *if*
         ; we're not at the end of the pile
@@ -387,7 +386,7 @@ pointToPile:
 
         ; squared piles that don't show each card (e.g. deck, foundation)
         ; always point to the "first" card:
-        and     PILE_DECK | PILE_FOUNDATION
+        and     PILE_STACK
         jr      nz,     @first
 
         ; column piles must point to the last card:
@@ -429,12 +428,10 @@ pointToCard:
         ; check the type of the pile, which will determine
         ; where the cursor will point more specifically
         ; (note that A is untouched here!)
-        bit     0,      [HL]            ; deck?
+        bit     7,      [HL]            ; stack?
         jr      nz,     @empty          ; TODO: the deck is slightly raised
-        bit     1,      [HL]            ; foundation?
-        jr      nz,     @empty
 
-        ; for a column, the cursor will be positioned
+        ; for a spread, the cursor will be positioned
         ; differently for the top card, vs the spread
         ;-----------------------------------------------------------------------
         ; compare the number of cards in the pile to the target card
@@ -444,7 +441,7 @@ pointToCard:
         jr      z,      @top
 
         call    @pos
-        call    @stack
+        call    @spread
 
         call    sprites.tilePosToScrXY
         ; offset the cursor a little so that it appears
@@ -467,9 +464,9 @@ pointToCard:
 
         ; offset the cursor according to the card number in the stack
         ;-----------------------------------------------------------------------
-@stack: ; add the card number to the row number as
-        ; each card in a pile adds another tile's height
-        ld      A,      [card_point]    ; retrieve card number to point to
+        ; add the card number to the row number as each
+        ; card in a pile adds another tile's height
+@spread ld      A,      [card_point]    ; retrieve card number to point to
         add     A,      B
         ld      B,      A
         ret
@@ -477,12 +474,11 @@ pointToCard:
         ; top card:
         ;-----------------------------------------------------------------------
 @top:   call    @pos
-        call    @stack
+        call    @spread
         inc     B
 
         call    sprites.tilePosToScrXY
-        dec     C
-        dec     C
+        inc     B
         jp      moveToScrXY
 
         ; empty pile:
@@ -494,7 +490,6 @@ pointToCard:
 
         ; fall through to the move routine below!
         ;
-
 
 moveToTile:
 ;===============================================================================

@@ -31,7 +31,7 @@ tableau.DefinePile \
         tableau.foundation4,    tableau.discard, \
         tableau.depot7,         tableau.depot1
 tableau.DefinePile \
-        fortunes_discard,       PILE_DECK, 52, \
+        fortunes_discard,       PILE_DISCARD, 52, \
         1,                      TABLEAU_LEFT + 4, \
         tableau.deck,           tableau.foundation1, \
         tableau.depot8,         tableau.depot2

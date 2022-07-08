@@ -53,23 +53,34 @@
 
 ; tableau piles:
 ;===============================================================================
+; these are the different display attributes of piles:
+;-------------------------------------------------------------------------------
+.DEF    PILE_STACK      %10000000       ; stacked, e.g. deck / foundation
+.DEF    PILE_SPREAD     %00000000       ; spread-out, e.g. column / hand
+
+.DEF    PILE_VERT       %01000000       ; vertically spread, e.g. column
+.DEF    PILE_HORZ       %00000000       ; horizontally spread, e.g. hand
+
+.DEF    PILE_FACE       %00100000       ; face-up, e.g. foundation
+.DEF    PILE_BACK       %00000000       ; face-down, e.g. deck
+
+; these can be combined into specific pile types:
+;-------------------------------------------------------------------------------
 ; an unasigned pile is not drawn
 .DEF    PILE_NONE       %00000000
+
 ; regardless of the number of cards in a deck,
 ; it always displays as one face-down card
-.DEF    PILE_DECK       %00000001
+.DEF    PILE_DECK       PILE_STACK | PILE_BACK
 ; like a deck, but displays the top card face-up
-.DEF    PILE_DISCARD    %00000010
+.DEF    PILE_DISCARD    PILE_STACK | PILE_FACE
+; a hand is spread horizontally
+.DEF    PILE_HAND       PILE_SPREAD | PILE_HORZ | PILE_FACE
 ; the foundation does not spread, and displays only the top card
-; face-up. unlike a discard pile it does not show any depth
-.DEF    PILE_FOUNDATION %00000100
+; face-up. unlike a discard pile it does not show any thickness
+.DEF    PILE_FOUNDATION PILE_STACK | PILE_FACE
 ; a downward spread of cards as you would typically see in Klondike
-.DEF    PILE_COLUMN     %00001000
-
-; for piles that spread to the right, instead of down the screen
-; this flag can be added to the pile type
-.DEF    PILE_HORZ       %10000000
-.DEF    PILE_ROW        PILE_COLUMN | PILE_HORZ
+.DEF    PILE_COLUMN     PILE_SPREAD | PILE_VERT | PILE_FACE
 
 ; TODO:types of pile validation:
 ;
@@ -299,11 +310,9 @@ allocateDeck:
 ;
 ; in:   BC      address to a Pile structure (in ROM) to copy from
 ;-------------------------------------------------------------------------------
-        ; HL    address of Pile structure (`deck`)
-        ; BC    address of template Pile in ROM
-        ld      HL,     deck
-        call    allocatePile
-
+        ; copy the template deck from ROM to RAM:
+        ld      HL,     deck            ; HL = address of Pile (`deck`)
+        call    allocatePile            ; BC = address of template Pile in ROM
         push    BC                      ; preserve new ROM address
 
         ; fill the deck with cards:
@@ -419,8 +428,7 @@ allocatePile:
         push    DE                      ; keep original pool address
 
         ; the cards for a pile must be zero-terminated,
-        ; so we add 1 to the count
-        inc     A
+        inc     A                       ; so we add 1 to the count
         ld      B,      A               ; copy card-limit to counter
         xor     A                       ; (write zeroes)
 
@@ -475,12 +483,11 @@ addCard:
 +       ld      E,      A
 
         ld      A,      B               ; retrieve card to add
-        ld      [DE],   A               ; write to pile
+        ld      [DE],   A               ; write to pool
         
-        ; increase the card count:
-        ; since this is the first byte in the Pile struct, and we need to
-        ; return the address of the Pile struct in HL, we can kill two birds
-        ; with one stone!
+        ; increase the card count: since this is the first byte in the Pile
+        ; struct, and we need to return the address of the Pile struct in HL,
+        ; we can kill two birds with one stone!
         pop     HL                      ; retrieve Pile addr
         inc     [HL]                    ; increase number of cards in pile
 
@@ -509,19 +516,19 @@ getCard:
 ;       DE      address of the card pool for the pile
 ;       HL      (preserved)
 ;-------------------------------------------------------------------------------
-        ; get the pile's pool address (DE)
-        call    getPilePool
-        push    DE
-        ; add the card index:
-        add     A,      E               ; add card index to addr lo-byte
-        jr      nc,     +               ; E overflows?
-        inc     D                       ; ripple to D
-+       ld      E,      A
-        
-        ld      A,      [DE]            ; read the card value from the pool
-
-        pop     DE
-        ret
+;;        ; get the pile's pool address (DE)
+;;        call    getPilePool
+;;        push    DE
+;;        ; add the card index:
+;;        add     A,      E               ; add card index to addr lo-byte
+;;        jr      nc,     +               ; E overflows?
+;;        inc     D                       ; ripple to D
+;;+       ld      E,      A
+;;        
+;;        ld      A,      [DE]            ; read the card value from the pool
+;;
+;;        pop     DE
+;;        ret
 
 
 removeCard:
@@ -573,7 +580,7 @@ emptyPile:
 ;===============================================================================
 ; empties a pile of cards (all cards are deleted!)
 ;
-; in:   HL      address of a Pile structure (e.g. `deck`, `depot`)
+; in:   HL      address of a Pile structure (e.g. `deck`, `depot1`)
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         ld      [HL],   0               ; set card count for the Pile to zero
@@ -815,23 +822,22 @@ drawPile:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      C,      [HL]           ; read number of cards in pile
-        inc     L
-
-        ; we automatically skip unallocated piles (type is 0)
+        ; we automatically skip unallocated piles (type is 0):
         ; this is because the tableau attempts to draw all piles
         ; and only those a particular game uses should be drawn
-        ld      A,      [HL]
-        and     A,      A
-        ret     z
+        ;
+        inc     L                       ; `type` field is second, not first
+        ld      A,      [HL-]           ; read pile type and rewind HL
+        and     A,      A               ; (set flags!)
+        ret     z                       ; if pile is unallocated, quit
 
-        ld      A,      C               ; return to number of cards in pile
+        ; check the type of pile:
+        bit     7,      A               ; is it a stack?
+        jr      nz,     @stack          ; -> handle stack-type piles
+
+        ld      A,      [HL+]           ; read number of cards in pile
         and     A,      A               ; (set flags!)
         jr      z,      @empty          ; if zero, draw empty space
-
-        ; check the type of pile (note, preserving A)
-        bit     0,      [HL]            ; is it a deck?
-        jr      nz,     @deck
 
         ; column:
         ;-----------------------------------------------------------------------
@@ -867,33 +873,9 @@ drawPile:
 
         ret
 
-        ; deck:
-        ;-----------------------------------------------------------------------
-        ; get the pile's row & col
-@deck:  call    @pos
-        ; the deck in particular extends a row upwards
-        ; to give it that thicker appearance
-        dec     B
-        ; get an address in the buffer for the X/Y co-ords
-        call    tilemap.getBufferAddr
-        ; draw out the tiles for the deck
-        ld      DE,     tilemap.tilemap_deck
-        jp      tilemap.writeTiles_5rows
-
-        ; empty pile:
-        ;-----------------------------------------------------------------------
-        ; draw an empty pile on the buffer:
-        ; first get the pile's row & col
-@empty: call    @pos
-        ; translate to an address on the buffer
-        call    tilemap.getBufferAddr
-        ; draw the empty pile tiles
-        ld      DE,     tilemap.tilemap_empty
-        jp      tilemap.writeTiles_4rows
-
         ; get the position of the pile:
         ;-----------------------------------------------------------------------
-@pos:   inc     L                       ; skip over card count byte
+@pos:   inc     L                       ; skip over card-count byte
         inc     L                       ; skip over max-cards byte
         ld      E,      [HL]            ; read pool-address, lo-byte
         inc     L
@@ -904,6 +886,46 @@ drawPile:
         ld      C,      [HL]            ; read column
         ret
 
+        ; empty pile:
+        ;-----------------------------------------------------------------------
+        ; draw an empty pile on the buffer:
+@empty: call    @pos                    ; first get the pile's row & col
+        call    tilemap.getBufferAddr   ; translate to a buffer address
+
+        ; draw the pre-baked empty pile tiles
+        ld      DE,     tilemap.tilemap_empty
+        jp      tilemap.writeTiles_4rows
+
+        ; stacks:
+        ;-----------------------------------------------------------------------
+@stack: ld      A,      [HL+]           ; read number of cards in pile
+        and     A,      A               ; (set flags!)
+        jr      z,      @empty          ; if zero, draw empty space
+
+        ; is it a face-down stack (e.g. deck),
+        ; or face-up stack (e.g. foundation)?
+        bit     5,      A
+        jr      z,      @face
+
+        call    @pos                    ; get the pile's row & col
+
+        ; the deck in particular extends a row upwards
+        ; to give it that thicker appearance
+        dec     B
+        ; get an address in the buffer for the X/Y co-ords
+        call    tilemap.getBufferAddr
+        ; draw out the tiles for the deck
+        ld      DE,     tilemap.tilemap_deck
+        jp      tilemap.writeTiles_5rows
+
+        ; stack with face-up card:
+        ;-----------------------------------------------------------------------
+@face:  call    @pos                    ; get the pile's row & col
+        call    tilemap.getBufferAddr   ; translate to a buffer address
+
+        ; fall through to below to draw
+        ; the singular face-up card!
+        ;
 
 drawCard:
 ;===============================================================================
