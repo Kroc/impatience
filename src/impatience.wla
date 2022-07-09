@@ -18,7 +18,7 @@ init:
         ld      HL,     LCDC            ; LCD config register;
         ld      A,      [HL]            ; read the current value
 
-        ; we *MUST NOT* disable the LCD (bit7=1) outside of vblank!
+        ; we *MUST NOT* disable the LCD (bit7=0) outside of vblank!
         ; even though we want the screen off during initialisation,
         ; we must set the LCD enable bit to 1 at this time and
         ; then wait for vblank to turn it off!
@@ -58,9 +58,9 @@ init:
         call    sprites.init
         call    tilemap.init
 
-        ;;call    acesup.init
+        call    acesup.init
         ;;call    fortunes.init
-        call    klondike.init
+        ;;call    klondike.init
 
         ; play loop:
         ;=======================================================================

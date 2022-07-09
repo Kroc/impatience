@@ -27,27 +27,27 @@ tableau.DefinePile \
         tableau.depot4,         tableau.depot1, \
         tableau.deck,           tableau.deck
 tableau.DefinePile \
-        acesup_discard,         PILE_DECK, 52, \
+        acesup_discard,         PILE_DISCARD, 52, \
         7,                      TABLEAU_LEFT + 1, \
         tableau.depot4,         tableau.depot1, \
         tableau.deck,           tableau.discard
 tableau.DefinePile \
-        acesup_depot1,          PILE_COLUMN, 13, \
+        acesup_depot1,          PILE_COLUMN | VALID_LOWEST, 13, \
         1,                      TABLEAU_LEFT + 5, \
         tableau.deck,           tableau.depot2, \
         tableau.depot1,         tableau.depot1
 tableau.DefinePile \
-        acesup_depot2,          PILE_COLUMN, 13, \
+        acesup_depot2,          PILE_COLUMN | VALID_LOWEST, 13, \
         1,                      TABLEAU_LEFT + 8 \
         tableau.depot1,         tableau.depot3, \
         tableau.depot2,         tableau.depot2
 tableau.DefinePile \
-        acesup_depot3,          PILE_COLUMN, 13, \
+        acesup_depot3,          PILE_COLUMN | VALID_LOWEST, 13, \
         1,                      TABLEAU_LEFT + 11 \
         tableau.depot2,         tableau.depot4, \
         tableau.depot3,         tableau.depot3
 tableau.DefinePile \
-        acesup_depot4,          PILE_COLUMN, 13, \
+        acesup_depot4,          PILE_COLUMN | VALID_LOWEST, 13, \
         1,                      TABLEAU_LEFT + 14 \
         tableau.depot3,         tableau.deck, \
         tableau.depot4,         tableau.depot4
@@ -87,55 +87,28 @@ init:
 
         ;-----------------------------------------------------------------------
         ld      HL,     tableau.depot1
-        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
+        ld      A,      CARD_J | SUIT_CLUB
         call    tableau.addCard
-        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
+        ld      A,      CARD_3 | SUIT_SPADE
         call    tableau.addCard
-        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    tableau.addCard
-        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    tableau.addCard
-        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    tableau.addCard
-        ld      A,      CARD_K | SUIT_SPADE | CARD_BACK
-        call    tableau.addCard
-
-        ld      A,      CARD_K | SUIT_SPADE | CARD_INACTIVE
-        call    tableau.addCard
-        ld      A,      CARD_Q | SUIT_HEART | CARD_INACTIVE
-        call    tableau.addCard
-        ld      A,      CARD_J | SUIT_CLUB | CARD_INACTIVE
-        call    tableau.addCard
-        ld      A,      CARD_X | SUIT_DIAMOND | CARD_INACTIVE
-        call    tableau.addCard
-        ld      A,      CARD_9 | SUIT_SPADE | CARD_INACTIVE
-        call    tableau.addCard
-        ld      A,      CARD_8 | SUIT_HEART | CARD_INACTIVE
-        call    tableau.addCard
-        ld      A,      CARD_7 | SUIT_CLUB
-        call    tableau.addCard
-        ;;ld      A,      CARD_6 | SUIT_DIAMOND
-        ;;call    tableau.addCard
-        ;;ld      A,      CARD_5 | SUIT_SPADE
-        ;;call    tableau.addCard
-        ;;ld      A,      CARD_4 | SUIT_HEART
-        ;;call    tableau.addCard
-        ;;ld      A,      CARD_3 | SUIT_CLUB
-        ;;call    tableau.addCard
-        ;;ld      A,      CARD_2 | SUIT_DIAMOND
-        ;;call    tableau.addCard
-        ;;ld      A,      CARD_A | SUIT_SPADE
-        ;;call    tableau.addCard
 
         ld      HL,     tableau.depot2
-        ld      A,      CARD_J | SUIT_HEART
+        ld      A,      CARD_X | SUIT_HEART
         call    tableau.addCard
+        ld      A,      CARD_4 | SUIT_SPADE
+        call    tableau.addCard
+
         ld      HL,     tableau.depot3
-        ld      A,      CARD_Q | SUIT_CLUB
+        ld      A,      CARD_2 | SUIT_SPADE
         call    tableau.addCard
-        ;;ld      HL,     tableau.depot4
-        ;;ld      A,      CARD_K | SUIT_DIAMOND
-        ;;call    tableau.addCard
+        ld      A,      CARD_6 | SUIT_CLUB
+        call    tableau.addCard
+
+        ld      HL,     tableau.depot4
+        ld      A,      CARD_A | SUIT_SPADE
+        call    tableau.addCard
+        ld      A,      CARD_3 | SUIT_DIAMOND
+        call    tableau.addCard
 
         ;-----------------------------------------------------------------------
         call    tableau.refresh

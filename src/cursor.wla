@@ -413,12 +413,12 @@ pointToCard:
         ; save the card number to point to: (0-based)
         ld      [card_point],   A
         ; (also put in a register for later comparison)
-        ld      C,      A
+        ld      C,              A
         ; save the address of the pile to point to:
-        ld      A,      L
-        ld      [cursor.pile_point+LO],A
-        ld      A,      H
-        ld      [cursor.pile_point+HI],A
+        ld      A,              L
+        ld      [pile_point+LO],A
+        ld      A,              H
+        ld      [pile_point+HI],A
 
         ; is the pile empty?
         ld      A,      [HL+]           ; read pile count
@@ -741,7 +741,6 @@ pickPile:
         ; redraw the entire tableau; this may seem overkill but the removal
         ; of one card may affect the validation of other piles which would
         ; also need redrawing
-        ; TODO: should validation be part of drawing, or a separate routine?
         call    tableau.refresh
         ; compare the display buffers and queue
         ; the changes to be made during vblank
@@ -784,7 +783,6 @@ dropPile:
         ; redraw the entire tableau; this may seem overkill but the removal
         ; of one card may affect the validation of other piles which would
         ; also need redrawing
-        ; TODO: should validation be part of drawing, or a separate routine?
         call    tableau.refresh
         ; compare the display buffers and queue
         ; the changes to be made during vblank

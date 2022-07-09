@@ -525,9 +525,10 @@ update:
         ; the tile data is written as two bytes even though we only use one;
         ; surprisingly, this is for a critical optimisation during vblank.
         ; when this value is POPed, the first byte will become the cpu flags!
-        ; all valid entries in the queue have the zero-flag set; when a zero
-        ; byte is encounted (NOTE: this equates to zero-flag UNSET), then
-        ; the queue has reached the end
+        ; all valid entries in the queue have the zero-flag clear; when a
+        ; zero byte is encounted (NOTE: this equates to the zero-bit SET),
+        ; then the queue has reached the end
+        ;
         ld      A,      %10000000       ; write cpu flags!
         ld      [BC],   A
         inc     C
