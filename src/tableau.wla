@@ -266,28 +266,31 @@
 
 piles:
 ;===============================================================================
-; this is a lookup table of Piles in case we need to iterate all of them
+; this is a lookup table of Piles in case we need to iterate all of them:
+; (hi-byte is fixed since the layout fits within 256 bytes)
 ;
-.WORD   deck
-.WORD   discard
-.WORD   foundation1
-.WORD   foundation2
-.WORD   foundation3
-.WORD   foundation4
-.WORD   depot1
-.WORD   depot2
-.WORD   depot3
-.WORD   depot4
-.WORD   depot5
-.WORD   depot6
-.WORD   depot7
-.WORD   depot8
-.WORD   depot9
-.WORD   depot10
-.WORD   depot11
-.WORD   depot12
-.WORD   hand
-.WORD   0
+.BYTE   <deck
+.BYTE   <discard
+.BYTE   <foundation1
+.BYTE   <foundation2
+.BYTE   <foundation3
+.BYTE   <foundation4
+.BYTE   <depot1
+.BYTE   <depot2
+.BYTE   <depot3
+.BYTE   <depot4
+.BYTE   <depot5
+.BYTE   <depot6
+.BYTE   <depot7
+.BYTE   <depot8
+.BYTE   <depot9
+.BYTE   <depot10
+.BYTE   <depot11
+.BYTE   <depot12
+.BYTE   <hand
+; a '1' marks the end of the list because it's impossible
+; for a Pile to start at $xx01 -- `deck` starts at $xx00
+.BYTE   1
 
 
 clearTiles:
@@ -764,32 +767,34 @@ validate:
 ;===============================================================================
 ; validate the piles on the tableau according to the game rules:
 ;-------------------------------------------------------------------------------
-        ; let's walk the list of piles
+        ; let's walk the list of piles in the tableau
         ld      HL,     piles
+        ; jump into the main body of the loop; it's formulated in
+        ; a strange way to allow for a single loop/exit condition
+        jr      +
+
+        ;-----------------------------------------------------------------------
+@loop:  call    validatePile            ; validate the specific Pile
+
+        pop     HL                      ; return to our list of piles
+        inc     L                       ; move to next Pile in the list
 
         ; preserve the current position in the piles list
         ; whilst we validate the pile in question
-@loop:  push    HL
++       push    HL
         ; read the pile-address from the list
         ; (we use HL to read into HL!)
-        ld      A,      [HL+]           ; Pile addr lo-byte
-        ld      H,      [HL]            ; Pile addr hi-byte
-        ld      L,      A
-        ; if we read $0000 the list has ended
-        or      H                       ; combine H & L (also in A) to
-        jr      z,      +               ;  check for any value in either
-
-        ; validate the specific Pile
-        call    validatePile
-
-        pop     HL
-        inc     HL                      ; move to next Pile in the list
-        inc     HL
-        jr      @loop
+        ld      A,      [HL]            ; Pile addr lo-byte
+        ld      H,      >layout         ; hi-byte is known
+        ld      L,      A               ; HL = pile to validate
+        ; a '1' marks the end of the list because it's impossible
+        ; for a Pile to start at $xx01 -- `deck` starts at $xx00
+        dec     A
+        jr      nz,     @loop
 
         ; clean-up and exit:
         ;-----------------------------------------------------------------------
-+       pop     HL
+        pop     HL
         ret
 
 
