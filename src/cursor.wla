@@ -253,14 +253,15 @@ getPointPile:
 
 moveLeft:
 ;===============================================================================
-; move the cursor left
+; move the cursor left:
+;
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         ; retrieve current pile location (HL)
         call    getPointPile
 
         ; move to the field that contains the pile to the left
-        ld      B,      0
-        ld      C,      Pile.left
+        ld      BC,     Pile.left
         add     HL,     BC
         ; read the lo-byte of the address of the pile to the left
         ld      L,      [HL]
@@ -273,14 +274,15 @@ moveLeft:
 
 moveRight:
 ;===============================================================================
-; move the cursor right
+; move the cursor right:
+;
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         ; retrieve current pile location (HL)
         call    getPointPile
 
         ; move to the field that contains the pile to the right
-        ld      B,      0
-        ld      C,      Pile.right
+        ld      BC,     Pile.right
         add     HL,     BC
         ; read the lo-byte of the address of the pile to the right
         ld      L,      [HL]
@@ -294,18 +296,26 @@ moveRight:
 moveUp:
 ;===============================================================================
 ; move the cursor up, either going through a pile of cards,
-; or upwards to the nearest pile above the current one
+; or upwards to the nearest pile above the current one:
+;
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         ; retrieve current pile location (HL),
         ; and the card index being pointed at (A)
         call    getPointPile
-        and     A,      A               ; (set flags!)
+
+        ; first byte is the type of Pile;
+        ; for types of piles that have no spread (e.g. decks / foundations),
+        ; there are no cards to step through, just move to the next pile
+        bit     7,      [HL]            ; =PILE_STACK?
+        jr      nz,     @pile
 
         ; is the current position 0? i.e. at the
         ; bottom (top, visually) of the pile?
+        and     A,      A               ; (set flags!)
         jr      z,      @pile
 
-        dec     A
+        dec     A                       ; move up a card
         jp      pointToCard
 
         ; move up to the next pile:
@@ -320,25 +330,26 @@ moveUp:
 moveDown:
 ;===============================================================================
 ; move the cursor down, either going through a pile of cards,
-; or downward to the nearest pile below the current one
+; or downward to the nearest pile below the current one:
+;
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         call    getPointPile            ; retrieve current pile location
         ld      C,      A               ; card number pointed at (0-based)
 
-        ; first byte is the number of cards in the pile
-        ld      A,      [HL]
+        ; first byte is the type of Pile;
+        ; for types of piles that have no spread (e.g. decks / foundations),
+        ; there are no cards to step through, just move to the next pile
+        bit     7,      [HL]            ; =PILE_STACK?
+        jr      nz,     @pile
+
+        ; get the number of cards in the pile
+        inc     L                       ; skip `type` field
+        ld      A,      [HL-]           ; read `count` field & rewind HL
         and     A,      A               ; (set flags!)
         ; if there are no cards in the pile
         ; we can move to the pile below
         jr      z,      @pile
-
-        ; next byte is the type of Pile
-        inc     L                       ; move to `type` field
-        ld      A,      [HL-]           ; (return HL to card-count)
-        ; for types of piles that have no spread (e.g. decks / foundations),
-        ; there are no cards to step through, just move to the next pile:
-        and     PILE_STACK
-        jr      nz,     @pile
 
         ; have we reached the bottom of the column?
         ;-----------------------------------------------------------------------
@@ -346,10 +357,11 @@ moveDown:
         ; add 1 to the card index to be able to move to the next card, *if*
         ; we're not at the end of the pile
         ;
-@col:   ld      A,      C               ; index of current-card (0-based)
-        inc     A                       ; adjust to 1-based but also next card!
-        cp      [HL]                    ; compare against card-count (1-based)
-        
+@col:   inc     L                       ; move to `count` field in Pile
+        ld      A,      [HL-]           ; read card count (1-based) & rewind
+        inc     C                       ; adjust pointed-to card index
+        cp      C                       ; to 1-based and compare with count
+
         ; if they are not equal, the pointer has not reached the top of
         ; the pile (visually, bottom on screen). move the cursor to the
         ; next card by using the 1-based index as 0-based!
@@ -372,30 +384,21 @@ pointToPile:
 ; e.g. on columns this is the face-up card furthest down the screen
 ;
 ; in:   HL      address of the Pile structure
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         ; if there are zero cards in the pile, the default card is 0
-        ld      A,      [HL]            ; first byte is number of cards in pile
+        inc     L
+        ld      A,      [HL-]           ; read `count` field
         and     A,      A               ; (set flags!)
         jr      z,      pointToCard     ; =0? point to it
 
-        ; for non-empty piles, the type of the Pile
-        ; determines where the default card will be:
-        inc     L
-        ld      A,      [HL-]           ; read pile type
-        ; (note how we've moved HL back to the beginning!)
-
-        ; squared piles that don't show each card (e.g. deck, foundation)
-        ; always point to the "first" card:
-        and     PILE_STACK
-        jr      nz,     @first
-
         ; column piles must point to the last card:
-        ld      A,      [HL]            ; retrieve card count
+        inc     L                       ; skip `type` field
+        ld      A,      [HL-]           ; read `count` field
         dec     A                       ; (adjust to 0-based)
-
-        .byte   $fe
-
-@first: xor    A
+        
+        ; fall through below
+        ;
 
 pointToCard:
 ;===============================================================================
@@ -420,16 +423,16 @@ pointToCard:
         ld      A,              H
         ld      [pile_point+HI],A
 
+        ; for types of piles that have no spread (e.g. decks / foundations),
+        ; we point to the top of the pile without counting cards
+        bit     7,      [HL]            ; =PILE_STACK?
+        jr      nz,     @empty          ; TODO: the deck is slightly raised
+
         ; is the pile empty?
-        ld      A,      [HL+]           ; read pile count
+        inc     L
+        ld      A,      [HL-]           ; read pile count
         and     A,      A               ; (set flags)
         jr      z,      @empty
-
-        ; check the type of the pile, which will determine
-        ; where the cursor will point more specifically
-        ; (note that A is untouched here!)
-        bit     7,      [HL]            ; stack?
-        jr      nz,     @empty          ; TODO: the deck is slightly raised
 
         ; for a spread, the cursor will be positioned
         ; differently for the top card, vs the spread
@@ -453,8 +456,7 @@ pointToCard:
 
         ; retrieve the row/column of the pile
         ;-----------------------------------------------------------------------
-@pos:   dec     L                       ; (move HL back to Pile start)
-        call    tableau.getPilePos      ; get Pile row (B) & col (C)
+@pos:   call    tableau.getPilePos      ; get Pile row (B) & col (C)
 
         ; we will always be pointing to the horizontal middle of the card;
         ; in the case of face-up cards, we want to point to the space
@@ -528,8 +530,8 @@ moveToScrXY:
 ; in:   B       Y position to move the cursor to
 ;       C       X position to move the cursor to
 ;
-; out:  BC      (preserved)
-;       A, HL   (clobbered)
+; out:  A/BC/DE (preserved)
+;       HL      (clobbered)
 ;-------------------------------------------------------------------------------
         ; update the destination cursor position
         ld      HL,     dest_x
@@ -571,7 +573,8 @@ pickPile:
 
         ; is the pile empty?
         ;-----------------------------------------------------------------------
-        ld      A,      [HL]            ; read card count
+        inc     L
+        ld      A,      [HL-]           ; read card count
         and     A,      A               ; (set flags!)
         jp      z,      @err            ; if pile is empty, exit
 

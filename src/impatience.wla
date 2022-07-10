@@ -59,8 +59,8 @@ init:
         call    tilemap.init
 
         ;;call    acesup.init
-        call    fortunes.init
-        ;;call    klondike.init
+        ;;call    fortunes.init
+        call    klondike.init
 
         ; play loop:
         ;=======================================================================

@@ -59,6 +59,8 @@
 ;===============================================================================
 ; these are the different display attributes of piles:
 ;-------------------------------------------------------------------------------
+; #FIXME: a valid Pile type+valid must never equal 0!
+;
 .DEF    PILE_STACK      %10000000       ; stacked, e.g. deck / foundation
 .DEF    PILE_SPREAD     %00000000       ; spread-out, e.g. column / hand
 
@@ -163,13 +165,9 @@
 
 .STRUCT Pile
         ;-----------------------------------------------------------------------
-        ; we place the card count byte first so that we can easily identify
-        ; empty piles first as all empty piles tend to look the same
-        ; regardless of type
-        ;
-        count           BYTE    ; number of cards in the pile, 1-based!
         type            BYTE    ; type of pile, i.e. deck, hand, foundation &c.
-        limit           BYTE    ; max.number of cards allowed in pile, 1-based!
+        count           BYTE    ; number of cards in the pile, 1-based!
+        capacity        BYTE    ; max.number of cards allowed in pile, 1-based!
         pool            WORD    ; address of storage for card pile
         row             BYTE    ; row position on the tilemap (not pixels!)
         col             BYTE    ; column position on the tilemap (not pixels!)
@@ -246,9 +244,9 @@
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 .DSTRUCT \1 INSTANCEOF Pile VALUES
-        count:          .BYTE 0         ; (assigned at run-time)
         type:           .BYTE \2
-        limit:          .BYTE \3
+        count:          .BYTE 0         ; (assigned at run-time)
+        capacity:       .BYTE \3
         pool:           .WORD __pool_addr
         row:            .BYTE \4
         col:            .BYTE \5
@@ -370,8 +368,8 @@ allocateDeck:
         ; C will be our suit counter;
         ; 0=spades, 1=clubs, 2=hearts, 3=diamonds
         ld      C,      0
-
 @next:  ld      B,      1               ; B = our ordinal counter, 1 to 13
+
 -       ld      A,      C               ; begin with the suit 0-3
         swap    A                       ; suit bits go in the upper nybble
         or      B                       ; add the ordinal (1-13)
@@ -409,7 +407,7 @@ allocatePile:
 ;
 ;       DE      address of the card pool for the pile, i.e. where the "cards",
 ;               each a byte, will be stored. this area will already have been
-;               cleared according to the limit set in the template Pile
+;               cleared according to the capacity set in the template Pile
 ;
 ;       BC      the ROM address will have been moved over the Pile struct
 ;               allowing you to automatically use the next template in ROM
@@ -418,11 +416,11 @@ allocatePile:
 ;-------------------------------------------------------------------------------
         ; copy the Pile template (in ROM) over the working Pile in RAM:
         ;
-        ; first byte is number of cards in the pile (defaults to 0)
+        ; first byte is the type of the Pile
         ld      A,      [BC]
         ld      [HL+],  A               ; move HL (RAM) forward
         inc     C                       ; move BC (ROM) forward
-        ; next byte is the type of the Pile
+        ; next byte is number of cards in the pile (defaults to 0)
         ld      A,      [BC]
         ld      [HL+],  A               ; move HL (RAM) forward
         inc     C                       ; move BC (ROM) forward
@@ -430,18 +428,18 @@ allocatePile:
         ld      A,      [BC]
         ld      [HL+],  A               ; move HL (RAM) forward
         inc     C                       ; move BC (ROM) forward
-        ; (put aside max pile size until we clear the Pile's card pool)
+        ; (put aside capacity until we clear the Pile's card pool)
         push    AF
         
         ; next two bytes are the storage address;
         ; we put this aside in DE for later
-        ld      A,      [BC]
-        ld      E,      A               ; lo-byte first
-        ld      [HL+],  A
+        ld      A,      [BC]            ; read from ROM
+        ld      E,      A               ; E = lo-byte first
+        ld      [HL+],  A               ; write to RAM
         inc     C
-        ld      A,      [BC]
-        ld      D,      A               ; hi-byte next
-        ld      [HL+],  A
+        ld      A,      [BC]            ; read from ROM
+        ld      D,      A               ; D = hi-byte next
+        ld      [HL+],  A               ; write to RAM
         inc     C
 
         ; next is the row/column position on the tilemap
@@ -474,7 +472,7 @@ allocatePile:
 
         ; the cards for a pile must be zero-terminated,
         inc     A                       ; so we add 1 to the count
-        ld      B,      A               ; copy card-limit to counter
+        ld      B,      A               ; copy pile capacity to counter
         xor     A                       ; (write zeroes)
 
 -       ld      [DE],   A               ; clear one byte
@@ -491,62 +489,43 @@ addCard:
 ;===============================================================================
 ; add a card to a pile:
 ;
+; NOTE: does not check pile capcity! it is expected that this
+; has been validated before attempting to add a card to a pile
+;
 ; in:   A       card to add (see CARD_* constants)
 ;       HL      address to the Pile structure, *not* the Pile's storage
 ;
 ; out:  HL      preserved, to allow adding multiple cards in row
-;       carry   if the pile is full (card cannot be added), carry will be set
 ;       A, BC   (clobbered)
 ;-------------------------------------------------------------------------------
-        push    HL                      ; preserve original HL for return
         ld      B,      A               ; put aside card to add for later
 
-        ; read number of cards in the pile:
-        ld      A,      [HL+]
-        inc     L                       ; (skip pile type field)
-        ; read the max. number of cards allowed in the pile:
-        ld      C,      [HL]
-        
-        ; compare number of cards in pile, with max (1-based)
-        cp      C
-        jr      nc,      @full
+        inc     L                       ; skip `type` field
+        ld      A,      [HL]            ; read number of cards in pile
+        inc     [HL]                    ; increase number of cards in pile
+        inc     L                       ; skip `count` field
+        inc     L                       ; skip `capacity` field
 
-        ; add card:
-        ;-----------------------------------------------------------------------
         ; write the card to the card pool;
         ; begin by reading the storage address:
-@add:   inc     L
-        ld      E,      [HL]            ; lo-byte first
+@add:   ld      E,      [HL]            ; lo-byte first
         inc     L
         ld      D,      [HL]            ; then hi-byte
+
+        dec     L                       ; restore HL:
+        dec     L                       ;  this is still faster than
+        dec     L                       ;  PUSH and POPing HL
+        dec     L
 
         ; move to the empty-slot at the end of the pile's card pool
         ;
         add     A,      E               ; add number of cards to pile addr.
         jr      nc,     +               ; E overflows?
         inc     D                       ; ripple to D
-+       ld      E,      A
++       ld      E,      A               ; DE = empty card slot in pool
 
-        ld      A,      B               ; retrieve card to add
+        ld      A,      B               ; retrieve card to add from earlier
         ld      [DE],   A               ; write to pool
-        
-        ; increase the card count: since this is the first byte in the Pile
-        ; struct, and we need to return the address of the Pile struct in HL,
-        ; we can kill two birds with one stone!
-        pop     HL                      ; retrieve Pile addr
-        inc     [HL]                    ; increase number of cards in pile
-
-        scf
-        ccf
-        ret
-
-        ; pile is full!
-        ;-----------------------------------------------------------------------
-@full:  scf
-
-        ld      B,      B               ; DEBUG
-
-        pop     HL                      ; return original HL
         ret
 
 
@@ -559,7 +538,8 @@ getLastCard:
 ;       DE      address of the last card in the pile's pool
 ;       HL      (preserved)
 ;-------------------------------------------------------------------------------
-        ld      A,      [HL]            ; number of cards in pile
+        inc     L                       ; skip `type` field
+        ld      A,      [HL-]           ; number of cards in pile
         dec     A                       ; adjust to 0-based
 
 getCard:
@@ -595,9 +575,9 @@ getPilePool:
 ; out:  DE      address of the pile's card pool
 ;       HL, A   (preserved)
 ;-------------------------------------------------------------------------------
-        inc     L                       ; skip the `count` field
         inc     L                       ; skip the `type` field
-        inc     L                       ; skip the `limit` field
+        inc     L                       ; skip the `count` field
+        inc     L                       ; skip the `capacity` field
         ld      E,      [HL]            ; read the pool address, lo-byte
         inc     L
         ld      D,      [HL]            ; read the pool address, hi-byte
@@ -653,7 +633,9 @@ validate:
         jr      +
 
         ;-----------------------------------------------------------------------
-@loop:  call    validatePile            ; validate the specific Pile
+@loop:  ld      A,      [HL]            ; is the pile allocated? type != 0
+        and     A,      A               ; (set flags!)
+        call    nz,     validatePile    ; validate the specific Pile
 
         pop     HL                      ; return to our list of piles
         inc     L                       ; move to next Pile in the list
@@ -679,25 +661,25 @@ validate:
 
 validatePile:
 ;===============================================================================
-; in:   HL      address of Pile to validate
+; in:   HL      address of Pile to validate, assumed to be allocated
+;       A       type of pile, from the first field of the Pile struct
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; the first field is the card count; an empty
+        ; if the pile is face-down, e.g. deck,
+        ; it doesn't need validation
+        bit     5,      A
+        ret     z
+
+        ; the next field is the card count; an empty
         ; pile obviously doesn't need validating
-        ld      A,      [HL+]
+        inc     L                       ; skip `type` field
+        ld      A,      [HL-]           ; read `count` field, also rewind
         and     A,      A               ; (set flags!)
         ret     z
         ; keep the card-count for later, we need this
         ; to be able to know which is the last card,
         ; i.e. the card atop the pile
         ld      C,      A
-
-        ; check the type of the Pile
-        ld      A,      [HL-]
-        ; if the pile is face-down, e.g. deck,
-        ; it also doesn't need validation
-        bit     5,      A
-        ret     z
 
         ; walk the cards in the Pile:
         ;-----------------------------------------------------------------------
@@ -707,10 +689,10 @@ validatePile:
         ; we need this to know when we've hit the last card (C)
         ld      B,      0
 
--       inc     L
-        ld      A,      [HL-]
-        and     VALID_MASK
-        dec     A
+-       ld      A,      [HL]            ; read the pile type
+        and     VALID_MASK              ; isolate the validation type
+        
+        dec     A                       ; is it '1'?
         call    z,      _validateLowest
 
         ; move to the next card in the pile
@@ -725,17 +707,17 @@ validatePile:
 
 _PileCardHL:
 ;===============================================================================
-        ld      A,      [HL+]           ; read `count` field
-        dec     A                       ; correct to 0-based
-        ld      C,      A               ; put aside until we have pool addr
-
+        ; note that in validation routines, C is already the card-count
+        ; so we don't need to read it again from the Pile
         inc     L                       ; skip `type` field
-        inc     L                       ; skip `limit` field
+        inc     L                       ; skip `count` field
+        inc     L                       ; skip `capacity` field
         ld      A,      [HL+]           ; read pool address, lo-byte
         ld      H,      [HL]            ; read pool address, hi-byte
         ld      L,      A               ; HL is now pool address
 
         ld      A,      C               ; retrieve that card count
+        dec     A                       ; correct to 0-based
         add     A,      L               ; add to the pool address, lo
         jr      nc,     +               ; did that overflow the lo-byte?
         inc     H                       ; ripple the carry
@@ -832,6 +814,8 @@ _validateLowest:
         ; for the higher value, not the lower one. do some register
         ; juggling to get the comparison the right way around...
         ;
+        push    BC
+
         ld      A,      [HL]            ; read the depot card
         sub     2                       ; wrap A low to A high!
         and     %00001111               ; (isolate the rank)
@@ -842,6 +826,8 @@ _validateLowest:
         and     %00001111               ; (isolate the rank)
 
         cp      C                       ; if depot card is higher,
+        
+        pop     BC
         ret                             ; return carry!
 
 
@@ -864,7 +850,8 @@ movePile:
 
         ; because we are removing all cards from the index down in
         ; the source pile, the number of cards simply becomes the index
-        ld      [HL],   A
+        inc     L
+        ld      [HL-],  A
 
         ; calculate source address:
         ;-----------------------------------------------------------------------
@@ -901,7 +888,8 @@ movePile:
         jr      -
 
 +       pop     DE                      ; return destination pool address
-        ld      A,      [HL]            ; return last card index
+        inc     L
+        ld      A,      [HL-]           ; return last card index
         dec     A                       ; (0-based)
         ret
 
@@ -971,8 +959,7 @@ drawPile:
         ; this is because the tableau attempts to draw all piles
         ; and only those a particular game uses should be drawn
         ;
-        inc     L                       ; `type` field is second, not first
-        ld      A,      [HL-]           ; read pile type and rewind HL
+        ld      A,      [HL+]           ; read pile type and rewind HL
         and     A,      A               ; (set flags!)
         ret     z                       ; if pile is unallocated, quit
 
@@ -980,7 +967,7 @@ drawPile:
         bit     7,      A               ; is it a stack?
         jr      nz,     @stack          ; -> handle stack-type piles
 
-        ld      A,      [HL+]           ; read number of cards in pile
+        ld      A,      [HL]            ; read number of cards in pile
         and     A,      A               ; (set flags!)
         jr      z,      @empty          ; if zero, draw empty space
 
@@ -1020,8 +1007,8 @@ drawPile:
 
         ; get the position of the pile:
         ;-----------------------------------------------------------------------
-@pos:   inc     L                       ; skip over card-count byte
-        inc     L                       ; skip over max-cards byte
+@pos:   inc     L                       ; skip over card-count
+        inc     L                       ; skip over `capacity` field
         ld      E,      [HL]            ; read pool-address, lo-byte
         inc     L
         ld      D,      [HL]            ; read pool-address, hi-byte
@@ -1048,7 +1035,7 @@ drawPile:
 @stack: bit     5,      A
         jr      nz,     @face
 
-        ld      A,      [HL+]           ; read number of cards in pile
+        ld      A,      [HL]            ; read number of cards in pile
         and     A,      A               ; (set flags!)
         jr      z,      @empty          ; if zero, draw empty space
 
@@ -1065,7 +1052,7 @@ drawPile:
 
         ; stack with face-up card:
         ;-----------------------------------------------------------------------
-@face:  ld      A,      [HL+]           ; read number of cards in pile
+@face:  ld      A,      [HL]            ; read number of cards in pile
         and     A,      A               ; (set flags!)
         jr      z,      @empty          ; if zero, draw empty space
 

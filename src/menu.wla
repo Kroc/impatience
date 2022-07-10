@@ -16,10 +16,10 @@ clear:
         ; the left of the playfield
         ld      HL,     tilemap.front_buffer
         ; number of tiles to skip to next row
-        ld      DE,     32-MENU_WIDTH
+        ld      DE,     TILEMAP_WIDTH-MENU_WIDTH
 
         ;-----------------------------------------------------------------------
-        ld      C,      32              ; 32 rows
+        ld      C,      TILEMAP_HEIGHT  ; 32 rows
 @row:   ld      B,      MENU_WIDTH      ; 12 columns
 @col:   ld      [HL+],  A               ; set cell to menu background tile
         dec     B
