@@ -10,6 +10,8 @@ init:
 ;===============================================================================
         di                              ; disable interrupts
         ld      SP,     $dff0           ; locate the stack
+        xor     A                       ; (set A to zero)
+        ldh     [<$ff26],       A       ; disable sound to save power!
 
         call    init_interrupts
 

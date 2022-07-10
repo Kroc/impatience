@@ -568,7 +568,7 @@ getCard:
 getPilePool:
 ;===============================================================================
 ; given a Pile struct address, returns the address
-; in the card pool where the pile's cards are stored
+; in the card pool where the pile's cards are stored:
 ;
 ; in:   HL      address of a Pile structure (e.g. `deck`, `depot`)
 ;
