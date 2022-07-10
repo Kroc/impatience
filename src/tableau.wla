@@ -90,10 +90,12 @@
 ; chooses which validation rules the pile should use:
 .DEF    VALID_MASK      %00011111
 .DEF    VALID_ANY       0
-; Aces Up:
-; the lowest ranked card of the same suit as another is valid; this validation
-; rule is unusal as piles other than the current one also have to be examined
-.DEF    VALID_LOWEST    1
+; Aces Up: the lowest ranked card of the same suit
+; as the cards on the other depots are valid
+.DEF    VALID_ACESUP    1
+; Fortune's Favour: cards that are of the same suit and one
+; lower in rank as the cards on the other depots are valid
+.DEF    VALID_FORTUNES  2
 
 ; TODO:types of pile validation:
 ;
@@ -548,6 +550,18 @@ addCard:
         ret
 
 
+getLastCard:
+;===============================================================================
+; retrieves the value of the last (top-most) card in a pile:
+;
+; in:   HL      address of a Pile structure
+; out:  A       value of last card in pile
+;       DE      address of the last card in the pile's pool
+;       HL      (preserved)
+;-------------------------------------------------------------------------------
+        ld      A,      [HL]            ; number of cards in pile
+        dec     A                       ; adjust to 0-based
+
 getCard:
 ;===============================================================================
 ; gets the value of a specific card in a pile:
@@ -556,123 +570,19 @@ getCard:
 ;       A       index (0-based) of the card to return
 ;
 ; out:  A       value of card
-;       DE      address of the card pool for the pile
+;       DE      address of the card in the pile's pool
 ;       HL      (preserved)
 ;-------------------------------------------------------------------------------
-;;        ; get the pile's pool address (DE)
-;;        call    getPilePool
-;;        push    DE
-;;        ; add the card index:
-;;        add     A,      E               ; add card index to addr lo-byte
-;;        jr      nc,     +               ; E overflows?
-;;        inc     D                       ; ripple to D
-;;+       ld      E,      A
-;;        
-;;        ld      A,      [DE]            ; read the card value from the pool
-;;
-;;        pop     DE
-;;        ret
+        ; get the pile's pool address (DE)
+        call    getPilePool
+        ; add the card index:
+        add     A,      E               ; add card index to addr lo-byte
+        jr      nc,     +               ; E overflows?
+        inc     D                       ; ripple to D
++       ld      E,      A
 
-
-removeCard:
-;===============================================================================
-; removes a card from a pile:
-; the value of the card removed is returned
-;
-; note that it is up to the caller to ensure
-; that there are no holes left in the pile!
-;
-; removing a card will NOT change the screen;
-; call `tilemap.refresh` to redraw any modified piles
-;
-; in:   HL      address of the Pile
-;       A       index (0-based) of the card to remove
-;
-; out:  A       value of card
-;       DE      address of the card pool for the pile
-;       HL      (preserved)
-;-------------------------------------------------------------------------------
-;;        ; reduce the number of cards in the pile first
-;;        ; as that's the first byte in the Pile structure
-;;        dec     [HL]
-;;
-;;        ; get the pile's pool address (DE)
-;;        call    getPilePool
-;;        push    DE
-;;        ; add the card index:
-;;        add     A,      E               ; add card index to addr lo-byte
-;;        jr      nc,     +               ; E overflows?
-;;        inc     D                       ; ripple to D
-;;+       ld      E,      A
-;;
-;;        ; read and erase the card:
-;;        ; (changing the size of the pile alone isn't enough as
-;;        ; the list of cards in the pool must be zero-terminated)
-;;        ;
-;;        ld      A,      [DE]            ; read the card value from the pool
-;;        push    AF                      ; keep card value
-;;        xor     A                       ; set A to zero
-;;        ld      [DE],   A               ; erase the card
-;;
-;;        pop     AF                      ; return the card value
-;;        pop     DE                      ; return the (starting) pool address
-;;        ret
-
-
-emptyPile:
-;===============================================================================
-; empties a pile of cards (all cards are deleted!)
-;
-; in:   HL      address of a Pile structure (e.g. `deck`, `depot1`)
-; out:  *       (clobbered)
-;-------------------------------------------------------------------------------
-;;        ld      [HL],   0               ; set card count for the Pile to zero
-;;        inc     L                       ; skip count field
-;;        inc     L                       ; skip type field
-;;        ld      C,      [HL]            ; read capacity field
-;;        inc     L
-;;        ld      E,      [HL]            ; read the pool address, lo-byte
-;;        inc     L
-;;        ld      D,      [HL]            ; read the pool address, hi-byte
-;;
-;;        ; the cards for a pile must be zero-terminated,
-;;        ; so we add 1 to the count
-;;@clear: inc     C
-;;        xor     A                       ; (set A to zero)
-;;-       ld      [DE],   A               ; clear one byte
-;;        inc     DE                      ; move to the next byte
-;;        dec     C                       ; one less byte to fill
-;;        jr      nz, -                   ; have we done all of them?
-;;        ret
-
-
-getPile:
-;===============================================================================
-; retrieves some basic Pile properties:
-;
-; in:   HL      address of a Pile structure (e.g. `deck`, `depot`)
-;
-; out:  A       number of cards in the pile, 1-based
-;       B       Pile type (e.g. `PILE_DECK`)
-;       C       maximum capacity of the pile, 1-based
-;       DE      address in the card pool for the pile
-;               (where the cards in the pile are stored)
-;       HL      (preserved)
-;-------------------------------------------------------------------------------
-;;        ld      A,      [HL+]           ; card count
-;;        ld      B,      [HL]            ; pile type
-;;        inc     L
-;;        ld      C,      [HL]            ; pile capacity
-;;        inc     L
-;;        ld      E,      [HL]            ; pool address, lo-byte
-;;        inc     L
-;;        ld      D,      [HL]            ; pool address, hi-byte
-;;        
-;;        dec     L                       ; restore HL:
-;;        dec     L                       ;  this is still faster than
-;;        dec     L                       ;  PUSH and POPing HL
-;;        dec     L
-;;        ret
+        ld      A,      [DE]            ; read the card value from the pool
+        ret
 
 
 getPilePool:
@@ -700,36 +610,6 @@ getPilePool:
         ret
 
 
-getPileLastCard:
-;===============================================================================
-; return the address and value of the last card in a Pile:
-;
-; in:   HL      Pile address
-; out:  A       value of the last card
-;       DE      address in the pile pool of the last card
-;       HL, BC  (preserved)
-;-------------------------------------------------------------------------------
-;;        ld      A,      [HL+]           ; read the card count
-;;        inc     L                       ; skip the `type` field
-;;        inc     L                       ; skip the `limit` field
-;;        ld      E,      [HL]            ; read the pool address, lo-byte
-;;        inc     L
-;;        ld      D,      [HL]            ; read the pool address, hi-byte
-;;
-;;        dec     L                       ; restore HL:
-;;        dec     L                       ;  this is still faster than
-;;        dec     L                       ;  PUSH and POPing HL
-;;        dec     L
-;;
-;;        add     A,      E               ; add index to the lo-byte
-;;        jr      nc,     +               ; did that overflow?
-;;        inc     D                       ; increment hi-byte
-;;+       ld      E,      A               ; DE = addr of last card
-;;
-;;        ld      A,      [DE]            ; read value of last card
-;;        ret
-
-
 getPilePos:
 ;===============================================================================
 ; retrieve the row & column co-ordinates (on the tile-map) of a pile:
@@ -749,17 +629,16 @@ getPilePos:
         ; in the Pile structure. the lack of index registers on the SM83
         ; is excruciating...
         ;
-        push    HL
+        push    HL                                                      ;+16=16
 
-        ld      B,      0
-        ld      C,      Pile.row
-        add     HL,     BC
+        ld      BC,     Pile.row                                        ;+12=28
+        add     HL,     BC                                              ;+8 =36
 
-        ld      B,      [HL]
-        inc     L
-        ld      C,      [HL]
+        ld      B,      [HL]                                            ;+8 =44
+        inc     L                                                       ;+4 =48
+        ld      C,      [HL]                                            ;+8 =56
 
-        pop     HL
+        pop     HL                                                      ;+12=68
         ret
 
 
@@ -844,6 +723,27 @@ validatePile:
         ret
 
 
+_PileCardHL:
+;===============================================================================
+        ld      A,      [HL+]           ; read `count` field
+        dec     A                       ; correct to 0-based
+        ld      C,      A               ; put aside until we have pool addr
+
+        inc     L                       ; skip `type` field
+        inc     L                       ; skip `limit` field
+        ld      A,      [HL+]           ; read pool address, lo-byte
+        ld      H,      [HL]            ; read pool address, hi-byte
+        ld      L,      A               ; HL is now pool address
+
+        ld      A,      C               ; retrieve that card count
+        add     A,      L               ; add to the pool address, lo
+        jr      nc,     +               ; did that overflow the lo-byte?
+        inc     H                       ; ripple the carry
++       ld      L,      A               ; HL = last card in depot
+        ld      A,      [HL]            ; read card value
+        ret
+
+
 _validateLowest:
 ;===============================================================================
 ; validate lowest rank of each suit
@@ -854,7 +754,7 @@ _validateLowest:
 ;       B       current index in pile (0-based)
 ;       C       number of cards in pile (1-based)
 ;
-; out:  HL      (preserved)
+; out:  HL, DE  (preserved)
 ;-------------------------------------------------------------------------------
         ; only the top card can be played, so any card
         ; that isn't top is automatically invalid
@@ -915,22 +815,7 @@ _validateLowest:
         ; given the Pile to compare *against*, fetch the top card
         ; of *that* pile. we have to preserve DE whilst doing this
         ;
-@cp:    ld      A,      [HL+]           ; read `count` field
-        dec     A                       ; correct to 0-based
-        ld      C,      A               ; put aside until we have pool addr
-
-        inc     L                       ; skip `type` field
-        inc     L                       ; skip `limit` field
-        ld      A,      [HL+]           ; read pool address, lo-byte
-        ld      H,      [HL]            ; read pool address, hi-byte
-        ld      L,      A               ; HL is now pool address
-
-        ld      A,      C               ; retrieve that card count
-        add     A,      L               ; add to the pool address, lo
-        jr      nc,     +               ; did that overflow the lo-byte?
-        inc     H                       ; ripple the carry
-+       ld      L,      A               ; HL = last card in depot
-        ld      A,      [HL]            ; read card value
+@cp:    call    _PileCardHL
 
         ; compare suits:
         ;
@@ -951,7 +836,7 @@ _validateLowest:
         sub     2                       ; wrap A low to A high!
         and     %00001111               ; (isolate the rank)
         ld      C,      A               ; swap sides
-        
+
         ld      A,      [DE]            ; get our original card again
         sub     2                       ; wrap A low to A high!
         and     %00001111               ; (isolate the rank)
@@ -983,16 +868,8 @@ movePile:
 
         ; calculate source address:
         ;-----------------------------------------------------------------------
-        ; from the source pile (HL) get the address
-        ; where the list of cards is stored (DE)
-        call    getPilePool
-        ; offset into the source pile's pool
-        ;(where to begin removing cards)
-        add     A,      E               ; add index to the lo-byte
-        jr      nc,     +               ; did that overflow?
-        inc     D                       ; increment hi-byte
-+       ld      E,      A               ; DE = index card in pile
-
+        ; from the source pile (HL) get the address of the given card in DE
+        call    getCard
         ; source address has been determined, put it aside
         ld      B,      D
         ld      C,      E
@@ -1001,15 +878,9 @@ movePile:
         ;-----------------------------------------------------------------------
         ; retrieve our destination pile
         pop     HL
-        ; get the pool address (DE) and the number
-        ; of cards currently in the pile (A)
-        ld      A,      [HL]            ; first byte is card count
-        call    getPilePool             ; get pile pool address in DE
-        push    DE                      ; (return destination pool address)
-        add     A,      E               ; add index to the lo-byte
-        jr      nc,     +               ; did that overflow?
-        inc     D                       ; increment hi-byte
-+       ld      E,      A               ; DE = first empty space after cards
+        ; get the pool address (DE) of the last card in the pile
+        call    getLastCard
+        inc     DE                      ; DE = first empty space after cards
 
         ; move cards between piles:
         ;-----------------------------------------------------------------------
@@ -1117,9 +988,9 @@ drawPile:
         ;-----------------------------------------------------------------------
         ; get the pile's row & col (BC), and the card pool address (DE)
 @col:   call    @pos
-        ; get screen-buffer address for the X/Y co-ords. note that this returns
-        ; the address in HL, but clobbers BC. we depend upon it preserving A
-        ; (our card count) and DE (the card pool address)
+        ; get screen-buffer address for the X/Y co-ords (BC). note that
+        ; this returns the address in HL, but clobbers BC. we depend upon
+        ; it preserving A (our card count) and DE (the card pool address)
         call    tilemap.getBufferAddr
         ; retain the card-count for iterating through the pile
         ld      C,      A
@@ -1172,14 +1043,14 @@ drawPile:
 
         ; stacks:
         ;-----------------------------------------------------------------------
-@stack: ld      A,      [HL+]           ; read number of cards in pile
-        and     A,      A               ; (set flags!)
-        jr      z,      @empty          ; if zero, draw empty space
-
         ; is it a face-down stack (e.g. deck),
         ; or face-up stack (e.g. foundation)?
-        bit     5,      A
-        jr      z,      @face
+@stack: bit     5,      A
+        jr      nz,     @face
+
+        ld      A,      [HL+]           ; read number of cards in pile
+        and     A,      A               ; (set flags!)
+        jr      z,      @empty          ; if zero, draw empty space
 
         call    @pos                    ; get the pile's row & col
 
@@ -1194,7 +1065,19 @@ drawPile:
 
         ; stack with face-up card:
         ;-----------------------------------------------------------------------
-@face:  call    @pos                    ; get the pile's row & col
+@face:  ld      A,      [HL+]           ; read number of cards in pile
+        and     A,      A               ; (set flags!)
+        jr      z,      @empty          ; if zero, draw empty space
+
+        call    @pos                    ; get the pile's row & col
+
+        dec     A
+        add     A,      E
+        jr      nc,     +
+        inc     D
++       ld      E,      A
+        ld      A,      [DE]            ; read the card value
+
         call    tilemap.getBufferAddr   ; translate to a buffer address
 
         ; fall through to below to draw
@@ -1211,7 +1094,7 @@ drawCard:
 ;               (this is for drawing down-stacking piles)
 ;
 ; out:  carry   (preserved)
-;       BC, DE  (clobbered)
+;       *       (clobbered)
 ;-------------------------------------------------------------------------------
         bit     6,      A               ; is the card face-down?
         jr      z,      @face           ; if not, skip onto drawing face-up
@@ -1330,3 +1213,104 @@ drawCard:
         ld      [HL+],  A               ; write the tile and advance
 
         ret
+
+
+;;removeCard:
+;===============================================================================
+; removes a card from a pile:
+; the value of the card removed is returned
+;
+; note that it is up to the caller to ensure
+; that there are no holes left in the pile!
+;
+; removing a card will NOT change the screen;
+; call `tilemap.refresh` to redraw any modified piles
+;
+; in:   HL      address of the Pile
+;       A       index (0-based) of the card to remove
+;
+; out:  A       value of card
+;       DE      address of the card pool for the pile
+;       HL      (preserved)
+;-------------------------------------------------------------------------------
+;;        ; reduce the number of cards in the pile first
+;;        ; as that's the first byte in the Pile structure
+;;        dec     [HL]
+;;
+;;        ; get the pile's pool address (DE)
+;;        call    getPilePool
+;;        push    DE
+;;        ; add the card index:
+;;        add     A,      E               ; add card index to addr lo-byte
+;;        jr      nc,     +               ; E overflows?
+;;        inc     D                       ; ripple to D
+;;+       ld      E,      A
+;;
+;;        ; read and erase the card:
+;;        ; (changing the size of the pile alone isn't enough as
+;;        ; the list of cards in the pool must be zero-terminated)
+;;        ;
+;;        ld      A,      [DE]            ; read the card value from the pool
+;;        push    AF                      ; keep card value
+;;        xor     A                       ; set A to zero
+;;        ld      [DE],   A               ; erase the card
+;;
+;;        pop     AF                      ; return the card value
+;;        pop     DE                      ; return the (starting) pool address
+;;        ret
+
+
+;;emptyPile:
+;===============================================================================
+; empties a pile of cards (all cards are deleted!)
+;
+; in:   HL      address of a Pile structure (e.g. `deck`, `depot1`)
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+;;        ld      [HL],   0               ; set card count for the Pile to zero
+;;        inc     L                       ; skip count field
+;;        inc     L                       ; skip type field
+;;        ld      C,      [HL]            ; read capacity field
+;;        inc     L
+;;        ld      E,      [HL]            ; read the pool address, lo-byte
+;;        inc     L
+;;        ld      D,      [HL]            ; read the pool address, hi-byte
+;;
+;;        ; the cards for a pile must be zero-terminated,
+;;        ; so we add 1 to the count
+;;@clear: inc     C
+;;        xor     A                       ; (set A to zero)
+;;-       ld      [DE],   A               ; clear one byte
+;;        inc     DE                      ; move to the next byte
+;;        dec     C                       ; one less byte to fill
+;;        jr      nz, -                   ; have we done all of them?
+;;        ret
+
+
+;;getPile:
+;===============================================================================
+; retrieves some basic Pile properties:
+;
+; in:   HL      address of a Pile structure (e.g. `deck`, `depot`)
+;
+; out:  A       Pile type (e.g. `PILE_DECK`)
+;       B       number of cards in the pile, 1-based
+;       C       maximum capacity of the pile, 1-based
+;       DE      address in the card pool for the pile
+;               (where the cards in the pile are stored)
+;       HL      (preserved)
+;-------------------------------------------------------------------------------
+;;        ld      B,      [HL]            ; card count
+;;        inc     L
+;;        ld      A,      [HL+]           ; pile type
+;;        ld      C,      [HL]            ; pile capacity
+;;        inc     L
+;;        ld      E,      [HL]            ; pool address, lo-byte
+;;        inc     L
+;;        ld      D,      [HL]            ; pool address, hi-byte
+;;
+;;        dec     L                       ; restore HL:
+;;        dec     L                       ;  this is still faster than
+;;        dec     L                       ;  PUSH and POPing HL
+;;        dec     L
+;;        ret

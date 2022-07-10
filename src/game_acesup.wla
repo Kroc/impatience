@@ -32,22 +32,22 @@ tableau.DefinePile \
         tableau.depot4,         tableau.depot1, \
         tableau.deck,           tableau.discard
 tableau.DefinePile \
-        acesup_depot1,          PILE_COLUMN | VALID_LOWEST, 13, \
+        acesup_depot1,          PILE_COLUMN | VALID_ACESUP, 13, \
         1,                      TABLEAU_LEFT + 5, \
         tableau.deck,           tableau.depot2, \
         tableau.depot1,         tableau.depot1
 tableau.DefinePile \
-        acesup_depot2,          PILE_COLUMN | VALID_LOWEST, 13, \
+        acesup_depot2,          PILE_COLUMN | VALID_ACESUP, 13, \
         1,                      TABLEAU_LEFT + 8 \
         tableau.depot1,         tableau.depot3, \
         tableau.depot2,         tableau.depot2
 tableau.DefinePile \
-        acesup_depot3,          PILE_COLUMN | VALID_LOWEST, 13, \
+        acesup_depot3,          PILE_COLUMN | VALID_ACESUP, 13, \
         1,                      TABLEAU_LEFT + 11 \
         tableau.depot2,         tableau.depot4, \
         tableau.depot3,         tableau.depot3
 tableau.DefinePile \
-        acesup_depot4,          PILE_COLUMN | VALID_LOWEST, 13, \
+        acesup_depot4,          PILE_COLUMN | VALID_ACESUP, 13, \
         1,                      TABLEAU_LEFT + 14 \
         tableau.depot3,         tableau.deck, \
         tableau.depot4,         tableau.depot4

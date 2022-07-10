@@ -58,8 +58,8 @@ init:
         call    sprites.init
         call    tilemap.init
 
-        call    acesup.init
-        ;;call    fortunes.init
+        ;;call    acesup.init
+        call    fortunes.init
         ;;call    klondike.init
 
         ; play loop:
