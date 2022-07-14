@@ -381,27 +381,27 @@ clear:
 ;-------------------------------------------------------------------------------
         xor     A                       ; (set A to zero)
         ld      HL,     type
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
         ld      HL,     count
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
         ld      HL,     capacity
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
         ld      HL,     pool_lo
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
         ld      HL,     pool_hi
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
         ld      HL,     row
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
         ld      HL,     col
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
         ld      HL,     left
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
         ld      HL,     right
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
         ld      HL,     up
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
         ld      HL,     down
-        call    fill@f{PILE_COUNT}
+        call    fill@x{PILE_COUNT}
 
         ; clear the card pool, this is 1KB
         ; (this must be zeroed because card lists must be zero-terminated)
@@ -623,10 +623,10 @@ getPos:
 ;       DE, A   (preserved)
 ;       H       (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      H,      FIELD_ROW       ; select `row` field            ;+4=4
-        ld      B,      [HL]            ; current pile (L) screen row   ;+8=12
-        ld      H,      FIELD_COL       ; select `col` field            ;+4=16
-        ld      C,      [HL]            ; current pile (L) screen col   ;+8=22
+        ld      H,      FIELD_ROW       ; select `row` field
+        ld      B,      [HL]            ; current pile (L) screen row
+        ld      H,      FIELD_COL       ; select `col` field
+        ld      C,      [HL]            ; current pile (L) screen col
         ret
 
 

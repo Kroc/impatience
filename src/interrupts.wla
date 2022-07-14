@@ -342,4 +342,4 @@ clearQueue:
         ld      HL,     tile_queue
         ; because the number of bytes to clear is fixed,
         ; we can jump into `fill` at the exact place needed
-        jp      fill@f{_sizeof_tile_queue}
+        jp      fill@x{_sizeof_tile_queue}

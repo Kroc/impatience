@@ -60,7 +60,7 @@ init:
         ; clear variables:
         xor     A                       ; (set A to zero)
         ld      HL,     SECTIONSTART_cursor.Cursor
-        call    fill@f{SECTIONEND_cursor.Cursor-SECTIONSTART_cursor.Cursor}
+        call    fill@x{SECTIONEND_cursor.Cursor-SECTIONSTART_cursor.Cursor}
 
         ; configure the cursor sprite:
         ld      HL,     sprites.attrs
@@ -107,7 +107,7 @@ clearHand:
         ld      [HL],   A
         ; zero out the list of cards in the private cursor pool
         ld      HL,     hand_cards
-        call    fill@f{_sizeof_hand_cards}
+        call    fill@x{_sizeof_hand_cards}
 
         ; fall through to below to clear the sprites
         ;
@@ -136,7 +136,7 @@ clearSprites:
         ; (cursor sprites are excluded), times 4 bytes per sprite
         ;
         xor     A                       ; (set A to zero)
-        jp      fill@f{38*_sizeof_Sprite}
+        jp      fill@x{38*_sizeof_Sprite}
 
 
 update:
