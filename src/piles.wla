@@ -1,0 +1,873 @@
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+;
+; card bytes:
+;-------------------------------------------------------------------------------
+; this section defines how we store cards in memory, one byte per card
+;
+; %bissnnnn     b     = "back" (back is visible)
+;               i     = validation, 0=valid, 1=invalid (unplayable card)
+;               ss    = suit, 0-3,  0=spades, 1=clubs, 2=hearts, 3=diamonds
+;               nnnn  = number, 1 (A), 2-9, 10 (J), 11 (Q), 12 (K),
+;                       13-15 unused. 0 = no-card / null
+;
+.DEF    CARD_NONE       %00000000
+
+.DEF    CARD_VALID      %00000000       ; card is playable
+.DEF    CARD_INVALID    %10000000       ; card is disabled
+
+.DEF    CARD_FRONT      %00000000       ; face-up card
+.DEF    CARD_BACK       %01000000       ; face-down card
+
+; suits:
+.DEF    MASK_SUIT       %00110000
+;                       %--0x---- = black
+.DEF    SUIT_BLACK      %00000000
+.DEF    SUIT_SPADE      %00000000
+.DEF    SUIT_CLUB       %00010000
+;                       %--1x---- = red
+.DEF    SUIT_RED        %00100000
+.DEF    SUIT_HEART      %00100000
+.DEF    SUIT_DIAMOND    %00110000
+
+.DEF    MASK_RANK       %00001111
+.DEF    CARD_AL         1               ; ace low!
+.DEF    CARD_A          1
+.DEF    CARD_2          2
+.DEF    CARD_3          3
+.DEF    CARD_4          4
+.DEF    CARD_5          5
+.DEF    CARD_6          6
+.DEF    CARD_7          7
+.DEF    CARD_8          8
+.DEF    CARD_9          9
+.DEF    CARD_X          10
+.DEF    CARD_J          11
+.DEF    CARD_Q          12
+.DEF    CARD_K          13
+.DEF    CARD_AH         16              ; ace high!
+
+; these are the indices of our preset pile roles:
+; this represents the row-order of each pile in the column fields
+;-------------------------------------------------------------------------------
+.ENUMID 0
+.ENUMID INDEX_DECK                      ; where cards are drawn from
+.ENUMID INDEX_DISCARD                   ; where cards are thrown away
+.ENUMID INDEX_HAND                      ; a working set of drawn cards
+.ENUMID INDEX_FOUNDATION1               ; up to four foundation piles,
+.ENUMID INDEX_FOUNDATION2               ; where cards are stacked in order
+.ENUMID INDEX_FOUNDATION3
+.ENUMID INDEX_FOUNDATION4
+.ENUMID INDEX_DEPOT1                    ; up to twelve depot piles,
+.ENUMID INDEX_DEPOT2                    ; where cards are sorted
+.ENUMID INDEX_DEPOT3
+.ENUMID INDEX_DEPOT4
+.ENUMID INDEX_DEPOT5
+.ENUMID INDEX_DEPOT6
+.ENUMID INDEX_DEPOT7
+.ENUMID INDEX_DEPOT8
+.ENUMID INDEX_DEPOT9
+.ENUMID INDEX_DEPOT10
+.ENUMID INDEX_DEPOT11
+.ENUMID INDEX_DEPOT12
+.ENUMID INDEX_CURSOR                    ; for cards held by the cursor
+
+.ENUMID PILE_COUNT                      ; number of piles defined, $xx00..$xxnn
+
+; these are the different display attributes of piles:
+;-------------------------------------------------------------------------------
+; #FIXME: a valid `PILE_*`|`VALID_*` constant must never equal 0!
+;
+.DEF    PILE_STACK      %10000000       ; stacked, e.g. deck / foundation
+.DEF    PILE_SPREAD     %00000000       ; spread-out, e.g. column / hand
+
+.DEF    PILE_VERT       %01000000       ; vertically spread, e.g. column
+.DEF    PILE_HORZ       %00000000       ; horizontally spread, e.g. hand
+
+.DEF    PILE_FACE       %00100000       ; face-up, e.g. foundation
+.DEF    PILE_BACK       %00000000       ; face-down, e.g. deck
+
+; these can be combined into specific pile types:
+;-------------------------------------------------------------------------------
+; an unasigned pile is not drawn
+.DEF    PILE_NONE       %00000000
+
+; regardless of the number of cards in a deck,
+; it always displays as one face-down card
+.DEF    PILE_DECK       PILE_STACK | PILE_BACK
+; like a deck, but displays the top card face-up
+.DEF    PILE_DISCARD    PILE_STACK | PILE_FACE
+; a hand is spread horizontally
+.DEF    PILE_HAND       PILE_SPREAD | PILE_HORZ | PILE_FACE
+; the foundation does not spread, and displays only the top card
+; face-up. unlike a discard pile it does not show any thickness
+.DEF    PILE_FOUNDATION PILE_STACK | PILE_FACE
+; a downward spread of cards as you would typically see in Klondike
+.DEF    PILE_COLUMN     PILE_SPREAD | PILE_VERT | PILE_FACE
+
+; the lower bits of the pile type are a number that
+; chooses which validation rules the pile should use:
+.DEF    MASK_VALID      %00011111
+.DEF    VALID_ANY       0
+; Aces Up: the lowest ranked card of the same suit
+; as the cards on the other depots are valid
+.DEF    VALID_ACESUP    1
+; Fortune's Favour: cards that are of the same suit and one
+; lower in rank as the cards on the other depots are valid
+.DEF    VALID_FORTUNES  2
+
+; TODO:types of pile validation:
+;
+; ascending by suit, A-first, i.e. foundations in most games
+; descending by alternating colour, e.g. standard Klondike depots
+; draw by three hand, i.e. klondike
+; descending by suit, e.g. fortune's favour
+; descending by same colour, move by same suit only, e.g. Whitehead
+
+; deck behaviour:
+; -     0 redeals
+; -     1 redeal
+; -     infinite redeals
+
+; lock behaviour:
+; e.g. allow taking from foundation (Klondike),
+; disallow taking from discard pile (Aces Up)
+; -     cards can be picked up again
+; -     cards cannot be picked up again,
+;       e.g. foundations in Russian Solitaire
+; pile order:
+; -     ascending
+; -     descending
+; -     both! e.g. Golf
+; wrapping:
+; -     allowed (K -> A / A -> K)
+; -     disallowed
+; stacking requirement:
+; -     same colour, e.g. Whitehead
+; -     alternating colour, e.g. Klondike
+; -     same suit, e.g. Fortune's Favour
+; empty-space behaviour:
+; -     Ace only, e.g. Klondike foundations
+; -     king only, e.g. Klondike depots
+; -     a specific card, determined by draw
+; -     any card
+; -     auto, from deck, e.g. Fortune's Favour
+; sequences:
+; -     disallowed (1-card only)
+; -     same suit only, e.g. Whitehead
+; matching requirement:
+; -     lowest rank of same suit, i.e. Aces Up
+; -     add to 13, e.g. Pyramid
+
+; outliers:
+; -     Pyramid! (strange pile spread and cards must add to 13)
+; -     Three peaks
+
+; games:
+; -     Aces Up / Russian Aces / Fortunes / Deck
+; -     Klondike
+; -     Easthaven
+; -     Fortune's Favour
+; -     Whitehead?
+; -     Flortine Patience / Four Seasons
+; -     Pile On
+; -     Simplex
+
+; deck-specific properties:
+; *     redeal-count, 0, 1, ... $FF (infinite)
+
+; foundation-specific properties:
+; *     lock
+
+
+; when I first started writing this game I used an array of pile structs, but
+; this did not scale well as the more the game did, the more tedious walking
+; up and down the fields was required. I've rewritten the way piles are stored
+; by separating each field into its own array. each field is aligned to the
+; start of an 8-bit boundary, so we can jump between fields just by changing
+; the high-byte, and between piles by changing the low-byte!
+;
+;      H = field -> [HL] <- L = pile index!
+;
+.RAMSECTION "PileType"  \
+        ALIGN 256       RETURNORG
+        type            DSB PILE_COUNT  ; the type of the pile
+.ENDS
+.DEF    FIELD_TYPE      >piles.type     ; e.g. `ld h, FIELD_TYPE`
+
+.RAMSECTION "PileCount" \
+        ALIGN 256       RETURNORG
+        count           DSB PILE_COUNT  ; the number of cards in the pile
+.ENDS
+.DEF    FIELD_COUNT     >piles.count    ; e.g. `ld h, FIELD_COUNT`
+
+.RAMSECTION "PileCapacity" \
+        ALIGN 256       RETURNORG
+        capacity        DSB PILE_COUNT  ; the maximum size of the pile
+.ENDS
+.DEF    FIELD_CAPACITY  >piles.capacity ; e.g. `ld h, FIELD_CAPACITY`
+
+.RAMSECTION "PilePoolLo" \
+        ALIGN 256       RETURNORG
+        pool_lo         DSB PILE_COUNT  ; the address in the card pool, lo-byte
+.ENDS
+.DEF    FIELD_POOL_LO   >piles.pool_lo  ; e.g. `ld h, FIELD_POOL_LO`
+
+.RAMSECTION "PilePoolHi" \
+        ALIGN 256       RETURNORG
+        pool_hi         DSB PILE_COUNT  ; the address in the card pool, hi-byte
+.ENDS
+.DEF    FIELD_POOL_HI   >piles.pool_hi  ; e.g. `ld h, FIELD_POOL_HI`
+
+.RAMSECTION "PileRow" \
+        ALIGN 256       RETURNORG
+        row             DSB PILE_COUNT  ; screen row of pile
+.ENDS
+.DEF    FIELD_ROW       >piles.row      ; e.g. `ld h, FIELD_ROW`
+
+.RAMSECTION "PileCol" \
+        ALIGN 256       RETURNORG
+        col             DSB PILE_COUNT  ; screen column of pile
+.ENDS
+.DEF    FIELD_COL       >piles.col      ; e.g. `ld h, FIELD_COL`
+
+.RAMSECTION "PileLeft" \
+        ALIGN 256       RETURNORG
+        left            DSB PILE_COUNT  ; index of pile to the left
+.ENDS
+.DEF    FIELD_LEFT      >piles.left     ; e.g. `ld h, FIELD_LEFT`
+
+.RAMSECTION "PileRight" \
+        ALIGN 256       RETURNORG
+        right           DSB PILE_COUNT  ; index of pile to the right
+.ENDS
+.DEF    FIELD_RIGHT     >piles.right    ; e.g. `ld h, FIELD_RIGHT`
+
+.RAMSECTION "PileUp" \
+        ALIGN 256       RETURNORG
+        up              DSB PILE_COUNT  ; index of pile above
+.ENDS
+.DEF    FIELD_UP        >piles.up       ; e.g. `ld h, FIELD_UP`
+
+.RAMSECTION "PileDown" \
+        ALIGN 256       RETURNORG
+        down            DSB PILE_COUNT  ; index of pile below
+.ENDS
+.DEF    FIELD_DOWN      >piles.down     ; e.g. `ld h, FIELD_DOWN`
+
+; the card pool is where the actual cards are stored; each pile contains
+; an address in the pool. the end of each card list in the pool is
+; zero-terminated to minimise the need for counting registers
+;
+.RAMSECTION "Storage"   SIZE 1024       RETURNORG
+        ;-----------------------------------------------------------------------
+        storage         DSB 1024
+.ENDS
+
+.DEF    __pool_addr     piles.storage
+
+; for the purposes of providing pre-defined pile definitions in ROM,
+; this struct is used to store (most) fields linearly
+;
+.STRUCT PileROM
+        ;-----------------------------------------------------------------------
+        type            BYTE    ; type of pile, i.e. deck, hand, foundation &c.
+        pool            WORD    ; address of storage for card pile
+        capacity        BYTE    ; max.number of cards allowed in pile, 1-based!
+        row             BYTE    ; row position on the tilemap (not pixels!)
+        col             BYTE    ; column position on the tilemap (not pixels!)
+        left            BYTE    ; index of pile to the left of this one
+        right           BYTE    ; index of pile to the right of this one
+        up              BYTE    ; index of pile above this one
+        down            BYTE    ; index of pile below this one
+.ENDST
+
+; use this macro before defining a set of piles in ROM
+; in order to reset the starting pool address
+;
+.MACRO  Begin
+;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+.REDEF  __pool_addr     piles.storage
+;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+.ENDM
+
+; this macro simplifies writing a pre-defined Pile of cards into ROM
+;
+.MACRO  Define
+;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+.DSTRUCT \1 INSTANCEOF PileROM VALUES
+        type:           .BYTE \2
+        pool:           .WORD __pool_addr
+        capacity:       .BYTE \3
+        row:            .BYTE \4        ; screen row (Y) of pile
+        col:            .BYTE \5        ; screen column (X) of pile
+        left:           .BYTE \6        ; index of pile to the left
+        right:          .BYTE \7        ; index of pile to the right
+        up:             .BYTE \8        ; index of the pile above
+        down:           .BYTE \9        ; index of the pile below
+.ENDST
+
+; move to the next available address in the pool;
+; we include an extra byte for a zero terminator
+.REDEF  __pool_addr     __pool_addr+\3+1
+
+;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+.ENDM
+
+
+.SECTION "z80_rst_20"      SIZE 8  RETURNORG
+;###############################################################################
+rst_poolAddr:                                                           ;$20
+;===============================================================================
+; given a pile index, returns the address in the
+; card pool where the pile's cards are stored:
+;
+; this is a common action, so we use an
+; RST routine for speed and compactness
+;
+; in:   L,      pile index (`INDEX_*`)
+; out:  DE      pool address of the pile, where cards are stored
+;       A, BC   (preserved)
+;       H       (clobbered) -- the current field is not retained
+;-------------------------------------------------------------------------------
+        ld      H,      FIELD_POOL_LO   ; switch field
+        ld      E,      [HL]            ; read pool-addr lo-byte
+        ld      H,      FIELD_POOL_HI   ; switch field to `pool_hi`
+        ld      D,      [HL]            ; read pool-addr hi-byte
+        ret
+;###############################################################################
+.ENDS
+
+.SECTION "z80_rst_28"      SIZE 8  RETURNORG
+;###############################################################################
+rst_cardAddr:                                                           ;$28
+;===============================================================================
+; gets the address of a specific card in a pile:
+;
+; in:   L       pile index (`INDEX_*`)
+;       A       index, 0-based, of the card in the pile
+;-------------------------------------------------------------------------------
+        rst     rst_poolAddr
+        add     E                       ; add card index to pool-addr, lo-byte
+        ld      E,      A
+        jr      nc,     +
+        inc     D
++       ret
+;###############################################################################
+.ENDS
+
+.SECTION "z80_rst_30"      SIZE 8  RETURNORG
+;###############################################################################
+rst_pileCount:                                                          ;$30
+;===============================================================================
+; get the number of cards in a pile:
+;
+; in:   L       pile index (`INDEX_*`)
+; out:  z       zero flag is set accordingly
+;       H       (clobbered) -- field will be changed to `count`
+;-------------------------------------------------------------------------------
+        ld      H,      FIELD_COUNT     ; select the count field
+        ld      A,      [HL]            ; card count for the pile
+        and     A,      A               ; set flags!
+        ret
+;###############################################################################
+.ENDS
+
+
+clear:
+;===============================================================================
+; clear all piles:
+;-------------------------------------------------------------------------------
+        xor     A                       ; (set A to zero)
+        ld      HL,     type
+        call    fill@f{PILE_COUNT}
+        ld      HL,     count
+        call    fill@f{PILE_COUNT}
+        ld      HL,     capacity
+        call    fill@f{PILE_COUNT}
+        ld      HL,     pool_lo
+        call    fill@f{PILE_COUNT}
+        ld      HL,     pool_hi
+        call    fill@f{PILE_COUNT}
+        ld      HL,     row
+        call    fill@f{PILE_COUNT}
+        ld      HL,     col
+        call    fill@f{PILE_COUNT}
+        ld      HL,     left
+        call    fill@f{PILE_COUNT}
+        ld      HL,     right
+        call    fill@f{PILE_COUNT}
+        ld      HL,     up
+        call    fill@f{PILE_COUNT}
+        ld      HL,     down
+        call    fill@f{PILE_COUNT}
+
+        ; clear the card pool, this is 1KB
+        ; (this must be zeroed because card lists must be zero-terminated)
+        ld      HL,     SECTIONSTART_piles.Storage
+        ld      BC,     SECTIONEND_piles.Storage-SECTIONSTART_piles.Storage
+        call    zero
+
+        ; when the piles are cleared, the cursor's pile must be reallocated
+        jp      cursor.init
+
+
+allocateDeck:
+;===============================================================================
+; allocates the deck: (this is always 52 cards in size)
+; the deck is populated with cards, but not shuffled
+;
+; in:   BC      address to a Pile structure (in ROM) to copy from
+;
+; out:  BC      the ROM address will have been moved over the PileROM struct
+;               allowing you to automatically use the next template in ROM
+;       L       the pile index is set to 1 (the deck is 0),
+;               useful for allocating multiple piles in order
+;-------------------------------------------------------------------------------
+        ; allocating a pile does not change the `count` field
+        ; (how many card are in the pile). we set that field
+        ; now, because `allocate` will increment L (pile index)
+        ;
+        ; select the deck pile and the count field together
+        ld      HL,     INDEX_DECK + (FIELD_COUNT <<8)
+        ld      [HL],   52
+
+        ; copy the template deck from ROM to RAM:
+        ; note that the pool address is returned in DE
+        call    allocate                ; BC = address of PileROM template
+        push    BC                      ; return next ROM address
+
+        ; fill the deck with cards:
+        ;-----------------------------------------------------------------------
+        ; calling `addCard` 52 times would be needlessly slow,
+        ; so we're going to manually write the pile size
+        ;
+        ; C will be our suit counter;
+        ; 0=spades, 1=clubs, 2=hearts, 3=diamonds
+        ld      C,      0
+@next:  ld      B,      1               ; B = our ordinal counter, 1 to 13
+
+-       ld      A,      C               ; begin with the suit 0-3
+        swap    A                       ; suit bits go in the upper nybble
+        or      B                       ; add the ordinal (1-13)
+        or      CARD_BACK               ; flip the card over!
+        ld      [DE],   A               ; store card,
+        inc     DE                      ; and move to next slot
+
+        inc     B                       ; move to the next ordinal
+        ld      A,      CARD_K          ; (need to use A for comparison)
+        cp      B                       ; have we gone past the king?
+        jr      nc,      -              ; no, continue adding cards
+
+        inc     C                       ; move to the next suit
+        bit     2,      C               ; have we hit 4?
+        jr      z,      @next           ; no, do next suit
+
+        ;-----------------------------------------------------------------------
+        pop     BC                      ; return next ROM address
+        ret
+
+
+allocate:
+;===============================================================================
+; allocates a pile where cards will be stored:
+; e.g. a deck, hand, foundation or depot, etc.
+;
+; in:   L       index of the pile (`INDEX_*`) to populate
+;
+;       BC      address of the `PileROM` template to copy
+;
+; out:  L       the next pile index will be returned,
+;               useful if you're allocating multiple piles in a row
+;
+;       DE      address of the card pool for the pile, i.e. where the "cards",
+;               each a byte, will be stored. this area will already have been
+;               cleared according to the capacity set in the template
+;
+;       BC      the ROM address will have been moved over the PileROM struct
+;               allowing you to automatically use the next template in ROM
+;
+;       A, H    (clobbered)
+;-------------------------------------------------------------------------------
+        ; copy the pile template (in ROM) over to the fields in RAM:
+        ; note that whilst the template is linear, the fields are separated
+        ; into an array for each pile, therefore we can't just copy from
+        ; source to destination easily
+        ;
+        ; first byte is the type of the Pile
+        ld      H,      FIELD_TYPE      ; switch to `type` field
+        ld      A,      [BC]            ; read data from ROM
+        ld      [HL],   A               ; write data to RAM
+        inc     BC                      ; move ROM addr forward
+        ; next two bytes are the storage address;
+        ; we put this aside in DE for later
+        ld      H,      FIELD_POOL_LO   ; switch to `pool_lo` field
+        ld      A,      [BC]            ; read data from ROM
+        ld      E,      A               ; E = pool addr lo-byte
+        ld      [HL],   A               ; write data to RAM
+        inc     BC                      ; move ROM addr forward
+        ld      H,      FIELD_POOL_HI   ; switch to `pool_hi` field
+        ld      A,      [BC]            ; read data from ROM
+        ld      D,      A               ; D = pool addr hi-byte
+        ld      [HL],   A               ; write data to RAM
+        inc     BC                      ; move ROM addr forward
+        ; then the maximum number of cards in the pile (1-based)
+        ld      H,      FIELD_CAPACITY  ; switch to `capacity` field
+        ld      A,      [BC]            ; read data from ROM
+        ld      [HL],   A               ; write data to RAM
+        inc     BC                      ; move ROM addr forward
+        ; (put aside capacity until we clear the Pile's card pool)
+        push    AF
+
+        ; next is the row/column position on the tilemap
+        ld      H,      FIELD_ROW       ; switch to `row` field
+        ld      A,      [BC]            ; read row (Y) from ROM
+        ld      [HL],   A               ; write data to RAM
+        inc     BC                      ; move ROM addr forward
+        ld      H,      FIELD_COL       ; switch to `col` field
+        ld      A,      [BC]            ; read column (X) from ROM
+        ld      [HL],   A               ; write data to RAM
+        inc     BC                      ; move ROM addr forward
+
+        ; positional data:
+        ld      H,      FIELD_LEFT      ; switch to `left` field
+        ld      A,      [BC]            ; read data from ROM
+        ld      [HL],   A               ; write data to RAM
+        inc     BC                      ; move ROM addr forward
+        ld      H,      FIELD_RIGHT     ; switch to `right` field
+        ld      A,      [BC]            ; read data from ROM
+        ld      [HL],   A               ; write data to RAM
+        inc     BC                      ; move ROM addr forward
+        ld      H,      FIELD_UP        ; switch to `up` field
+        ld      A,      [BC]            ; read data from ROM
+        ld      [HL],   A               ; write data to RAM
+        inc     BC                      ; move ROM addr forward
+        ld      H,      FIELD_DOWN      ; switch to `down` field
+        ld      A,      [BC]            ; read data from ROM
+        ld      [HL],   A               ; write data to RAM
+        inc     BC                      ; move ROM addr forward
+
+        ; clear the allocated card storage:
+        ;-----------------------------------------------------------------------
+        pop     AF                      ; retrieve max. card count
+        push    BC                      ; preserve current ROM address
+        push    DE                      ; keep original pool address
+
+        ; the cards for a pile must be zero-terminated,
+        inc     A                       ; so we add 1 to the count
+        ld      B,      A               ; copy pile capacity to counter
+        xor     A                       ; (write zeroes)
+
+-       ld      [DE],   A               ; clear one byte + increment
+        inc     DE
+        dec     B                       ; one less byte to fill
+        jr      nz, -                   ; have we done all of them?
+
+        pop     DE                      ; restore original pool address
+        pop     BC                      ; restore current ROM address
+        inc     L                       ; move to the next pile index
+        ret
+
+
+addCard:
+;===============================================================================
+; add a card to a pile:
+;
+; NOTE: does not check pile capcity! it is expected that this
+; has been validated before attempting to add a card to a pile
+;
+; in:   A       card to add (see `CARD_*` constants)
+;       L       index of pile (`INDEX_*`) to add card to
+;
+; out:  L       (preserved) -- to allow adding multiple cards in row
+;       A, BC   (preserved)
+;       DE, H   (clobbered)
+;-------------------------------------------------------------------------------
+        push    AF                      ; put aside card to add for later
+
+        rst     piles.rst_pileCount     ; how many cards already in the pile?
+        rst     piles.rst_cardAddr      ; get the address of the empty card
+
+        pop     AF                      ; retrieve card value to add
+        ld      [DE],   A               ; write card to pool
+        ld      H,      FIELD_COUNT     ; change field (not preserved)
+        inc     [HL]                    ; increase number of cards in pile
+        ret
+
+
+getLastCard:
+;===============================================================================
+; gets the value (and address) of the last (top-most) card in a pile:
+;
+; in:   L       pile index (`INDEX_*`)
+;-------------------------------------------------------------------------------
+        rst     piles.rst_pileCount
+        jr      z,      +               ; for empty piles return zero, not $FF!
+        dec     A                       ; adjust to 0-based
++       rst     rst_cardAddr            ; return last card addr (DE)
+        ld      A,      [DE]
+        ret
+
+
+getPos:
+;===============================================================================
+; retrieve the row & column co-ordinates (on the tile-map) of a pile:
+; these are tile co-ordinates, NOT pixels!
+;
+; in:   L       index (`INDEX_*`) of the pile
+;
+; out:  B       row number of the pile on the tile-map
+;       C       column number of the pile on-screen
+;               (note that these two disregard scroll position!)
+;       DE, A   (preserved)
+;       H       (clobbered)
+;-------------------------------------------------------------------------------
+        ld      H,      FIELD_ROW       ; select `row` field            ;+4=4
+        ld      B,      [HL]            ; current pile (L) screen row   ;+8=12
+        ld      H,      FIELD_COL       ; select `col` field            ;+4=16
+        ld      C,      [HL]            ; current pile (L) screen col   ;+8=22
+        ret
+
+
+move:
+;===============================================================================
+; take the cards from one pile and move them to the top of another:
+;
+; in:   L       source pile index
+;       E       destination pile index
+;       A       card index in the source pile to start from
+;               (i.e. take 2nd card onwards) -- 0 based
+;
+; out:  L       destination pile index
+;       A       destination pile updated last card index
+;       BC, DE  (clobbered)
+;       H       (clobbered) -- you should select a field before using HL!
+;-------------------------------------------------------------------------------
+        ; because we are removing all cards from the index down in
+        ; the source pile, the number of cards simply becomes the index
+        ld      H,      FIELD_COUNT
+        ld      [HL],   A
+
+        ; calculate source address:
+        ;-----------------------------------------------------------------------
+        ; from the source pile (L) get the address of the card to
+        ; copy from into BC; whilst preserving E (destination pile)
+        ;
+        ld      H,      FIELD_POOL_LO   ; switch field
+        add     A,      [HL]            ; get pool lo-byte & add card index
+        ld      C,      A
+        ld      H,      FIELD_POOL_HI   ; switch field
+        ld      B,      [HL]            ; read pool-addr hi-byte
+        jr      nc,     +
+        inc     B
++
+        ; calculate destination address:
+        ;-----------------------------------------------------------------------
+        ; get the pool address (DE) of the last card in the destination pile
+        ld      L,      E
+        push    HL
+        rst     piles.rst_pileCount     ; how many cards already in the pile?
+        rst     piles.rst_cardAddr      ; get the address of the empty card
+
+        ; move cards between piles:
+        ;-----------------------------------------------------------------------
+        ; we use BC for the source address because HL is at the destination
+        ; pile's card count and we need to increment that for each new card
+        ; added to the pile
+        ;
+        ld      H,      FIELD_COUNT
+-       ld      A,      [BC]            ; get a card form source pile
+        and     A,      A               ; (set flags!)
+        jr      z,      +               ; if zero, we've reached the end!
+
+        ld      [DE],   A               ; add card to destination pile
+        inc     DE                      ; move to next destination addr
+        inc     [HL]                    ; increment destination pile card count
+        xor     A                       ; set A to zero
+        ld      [BC],   A               ; remove card from source pile
+        inc     BC                      ; move to next card in source pile
+        jr      -
+
++       pop     HL                      ; return source pile index
+        
+        ; (callers should not rely upon the value of H,
+        ; this could theoretically change in the future)
+        ld      H,      FIELD_COUNT
+        ld      A,      [HL]            ; return last card index
+        dec     A                       ; (0-based)
+        ret
+
+
+validate:
+;===============================================================================
+; validate the piles on the tableau according to the game rules:
+;-------------------------------------------------------------------------------
+        ; let's walk the list of piles in the tableau
+        ; the pile index (L) will act as the counter
+        ld      L,      0
+        ;-----------------------------------------------------------------------
+@loop:  ld      H,      FIELD_TYPE      ; select `type` field
+        ld      A,      [HL]            ; is the pile allocated? type != 0
+        and     A,      A               ; (set flags!)
+        call    nz,     validatePile    ; validate the specific Pile
+
+        inc     L                       ; move to next Pile in the list
+        ld      A,      L
+        cp      INDEX_CURSOR            ; don't validate cards in cursor!
+        jr      nz,     @loop
+        ;-----------------------------------------------------------------------
+        ret
+
+
+validatePile:
+;===============================================================================
+; in:   L       pile index (`INDEX_*`)
+; out:  L       (preserved)
+;-------------------------------------------------------------------------------
+        ; an empty pile obviously doesn't need validating
+        rst     piles.rst_pileCount           ; (get pile count, set flags)
+        ret     z
+
+        ; if the pile is face-down, e.g. deck,
+        ; it doesn't need validation
+        ld      H,      FIELD_TYPE
+        ld      A,      [HL]
+        bit     5,      A
+        ret     z
+        ; isolate the validation type
+        and     MASK_VALID
+
+        dec     A                       ; is it '1'?
+        jp      z,      _validatePile_AcesUp
+
+        ret
+
+
+_validatePile_AcesUp:
+;===============================================================================
+; validate lowest rank of each suit:
+;
+; in:   L       pile index (`INDEX_*`)
+; out:  L       (preserved)
+;-------------------------------------------------------------------------------
+        ; the routine must return the original pile index
+        ; as it's being used as the counter over all piles
+        push    HL
+        
+        ; validate top-card:
+        ;=======================================================================
+        ; since only the top-most card requires specific validation,
+        ; we start with the last card in the pile
+        rst     piles.rst_pileCount
+        ld      C,      A               ; use the card count as 1-based counter
+        dec     A                       ; adjust index to 0-based for access
+        rst     piles.rst_cardAddr      ; get address of last card into DE
+        
+        ; we need to compare our card with the other depots;
+        ; first extract the suit; we can't use the rank yet
+        ld      A,      [DE]            ; get value of last card
+        and     MASK_SUIT               ; isolate suit bits
+        ld      B,      A               ; B = source suit
+
+        ; check the depots:
+        ;-----------------------------------------------------------------------
+        ; is our card lower than any other card of the same suit on top of
+        ; the other depots? we don't make an effort to avoid checking the
+        ; same depot as our card as it won't be considered lower
+        ;
+        ; since only Aces Up uses this type of validation (so far), we know
+        ; we don't need to check the validation-type of every other pile;
+        ; just the first four depots are relevant
+        ;
+        ; note that once a valid match has been found (c+),
+        ; we skip checking the other depots (`call nc, ...`)
+        ld      L,      INDEX_DEPOT1
+        call            @cp
+        ld      L,      INDEX_DEPOT2
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT3
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT4
+        call    nc,     @cp
+
+        ; read the source card value once more
+        ld      A,      [DE]
+        ; flip the carry due to the $80->$00
+        ; ordering of the tiles in VRAM
+        ccf
+        ; shift the carry (result bit) into bit 0,
+        ; pushing the old validity bit off
+        rla
+        ; now rotate the byte back so that bit 0
+        ; (the new validity bit) becomes bit 7
+        rrca
+        ; finally, update the pile
+        ; with the validation result
+        ld      [DE],   A
+
+        ; all other cards in the pile are automatically invalid:
+        ;=======================================================================
+-       dec     C
+        jr      z,      +
+        dec     DE
+        ld      A,      [DE]
+        or      CARD_INVALID
+        ld      [DE],   A
+        jr      -
+
++       pop     HL
+        ret
+
+        ;=======================================================================
+        ; compare cards:
+        ;
+        ; given the Pile to compare *against*, fetch the top card
+        ; of *that* pile. we have to preserve DE whilst doing this
+        ;
+@cp:    rst     piles.rst_pileCount     ; number of cards in pile, 1-based
+        ret     z                       ; skip depot if empty!
+        dec     A                       ; correct count to 0-based
+        push    AF
+        ld      H,      FIELD_POOL_LO   ; switch field
+        ld      A,      [HL]            ; read pool-addr lo-byte
+        ld      H,      FIELD_POOL_HI   ; switch field
+        ld      H,      [HL]            ; read pool-addr hi-byte
+        ld      L,      A
+        pop     AF
+        add     A,      L
+        ld      L,      A
+        jr      nc,     +
+        inc     H
++       ld      A,      [HL]            ; read the last card in the pile
+
+        ; compare suits:
+        ;
+        ; we compare suits using XOR so that carry is
+        ; unaffected. if the suits match, zero is set
+        and     MASK_SUIT
+        xor     B                       ; compare suits
+        ret     nz                      ; exit if they don't match
+
+        ; compare ranks:
+        ;
+        ; unfortunately we have our registers back-to-front so that,
+        ; if were were to put the original rank in C, we'd be looking
+        ; for the higher value, not the lower one. do some register
+        ; juggling to get the comparison the right way around...
+        ;
+        push    BC
+
+        ld      A,      [HL]            ; read the last depot card
+        sub     2                       ; wrap A low to A high!
+        and     MASK_RANK               ; (isolate the rank)
+        ld      C,      A               ; swap sides
+
+        ld      A,      [DE]            ; get our original card again
+        sub     2                       ; wrap A low to A high!
+        and     MASK_RANK               ; (isolate the rank)
+
+        cp      C                       ; if depot card is higher,
+
+        pop     BC
+        ret                             ; return carry!

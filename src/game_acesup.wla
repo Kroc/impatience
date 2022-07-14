@@ -2,10 +2,6 @@
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
 ; create template card piles for the intial setup of the game:
-; NOTE: this table must not cross a page boundary!
-;
-.SECTION "AcesUpPiles"          BITWINDOW 8     RETURNORG
-;###############################################################################
 ;
 ;       .---.   .---. .---. .---. .---.
 ;       |DCK|   | D | | D | | D | | D |
@@ -16,43 +12,41 @@
 ;       |   |
 ;       '---'
 ;
-tableau.BeginPiles
+piles.Begin
         ; label,                type, max-cards,
         ; row,                  col,
         ; pile-left,            pile-right,
         ; pile-up,              pile-down
-tableau.DefinePile \
+piles.Define \
         acesup_deck,            PILE_DECK, 52, \
         1,                      TABLEAU_LEFT + 1, \
-        tableau.depot4,         tableau.depot1, \
-        tableau.deck,           tableau.deck
-tableau.DefinePile \
+        INDEX_DEPOT4,           INDEX_DEPOT1, \
+        INDEX_DECK,             INDEX_DECK
+piles.Define \
         acesup_discard,         PILE_DISCARD, 52, \
         7,                      TABLEAU_LEFT + 1, \
-        tableau.depot4,         tableau.depot1, \
-        tableau.deck,           tableau.discard
-tableau.DefinePile \
+        INDEX_DEPOT4,           INDEX_DEPOT1, \
+        INDEX_DECK,             INDEX_DISCARD
+piles.Define \
         acesup_depot1,          PILE_COLUMN | VALID_ACESUP, 13, \
         1,                      TABLEAU_LEFT + 5, \
-        tableau.deck,           tableau.depot2, \
-        tableau.depot1,         tableau.depot1
-tableau.DefinePile \
+        INDEX_DECK,             INDEX_DEPOT2, \
+        INDEX_DEPOT1,           INDEX_DEPOT1
+piles.Define \
         acesup_depot2,          PILE_COLUMN | VALID_ACESUP, 13, \
         1,                      TABLEAU_LEFT + 8 \
-        tableau.depot1,         tableau.depot3, \
-        tableau.depot2,         tableau.depot2
-tableau.DefinePile \
+        INDEX_DEPOT1,           INDEX_DEPOT3, \
+        INDEX_DEPOT2,           INDEX_DEPOT2
+piles.Define \
         acesup_depot3,          PILE_COLUMN | VALID_ACESUP, 13, \
         1,                      TABLEAU_LEFT + 11 \
-        tableau.depot2,         tableau.depot4, \
-        tableau.depot3,         tableau.depot3
-tableau.DefinePile \
+        INDEX_DEPOT2,           INDEX_DEPOT4, \
+        INDEX_DEPOT3,           INDEX_DEPOT3
+piles.Define \
         acesup_depot4,          PILE_COLUMN | VALID_ACESUP, 13, \
         1,                      TABLEAU_LEFT + 14 \
-        tableau.depot3,         tableau.deck, \
-        tableau.depot4,         tableau.depot4
-;###############################################################################
-.ENDS
+        INDEX_DEPOT3,           INDEX_DECK, \
+        INDEX_DEPOT4,           INDEX_DEPOT4
 
 
 init:
@@ -67,48 +61,46 @@ init:
 
         ; setup the tableau layout for the game
         ;-----------------------------------------------------------------------
-        ; completely clear the table of cards, both the piles and the storage
-        ; pool of all cards on the table. DE will be set to the beginning
-        ; of the storage pool, as needed by the allocation routines
+        ; completely clear the table of cards, both the piles
+        ; and the storage pool of all cards on the table
         ;
-        call    tableau.clearPiles
+        call    piles.clear
 
-        ; allocate the deck:
         ld      BC,     acesup_deck
-        call    tableau.allocateDeck
-        call    tableau.allocatePile    ; (and discard pile)
+        call    piles.allocateDeck      ; allocate the deck,
+        call    piles.allocate          ; and discard pile
 
         ; allocate the depots:
-        ld      HL,     tableau.depot1
-        call    tableau.allocatePile
-        call    tableau.allocatePile    ; depot 2, 3 & 4 all follow in order,
-        call    tableau.allocatePile    ; so we don't need to set HL & BC again
-        call    tableau.allocatePile
+        ld      L,      INDEX_DEPOT1    ; (skip `INDEX_HAND`)
+        call    piles.allocate
+        call    piles.allocate          ; depot 2, 3 & 4 all follow in order,
+        call    piles.allocate          ; so we don't need to set HL & BC again
+        call    piles.allocate
 
         ;-----------------------------------------------------------------------
-        ld      HL,     tableau.depot1
+        ld      L,      INDEX_DEPOT1
         ld      A,      CARD_J | SUIT_CLUB
-        call    tableau.addCard
+        call    piles.addCard
         ld      A,      CARD_3 | SUIT_SPADE
-        call    tableau.addCard
+        call    piles.addCard
 
-        ld      HL,     tableau.depot2
+        ld      L,      INDEX_DEPOT2
         ld      A,      CARD_X | SUIT_HEART
-        call    tableau.addCard
+        call    piles.addCard
         ld      A,      CARD_4 | SUIT_SPADE
-        call    tableau.addCard
+        call    piles.addCard
 
-        ld      HL,     tableau.depot3
+        ld      L,      INDEX_DEPOT3
         ld      A,      CARD_2 | SUIT_SPADE
-        call    tableau.addCard
+        call    piles.addCard
         ld      A,      CARD_6 | SUIT_CLUB
-        call    tableau.addCard
+        call    piles.addCard
 
-        ld      HL,     tableau.depot4
+        ld      L,      INDEX_DEPOT4
         ld      A,      CARD_A | SUIT_SPADE
-        call    tableau.addCard
+        call    piles.addCard
         ld      A,      CARD_3 | SUIT_DIAMOND
-        call    tableau.addCard
+        call    piles.addCard
 
         ;-----------------------------------------------------------------------
         call    tableau.refresh
@@ -117,5 +109,5 @@ init:
         rst     rst_screenOn
 
         ; move the cursor to the bottom card in the first depot pile
-        ld      HL,     tableau.depot1
+        ld      L,      INDEX_DEPOT1
         jp      cursor.pointToPile

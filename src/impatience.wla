@@ -60,9 +60,9 @@ init:
         call    sprites.init
         call    tilemap.init
 
-        ;;call    acesup.init
+        call    acesup.init
         ;;call    fortunes.init
-        call    klondike.init
+        ;;call    klondike.init
 
         ; play loop:
         ;=======================================================================
@@ -206,6 +206,7 @@ fill:
 .INC    "strings.wla"           ; string & text routines
 .INC    "tilemap.wla"           NAMESPACE "tilemap"
 .INC    "menu.wla"              NAMESPACE "menu"
+.INC    "piles.wla"             NAMESPACE "piles"
 .INC    "tableau.wla"           NAMESPACE "tableau"
 .INC    "sprites.wla"           NAMESPACE "sprites"
 .INC    "cursor.wla"            NAMESPACE "cursor"

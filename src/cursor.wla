@@ -20,9 +20,9 @@
         ;-----------------------------------------------------------------------
         mode            BYTE            ; to control different cursor behaviour
         ;-----------------------------------------------------------------------
-        ; the address of the Pile struct that the cursor is pointing to;
-        ; e.g. deck / depot; $0000 if cursor is free
-        pile_point      WORD
+        ; the index of the Pile struct that the cursor is pointing to;
+        ; e.g. deck / depot
+        pile_point      BYTE
         ; the number of the card in the pile the cursor is pointing at.
         ; note that this is 0-based and not 1-based like the pile size!
         card_point      BYTE
@@ -30,23 +30,17 @@
         temp            BYTE
         ;-----------------------------------------------------------------------
         ; when the cursor picks up a pile of cards, they are removed from
-        ; the original pile and have to be stored elsewhere, so this Pile
-        ; exist specifically for the cards in the cursor's hand. the storage
-        ; pool is not used so that the cursor's pile has a fixed address
+        ; the original pile and have to be stored elsewhere, so this pool
+        ; exists specifically for the cards in the cursor's hand. the storage
+        ; pool is not used so that the cursor's pool has a fixed address
         ; that makes it easier to work with
         ;
         ; TODO: is 13 cards enough? what's the largest pile
-        ;       that can be picked up in a game?
-        ;       (note sprites are limited to 12 cards!)
-        hand_pile       INSTANCEOF Pile
+        ;       (note sprites limit us to 12 cards!)
         hand_cards      DSB 13+1         ; +1 for zero-terminator!
 .ENDS
 
 ; the pile used to hold cards in the hand needs a template;
-; we need to ensure that this template doesn't cross an 8-bit boundary
-;
-.SECTION "CursorPiles"          BITWINDOW 8     RETURNORG
-;###############################################################################
 ; force this template to use the fixed pool address!
 .REDEF  __pool_addr             cursor.hand_cards
 
@@ -54,13 +48,11 @@
         ; row,                  col,
         ; pile-left,            pile-right,
         ; pile-up,              pile-down
-tableau.DefinePile \
+piles.Define \
         pile_template,          PILE_COLUMN | PILE_HORZ, 13, \
         TILEMAP_HEIGHT-4,       TABLEAU_LEFT + 1, \
         0,                      0, \
         0,                      0
-;###############################################################################
-.ENDS
 
 
 init:
@@ -96,8 +88,8 @@ init:
         ; configure the pile for holding cards in the cursor hand
         ;-----------------------------------------------------------------------
         ld      BC,     pile_template   ; the ROM template to copy from
-        ld      HL,     hand_pile       ; where to copy the template in RAM
-        jp      tableau.allocatePile
+        ld      L,      INDEX_CURSOR    ; which pile to allocate
+        jp      piles.allocate
 
 
 clearHand:
@@ -111,7 +103,7 @@ clearHand:
 ;       A, HL   (clobbered)
 ;-------------------------------------------------------------------------------
         xor     A                       ; (set A to zero)
-        ld      HL,     hand_pile.count ; set the pile card count to zero
+        ld      HL,     piles.count+INDEX_CURSOR
         ld      [HL],   A
         ; zero out the list of cards in the private cursor pool
         ld      HL,     hand_cards
@@ -234,20 +226,18 @@ update:
 
 getPointPile:
 ;===============================================================================
-; returns the address of the Pile struct the cursor is pointing to:
+; returns the index of the Pile struct the cursor is pointing to:
 ;
-; out:  HL      address of the Pile the cursor is pointing at
-;       A       card number being pointed to, 0-based
-;       DE      (preserved)
+; out:  L       index of the pile the cursor is pointing at
+;       A       card index being pointed to, 0-based
+;       BC, DE  (preserved)
+;       H       (clobbered) -- select a field before using HL!
 ;-------------------------------------------------------------------------------
-        ; retrieve address of pile being pointed at
+        ; retrieve index of pile being pointed at
         ld      HL,     pile_point
-        ld      A,      [HL+]           ; read pile address, lo-byte
-        ld      H,      [HL]            ; read pile address, hi-byte
-        ld      L,      A
+        ld      L,      [HL]
         ; retrieve card number being pointed to
         ld      A,      [card_point]
-
         ret
 
 
@@ -257,17 +247,13 @@ moveLeft:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; retrieve current pile location (HL)
+        ; retrieve current pile index (L)
         call    getPointPile
 
-        ; move to the field that contains the pile to the left
-        ld      BC,     Pile.left
-        add     HL,     BC
-        ; read the lo-byte of the address of the pile to the left
+        ; select the field that contains the pile to the left
+        ld      H,      FIELD_LEFT
+        ; read the index of the the pile to the left
         ld      L,      [HL]
-        ; set the hi-byte for the piles
-        ld      H,      >tableau.layout
-
         ; move to the default card in the next pile
         jp      pointToPile
 
@@ -278,17 +264,13 @@ moveRight:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; retrieve current pile location (HL)
+        ; retrieve current pile index (L)
         call    getPointPile
 
-        ; move to the field that contains the pile to the right
-        ld      BC,     Pile.right
-        add     HL,     BC
-        ; read the lo-byte of the address of the pile to the right
+        ; select the field that contains the pile to the right
+        ld      H,      FIELD_RIGHT
+        ; read the index of the pile to the right
         ld      L,      [HL]
-        ; set the fixed hi-byte for the piles
-        ld      H,      >tableau.layout
-
         ; move to the default card in the next pile
         jp      pointToPile
 
@@ -300,13 +282,13 @@ moveUp:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; retrieve current pile location (HL),
+        ; retrieve current pile index (L),
         ; and the card index being pointed at (A)
         call    getPointPile
 
-        ; first byte is the type of Pile;
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; there are no cards to step through, just move to the next pile
+        ld      H,      FIELD_TYPE
         bit     7,      [HL]            ; =PILE_STACK?
         jr      nz,     @pile
 
@@ -320,10 +302,8 @@ moveUp:
 
         ; move up to the next pile:
         ;-----------------------------------------------------------------------
-@pile:  ld      BC,     Pile.up         ; read the `up` field that
-        add     HL,     BC              ;  tells us the pile to move to
-        ld      L,      [HL]            ; (read the lo-byte of the Pile)
-        ld      H,      >tableau.layout ; the hi-byte is fixed
+@pile:  ld      H,      FIELD_UP        ; read the `up` field that
+        ld      L,      [HL]            ;  tells us the pile to move to
         jp      pointToPile
 
 
@@ -334,19 +314,17 @@ moveDown:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        call    getPointPile            ; retrieve current pile location
+        call    getPointPile            ; retrieve current pile index
         ld      C,      A               ; card number pointed at (0-based)
 
-        ; first byte is the type of Pile;
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; there are no cards to step through, just move to the next pile
+        ld      H,      FIELD_TYPE
         bit     7,      [HL]            ; =PILE_STACK?
         jr      nz,     @pile
 
         ; get the number of cards in the pile
-        inc     L                       ; skip `type` field
-        ld      A,      [HL-]           ; read `count` field & rewind HL
-        and     A,      A               ; (set flags!)
+        rst     piles.rst_pileCount
         ; if there are no cards in the pile
         ; we can move to the pile below
         jr      z,      @pile
@@ -357,10 +335,8 @@ moveDown:
         ; add 1 to the card index to be able to move to the next card, *if*
         ; we're not at the end of the pile
         ;
-@col:   inc     L                       ; move to `count` field in Pile
-        ld      A,      [HL-]           ; read card count (1-based) & rewind
-        inc     C                       ; adjust pointed-to card index
-        cp      C                       ; to 1-based and compare with count
+@col:   inc     C                       ; adjust pointed-to card index
+        cp      C                       ;  to 1-based and compare with count
 
         ; if they are not equal, the pointer has not reached the top of
         ; the pile (visually, bottom on screen). move the cursor to the
@@ -369,10 +345,8 @@ moveDown:
 
         ; move down to the next pile:
         ;-----------------------------------------------------------------------
-@pile:  ld      BC,     Pile.down       ; read the `down` field that
-        add     HL,     BC              ;  tells us the pile to move to
-        ld      L,      [HL]            ; (read the lo-byte of the Pile)
-        ld      H,      >tableau.layout ; hi-byte is fixed
+@pile:  ld      H,      FIELD_DOWN      ; read the `down` field that
+        ld      L,      [HL]            ;  tells us the pile to move to
 
         ; fall through to below
         ; to point to the new pile!
@@ -383,18 +357,14 @@ pointToPile:
 ; move the cursor to a specific pile, pointing to the default card,
 ; e.g. on columns this is the face-up card furthest down the screen
 ;
-; in:   HL      address of the Pile structure
+; in:   L       index (`INDEX_*`) of the pile to point to
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         ; if there are zero cards in the pile, the default card is 0
-        inc     L
-        ld      A,      [HL-]           ; read `count` field
-        and     A,      A               ; (set flags!)
+        rst     piles.rst_pileCount     ; get pile count, set flags
         jr      z,      pointToCard     ; =0? point to it
 
         ; column piles must point to the last card:
-        inc     L                       ; skip `type` field
-        ld      A,      [HL-]           ; read `count` field
         dec     A                       ; (adjust to 0-based)
         
         ; fall through below
@@ -417,21 +387,18 @@ pointToCard:
         ld      [card_point],   A
         ; (also put in a register for later comparison)
         ld      C,              A
-        ; save the address of the pile to point to:
+        ; save the index of the pile to point to:
         ld      A,              L
-        ld      [pile_point+LO],A
-        ld      A,              H
-        ld      [pile_point+HI],A
+        ld      [pile_point],   A
 
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; we point to the top of the pile without counting cards
+        ld      H,      FIELD_TYPE
         bit     7,      [HL]            ; =PILE_STACK?
         jr      nz,     @empty          ; TODO: the deck is slightly raised
 
         ; is the pile empty?
-        inc     L
-        ld      A,      [HL-]           ; read pile count
-        and     A,      A               ; (set flags)
+        rst     piles.rst_pileCount     ; get pile count, set flags
         jr      z,      @empty
 
         ; for a spread, the cursor will be positioned
@@ -456,7 +423,7 @@ pointToCard:
 
         ; retrieve the row/column of the pile
         ;-----------------------------------------------------------------------
-@pos:   call    tableau.getPilePos      ; get Pile row (B) & col (C)
+@pos:   call    piles.getPos            ; get Pile row (B) & col (C)
 
         ; we will always be pointing to the horizontal middle of the card;
         ; in the case of face-up cards, we want to point to the space
@@ -525,7 +492,7 @@ moveToScrXY:
 ; move the cursor to a specific X/Y position on the screen, in pixels:
 ;
 ; the move isn't instant, it'll move over several frames until it reaches
-; its destination. another position can be set even whilst in motion
+; its destination; another position can be set even whilst in motion
 ;
 ; in:   B       Y position to move the cursor to
 ;       C       X position to move the cursor to
@@ -566,30 +533,30 @@ pickPile:
 ; currently pointed to, down to the top of the pile
 ;
 ;-------------------------------------------------------------------------------
-        ; retrieve current pile location (HL),
+        ; retrieve current pile index (L),
         ; and the card index being pointed at (A)
         call    getPointPile
-        ld      C,      A
+        ld      C,      A               ; put aside for later
 
         ; is the pile empty?
         ;-----------------------------------------------------------------------
-        inc     L
-        ld      A,      [HL-]           ; read card count
-        and     A,      A               ; (set flags!)
+        rst     piles.rst_pileCount     ; (get pile card count, set flags)
         jp      z,      @err            ; if pile is empty, exit
 
         ; TODO: validate pick
 
-        ; move pile to cursor's pile:
+        ; move cards to cursor's pile:
         ;-----------------------------------------------------------------------
         ; move all the cards in the source pile, from
         ; the index card down, to the cursor's pile:
-        ld      DE,     hand_pile
-        ld      A,      C
-        ; the destination pile's address is returned in HL, and the 
-        ; destination pile's pool address in DE, which is where we
-        ; want to start creating sprites from
-        call    tableau.movePile
+        ld      E,      INDEX_CURSOR    ; destination pile
+        ld      A,      C               ; card index to start from
+        call    piles.move
+
+        ; after the move, the destination pile's index is returned in L.
+        ; get the destination pile's pool address in DE, which is where
+        ; we want to start creating sprites from
+        rst     piles.rst_poolAddr
 
         ; initialise sprites:
         ;-----------------------------------------------------------------------
@@ -598,7 +565,8 @@ pickPile:
         ld      [sprites.attrs.1.tile], A
         ld      A,      SPRITE_HOLD_RHS
         ld      [sprites.attrs.2.tile], A
-        ; change the cursor mode so that the cards move with the cursor
+        ; change the cursor mode so that 
+        ; the cards move with the cursor
         ld      HL,     mode
         ld      [HL],   MODE_HOLD
 
@@ -648,7 +616,7 @@ pickPile:
         ld      A,      SPRITE_CARD_12X2; this one has a fixed sprite tile
         ld      [HL-],  A
         ld      A,      C               ; position this sprite next
-        add     A,      8               ; to the previous one
+        add     A,      8               ;  to the previous one
         ld      [HL-],  A               ; write sprite X-position
         ld      A,      B
         ld      [HL-],  A               ; write sprite Y-position
@@ -664,7 +632,7 @@ pickPile:
         add     SPRITE_CARD_12X3        ; offset the tile with the suit
         ld      [HL-],  A
         ld      A,      C               ; position this sprite next
-        add     A,      16              ; to the previous one
+        add     A,      16              ;  to the previous one
         ld      [HL-],  A               ; write sprite X-position
         ld      A,      B
         ld      [HL-],  A               ; write sprite Y-position
@@ -745,6 +713,7 @@ pickPile:
         ; of one card may affect the validation of other piles which would
         ; also need redrawing
         call    tableau.refresh
+
         ; compare the display buffers and queue
         ; the changes to be made during vblank
         jp      tilemap.update
@@ -767,21 +736,22 @@ dropPile:
         call    clearSprites
 
         ; retrieve current pile being pointed at
-        ; into DE, as it's the destination
+        ; into E, as it's the destination
         ld      HL,     pile_point
-        ld      E,      [HL]            ; read pile address, lo-byte
-        inc     L
-        ld      D,      [HL]            ; read pile address, hi-byte
-
+        ld      E,      [HL]
+        
         ; move the pile of cards in the cursor's hand
         ; on to the top of the pile being pointed at
-        ld      HL,     hand_pile
+        ld      L,      INDEX_CURSOR
         xor     A                       ; A = 0, move all cards in hand
-        call    tableau.movePile
+        call    piles.move
 
         ; with the pile changed, the cursor needs
         ; to be moved again to the top of the pile
-        call    pointToCard
+        rst     piles.rst_pileCount
+        jr      z,      +
+        dec     A
++       call    pointToCard
 
         ; redraw the entire tableau; this may seem overkill but the removal
         ; of one card may affect the validation of other piles which would

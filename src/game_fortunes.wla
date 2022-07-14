@@ -2,10 +2,6 @@
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
 ; create template card piles for the intial setup of the game:
-; NOTE: this table must not cross a page boundary!
-;
-.SECTION "FortunesPiles"        BITWINDOW 8     RETURNORG
-;###############################################################################
 ;
 ;       .---. .---. .---. .---. .---. .---.
 ;       |DCK| |DSC| | F | | F | | F | | F |
@@ -20,112 +16,110 @@
 ;       | 7 | | 8 | | 9 | | 10| | 11| | 12|
 ;       '---' '---' '---' '---' '---' '---'
 ;
-tableau.BeginPiles
+piles.Begin
         ; label,                type, max-cards,
         ; row,                  col,
         ; pile-left,            pile-right,
         ; pile-up,              pile-down
-tableau.DefinePile \
+piles.Define \
         fortunes_deck,          PILE_DECK, 52, \
         1,                      TABLEAU_LEFT + 1, \
-        tableau.foundation4,    tableau.discard, \
-        tableau.depot7,         tableau.depot1
-tableau.DefinePile \
+        INDEX_FOUNDATION4,      INDEX_DISCARD, \
+        INDEX_DEPOT7,           INDEX_DEPOT1
+piles.Define \
         fortunes_discard,       PILE_DISCARD, 52, \
         1,                      TABLEAU_LEFT + 4, \
-        tableau.deck,           tableau.foundation1, \
-        tableau.depot8,         tableau.depot2
+        INDEX_DECK,             INDEX_FOUNDATION1, \
+        INDEX_DEPOT8,           INDEX_DEPOT2
 ;
 ; foundations:
 ;
-tableau.DefinePile \
+piles.Define \
         fortunes_foundation1,   PILE_FOUNDATION, 13, \
         1,                      TABLEAU_LEFT + 7, \
-        tableau.discard,        tableau.foundation2, \
-        tableau.depot9,         tableau.depot3
-tableau.DefinePile \
+        INDEX_DISCARD,          INDEX_FOUNDATION2, \
+        INDEX_DEPOT9,           INDEX_DEPOT3
+piles.Define \
         fortunes_foundation2,   PILE_FOUNDATION, 13, \
         1,                      TABLEAU_LEFT + 10, \
-        tableau.foundation1,    tableau.foundation3, \
-        tableau.depot10,        tableau.depot4
-tableau.DefinePile \
+        INDEX_FOUNDATION1,      INDEX_FOUNDATION3, \
+        INDEX_DEPOT10,          INDEX_DEPOT4
+piles.Define \
         fortunes_foundation3,   PILE_FOUNDATION, 13, \
         1,                      TABLEAU_LEFT + 13, \
-        tableau.foundation2,    tableau.foundation4, \
-        tableau.depot11,        tableau.depot5
-tableau.DefinePile \
+        INDEX_FOUNDATION2,      INDEX_FOUNDATION4, \
+        INDEX_DEPOT11,          INDEX_DEPOT5
+piles.Define \
         fortunes_foundation4,   PILE_FOUNDATION, 13, \
         1,                      TABLEAU_LEFT + 16, \
-        tableau.foundation3,    tableau.deck, \
-        tableau.depot12,        tableau.depot6
+        INDEX_FOUNDATION3,      INDEX_DECK, \
+        INDEX_DEPOT12,          INDEX_DEPOT6
 ;
 ; first row of depots:
 ;
-tableau.DefinePile \
+piles.Define \
         fortunes_depot1,        PILE_COLUMN | VALID_FORTUNES, 1, \
         7,                      TABLEAU_LEFT + 1, \
-        tableau.depot6,         tableau.depot2, \
-        tableau.deck,           tableau.depot7
-tableau.DefinePile \
+        INDEX_DEPOT6,           INDEX_DEPOT2, \
+        INDEX_DECK,             INDEX_DEPOT7
+piles.Define \
         fortunes_depot2,        PILE_COLUMN | VALID_FORTUNES, 1, \
         7,                      TABLEAU_LEFT + 4, \
-        tableau.depot1,         tableau.depot3, \
-        tableau.discard,        tableau.depot8
-tableau.DefinePile \
+        INDEX_DEPOT1,           INDEX_DEPOT3, \
+        INDEX_DISCARD,          INDEX_DEPOT8
+piles.Define \
         fortunes_depot3,        PILE_COLUMN | VALID_FORTUNES, 1, \
         7,                      TABLEAU_LEFT + 7, \
-        tableau.depot2,         tableau.depot4, \
-        tableau.foundation1,    tableau.depot9
-tableau.DefinePile \
+        INDEX_DEPOT2,           INDEX_DEPOT4, \
+        INDEX_FOUNDATION1,      INDEX_DEPOT9
+piles.Define \
         fortunes_depot4,        PILE_COLUMN | VALID_FORTUNES, 1, \
         7,                      TABLEAU_LEFT + 10, \
-        tableau.depot3,         tableau.depot5, \
-        tableau.foundation2,    tableau.depot10
-tableau.DefinePile \
+        INDEX_DEPOT3,           INDEX_DEPOT5, \
+        INDEX_FOUNDATION2,      INDEX_DEPOT10
+piles.Define \
         fortunes_depot5,        PILE_COLUMN | VALID_FORTUNES, 1, \
         7,                      TABLEAU_LEFT + 13, \
-        tableau.depot4,         tableau.depot6, \
-        tableau.foundation3,    tableau.depot11
-tableau.DefinePile \
+        INDEX_DEPOT4,           INDEX_DEPOT6, \
+        INDEX_FOUNDATION3,      INDEX_DEPOT11
+piles.Define \
         fortunes_depot6,        PILE_COLUMN | VALID_FORTUNES, 1, \
         7,                      TABLEAU_LEFT + 16, \
-        tableau.depot5,         tableau.depot1, \
-        tableau.foundation4,    tableau.depot12
+        INDEX_DEPOT5,           INDEX_DEPOT1, \
+        INDEX_FOUNDATION4,      INDEX_DEPOT12
 ;
 ; second row of depots:
 ;
-tableau.DefinePile \
+piles.Define \
         fortunes_depot7,        PILE_COLUMN | VALID_FORTUNES, 1, \
         12,                     TABLEAU_LEFT + 1, \
-        tableau.depot12,        tableau.depot8, \
-        tableau.depot1,         tableau.deck
-tableau.DefinePile \
+        INDEX_DEPOT12,          INDEX_DEPOT8, \
+        INDEX_DEPOT1,           INDEX_DECK
+piles.Define \
         fortunes_depot8,        PILE_COLUMN | VALID_FORTUNES, 1, \
         12,                     TABLEAU_LEFT + 4, \
-        tableau.depot7,         tableau.depot9, \
-        tableau.depot2,         tableau.discard
-tableau.DefinePile \
+        INDEX_DEPOT7,           INDEX_DEPOT9, \
+        INDEX_DEPOT2,           INDEX_DISCARD
+piles.Define \
         fortunes_depot9,        PILE_COLUMN | VALID_FORTUNES, 1, \
         12,                     TABLEAU_LEFT + 7, \
-        tableau.depot8,         tableau.depot10, \
-        tableau.depot3,         tableau.foundation1
-tableau.DefinePile \
+        INDEX_DEPOT8,           INDEX_DEPOT10, \
+        INDEX_DEPOT3,           INDEX_FOUNDATION1
+piles.Define \
         fortunes_depot10,       PILE_COLUMN | VALID_FORTUNES, 1, \
         12,                     TABLEAU_LEFT + 10, \
-        tableau.depot9,         tableau.depot11, \
-        tableau.depot4,         tableau.foundation2
-tableau.DefinePile \
+        INDEX_DEPOT9,           INDEX_DEPOT11, \
+        INDEX_DEPOT4,           INDEX_FOUNDATION2
+piles.Define \
         fortunes_depot11,       PILE_COLUMN | VALID_FORTUNES, 1, \
         12,                     TABLEAU_LEFT + 13, \
-        tableau.depot10,        tableau.depot12, \
-        tableau.depot5,         tableau.foundation3
-tableau.DefinePile \
+        INDEX_DEPOT10,          INDEX_DEPOT12, \
+        INDEX_DEPOT5,           INDEX_FOUNDATION3
+piles.Define \
         fortunes_depot12,       PILE_COLUMN | VALID_FORTUNES, 1, \
         12,                     TABLEAU_LEFT + 16, \
-        tableau.depot11,        tableau.depot7, \
-        tableau.depot6,         tableau.foundation4
-;###############################################################################
-.ENDS
+        INDEX_DEPOT11,          INDEX_DEPOT7, \
+        INDEX_DEPOT6,           INDEX_FOUNDATION4
 
 
 init:
@@ -140,88 +134,86 @@ init:
 
         ; setup the tableau layout for the game
         ;-----------------------------------------------------------------------
-        ; completely clear the table of cards, both the piles and the storage
-        ; pool of all cards on the table. DE will be set to the beginning
-        ; of the storage pool, as needed by the allocation routines
+        ; completely clear the table of cards, both the piles
+        ; and the storage pool of all cards on the table
         ;
-        call    tableau.clearPiles
+        call    piles.clear
 
-        ; allocate the deck:
         ld      BC,     fortunes_deck
-        call    tableau.allocateDeck
-        ; (and discard pile)
-        call    tableau.allocatePile
+        call    piles.allocateDeck      ; allocate the deck,
+        call    piles.allocate          ; and discard pile
         ; allocate the foundations:
-        call    tableau.allocatePile    ; foundation 1
-        call    tableau.allocatePile    ; foundation 2
-        call    tableau.allocatePile    ; foundation 3
-        call    tableau.allocatePile    ; foundation 4
+        ld      L,      INDEX_FOUNDATION1
+        call    piles.allocate          ; foundation 1
+        call    piles.allocate          ; foundation 2
+        call    piles.allocate          ; foundation 3
+        call    piles.allocate          ; foundation 4
         ; allocate the depots:
-        call    tableau.allocatePile    ; depot 1
-        call    tableau.allocatePile    ; depot 2
-        call    tableau.allocatePile    ; depot 3
-        call    tableau.allocatePile    ; depot 4
-        call    tableau.allocatePile    ; depot 5
-        call    tableau.allocatePile    ; depot 6
-        call    tableau.allocatePile    ; depot 7
-        call    tableau.allocatePile    ; depot 8
-        call    tableau.allocatePile    ; depot 9
-        call    tableau.allocatePile    ; depot 10
-        call    tableau.allocatePile    ; depot 11
-        call    tableau.allocatePile    ; depot 12
+        call    piles.allocate          ; depot 1
+        call    piles.allocate          ; depot 2
+        call    piles.allocate          ; depot 3
+        call    piles.allocate          ; depot 4
+        call    piles.allocate          ; depot 5
+        call    piles.allocate          ; depot 6
+        call    piles.allocate          ; depot 7
+        call    piles.allocate          ; depot 8
+        call    piles.allocate          ; depot 9
+        call    piles.allocate          ; depot 10
+        call    piles.allocate          ; depot 11
+        call    piles.allocate          ; depot 12
 
         ; populate sample cards
         ;-----------------------------------------------------------------------
-        ld      HL,     tableau.foundation1
+        ld      L,      INDEX_FOUNDATION1
         ld      A,      CARD_A | SUIT_CLUB
-        call    tableau.addCard
-        ld      HL,     tableau.foundation2
+        call    piles.addCard
+        ld      L,      INDEX_FOUNDATION2
         ld      A,      CARD_A | SUIT_SPADE
-        call    tableau.addCard
-        ld      HL,     tableau.foundation3
+        call    piles.addCard
+        ld      L,      INDEX_FOUNDATION3
         ld      A,      CARD_A | SUIT_HEART
-        call    tableau.addCard
-        ld      HL,     tableau.foundation4
+        call    piles.addCard
+        ld      L,      INDEX_FOUNDATION4
         ld      A,      CARD_A | SUIT_DIAMOND
-        call    tableau.addCard
+        call    piles.addCard
         ; depots, first row
-        ld      HL,     tableau.depot1
+        ld      L,      INDEX_DEPOT1
         ld      A,      CARD_6 | SUIT_DIAMOND
-        call    tableau.addCard
-        ld      HL,     tableau.depot2
+        call    piles.addCard
+        ld      L,      INDEX_DEPOT2
         ld      A,      CARD_Q | SUIT_DIAMOND
-        call    tableau.addCard
-        ld      HL,     tableau.depot3
+        call    piles.addCard
+        ld      L,      INDEX_DEPOT3
         ld      A,      CARD_Q | SUIT_HEART
-        call    tableau.addCard
-        ld      HL,     tableau.depot4
+        call    piles.addCard
+        ld      L,      INDEX_DEPOT4
         ld      A,      CARD_J | SUIT_DIAMOND
-        call    tableau.addCard
-        ld      HL,     tableau.depot5
+        call    piles.addCard
+        ld      L,      INDEX_DEPOT5
         ld      A,      CARD_4 | SUIT_HEART
-        call    tableau.addCard
-        ld      HL,     tableau.depot6
+        call    piles.addCard
+        ld      L,      INDEX_DEPOT6
         ld      A,      CARD_X | SUIT_SPADE
-        call    tableau.addCard
+        call    piles.addCard
         ; depots, second row
-        ld      HL,     tableau.depot7
+        ld      L,      INDEX_DEPOT7
         ld      A,      CARD_8 | SUIT_SPADE
-        call    tableau.addCard
-        ld      HL,     tableau.depot8
+        call    piles.addCard
+        ld      L,      INDEX_DEPOT8
         ld      A,      CARD_X | SUIT_DIAMOND
-        call    tableau.addCard
-        ld      HL,     tableau.depot9
+        call    piles.addCard
+        ld      L,      INDEX_DEPOT9
         ld      A,      CARD_9 | SUIT_CLUB
-        call    tableau.addCard
-        ld      HL,     tableau.depot10
+        call    piles.addCard
+        ld      L,      INDEX_DEPOT10
         ld      A,      CARD_3 | SUIT_HEART
-        call    tableau.addCard
-        ld      HL,     tableau.depot11
+        call    piles.addCard
+        ld      L,      INDEX_DEPOT11
         ld      A,      CARD_K | SUIT_CLUB
-        call    tableau.addCard
-        ld      HL,     tableau.depot12
+        call    piles.addCard
+        ld      L,      INDEX_DEPOT12
         ld      A,      CARD_K | SUIT_SPADE
-        call    tableau.addCard
+        call    piles.addCard
 
         ;-----------------------------------------------------------------------
         call    tableau.refresh
@@ -230,5 +222,5 @@ init:
         rst     rst_screenOn
 
         ; move the cursor to the card in the first depot pile
-        ld      HL,     tableau.depot1
+        ld      L,      INDEX_DEPOT1
         jp      cursor.pointToPile
