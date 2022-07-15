@@ -113,12 +113,17 @@
 ; chooses which validation rules the pile should use:
 .DEF    MASK_VALID      %00011111
 .DEF    VALID_ANY       0
+.DEF    VALID_LOCKED    1
 ; Aces Up: the lowest ranked card of the same suit
 ; as the cards on the other depots are valid
-.DEF    VALID_ACESUP    1
+.DEF    VALID_ACESUP    2
 ; Fortune's Favour: cards that are of the same suit and one
 ; lower in rank as the cards on the other depots are valid
-.DEF    VALID_FORTUNES  2
+.DEF    VALID_FORTUNES  3
+; standard Klondike rules: cards must build down by alternating colour and
+; a packed sequence can be moved to another pile if it continues the sequence
+.DEF    VALID_KLONDIKE  4
+
 
 ; TODO:types of pile validation:
 ;
@@ -413,7 +418,8 @@ clear:
         ld      BC,     SECTIONEND_piles.Storage-SECTIONSTART_piles.Storage
         call    zero
 
-        ; when the piles are cleared, the cursor's pile must be reallocated
+        ; when the piles are cleared,
+        ; the cursor's pile must be reallocated
         jp      cursor.init
 
 
@@ -600,18 +606,19 @@ addCard:
         ret
 
 
-getLastCard:
+getLastCardAddr:
 ;===============================================================================
-; gets the value (and address) of the last (top-most) card in a pile:
+; gets the address of the last (top-most) card in a pile:
 ;
 ; in:   L       pile index (`INDEX_*`)
+; out:  DE      pool address of the last card in the pile
+;       L       (preserved)
+;       H       (clobbered) -- select a field before using HL!
 ;-------------------------------------------------------------------------------
-        rst     piles.rst_pileCount
+        rst     rst_pileCount           ; get size of pile
         jr      z,      +               ; for empty piles return zero, not $FF!
-        dec     A                       ; adjust to 0-based
-+       rst     rst_cardAddr            ; return last card addr (DE)
-        ld      A,      [DE]
-        ret
+        dec     A                       ; change count to 0-based
++       jp      rst_cardAddr            ; use index to get pool addr
 
 
 getPos:
@@ -711,7 +718,7 @@ validate:
 ;-------------------------------------------------------------------------------
         ; let's walk the list of piles in the tableau. the pile index (L) will
         ; act as the counter; we count towards zero for speed/simplicity and
-        ; we skip the last pile as that's the cursor's
+        ; we skip the last pile as that's the cursor's private pile
         ;
         ld      L,      PILE_COUNT-2
         ;-----------------------------------------------------------------------
@@ -743,136 +750,50 @@ validatePile:
         ; isolate the validation type
         and     MASK_VALID
 
-        dec     A                       ; is it '1'?
-        jp      z,      _validatePile_AcesUp
+        cp      VALID_LOCKED
+        jp      z,      validatePileLocked
+        cp      VALID_ACESUP
+        jp      z,      acesup.validatePile
+        cp      VALID_FORTUNES
+        jp      z,      fortunes.validatePile
+        cp      VALID_KLONDIKE
+        jp      z,      klondike.validatePile
 
         ret
 
 
-_validatePile_AcesUp:
+validatePileLocked:
 ;===============================================================================
-; validate lowest rank of each suit:
+; validates a pile of cards as always invalid -- for locked piles that the
+; player cannot take cards from, such as the discard pile in Aces Up
 ;
 ; in:   L       pile index (`INDEX_*`)
 ; out:  L       (preserved)
 ;-------------------------------------------------------------------------------
-        ; the routine must return the original pile index
-        ; as it's being used as the counter over all piles
-        push    HL
-        
-        ; validate top-card:
-        ;=======================================================================
-        ; since only the top-most card requires specific validation,
-        ; we start with the last card in the pile
-        rst     piles.rst_pileCount
-        ld      C,      A               ; use the card count as 1-based counter
-        dec     A                       ; adjust index to 0-based for access
-        rst     piles.rst_cardAddr      ; get address of last card into DE
+        ld      H,      FIELD_TYPE
+        bit     7,      [HL]            ; is this a stack?
+        jr      z,      +               ; if not, invalidate all cards
 
-        ; we need to compare our card with the other depots;
-        ; first extract the suit; we can't use the rank yet
-        ld      A,      [DE]            ; get value of last card
-        and     MASK_SUIT               ; isolate suit bits
-        ld      B,      A               ; B = source suit
-
-        ; check the depots:
+        ; make the top-most card invalid since only it is visible
         ;-----------------------------------------------------------------------
-        ; is our card lower than any other card of the same suit on top of
-        ; the other depots? we don't make an effort to avoid checking the
-        ; same depot as our card as it won't be considered lower
-        ;
-        ; since only Aces Up uses this type of validation (so far), we know
-        ; we don't need to check the validation-type of every other pile;
-        ; just the first four depots are relevant
-        ;
-        ; note that once a valid match has been found (c+),
-        ; we skip checking the other depots (`call nc, ...`)
-        ld      L,      INDEX_DEPOT1
-        call            @cp
-        ld      L,      INDEX_DEPOT2
-        call    nc,     @cp
-        ld      L,      INDEX_DEPOT3
-        call    nc,     @cp
-        ld      L,      INDEX_DEPOT4
-        call    nc,     @cp
-
-        ; read the source card value once more
-        ld      A,      [DE]
-        ; flip the carry due to the $80->$00
-        ; ordering of the tiles in VRAM
-        ccf
-        ; shift the carry (result bit) into bit 0,
-        ; pushing the old validity bit off
-        rla
-        ; now rotate the byte back so that bit 0
-        ; (the new validity bit) becomes bit 7
-        rrca
-        ; finally, update the pile
-        ; with the validation result
-        ld      [DE],   A
-
-        ; all other cards in the pile are automatically invalid:
-        ;=======================================================================
--       dec     C                       ; decrement card count
-        jr      z,      +               ; stop once we hit zero
-        dec     DE                      ; move to the previous card in RAM
-        ld      A,      [DE]            ; read the card value
++       call    getLastCardAddr         ; go straight to the last card
+        ld      A,      [DE]            ; read card value
         or      CARD_INVALID            ; set the invalid bit
-        ld      [DE],   A               ; write back the updated card
-        jr      -
-
-+       pop     HL                      ; return original pile index
+        ld      [DE],   A               ; update pool
         ret
 
         ;=======================================================================
-        ; compare cards:
+        ; mark all cards in the pile as invalid:
         ;
-        ; given the Pile to compare *against*, fetch the top card
-        ; of *that* pile. we have to preserve DE whilst doing this
-        ;
-@cp:    rst     piles.rst_pileCount     ; number of cards in pile, 1-based
-        ret     z                       ; skip depot if empty!
-        dec     A                       ; correct count to 0-based
-        push    AF
-        ld      H,      FIELD_POOL_LO   ; switch field
-        ld      A,      [HL]            ; read pool-addr lo-byte
-        ld      H,      FIELD_POOL_HI   ; switch field
-        ld      H,      [HL]            ; read pool-addr hi-byte
-        ld      L,      A
-        pop     AF
-        add     A,      L
-        ld      L,      A
-        jr      nc,     +
-        inc     H
-+       ld      A,      [HL]            ; read the last card in the pile
-
-        ; compare suits:
-        ;
-        ; we compare suits using XOR so that carry is
-        ; unaffected. if the suits match, zero is set
-        and     MASK_SUIT
-        xor     B                       ; compare suits
-        ret     nz                      ; exit if they don't match
-
-        ; compare ranks:
-        ;
-        ; unfortunately we have our registers back-to-front so that,
-        ; if were were to put the original rank in C, we'd be looking
-        ; for the higher value, not the lower one. do some register
-        ; juggling to get the comparison the right way around...
-        ;
-        push    BC
-
-        ld      A,      [HL]            ; read the last depot card
-        sub     2                       ; wrap A low to A high!
-        and     MASK_RANK               ; (isolate the rank)
-        ld      C,      A               ; swap sides
-
-        ld      A,      [DE]            ; get our original card again
-        sub     2                       ; wrap A low to A high!
-        and     MASK_RANK               ; (isolate the rank)
-
-        cp      C                       ; if depot card is higher,
-
-        pop     BC
-        ret                             ; return carry!
+        rst     rst_pileCount           ; number of cards to invalidate
+        ld      C,      A               ; this will be our counter (1-based)
+        rst     rst_poolAddr            ; addr of pile's card list
+        ld      B,      CARD_INVALID    ; (this to save 4-cycles per loop)
+        ;-----------------------------------------------------------------------
+-       ld      A,      [DE]            ; read a card
+        or      B                       ; add the invalid bit
+        ld      [DE],   A               ; update pool
+        dec     C                       ; one less card to do
+        jr      nz,     -               ; keep looping until done
+        ;-----------------------------------------------------------------------
+        ret

@@ -35,22 +35,22 @@ piles.Define \
 ; foundations:
 ;
 piles.Define \
-        fortunes_foundation1,   PILE_FOUNDATION, 13, \
+        fortunes_foundation1,   PILE_FOUNDATION | VALID_LOCKED, 13, \
         1,                      TABLEAU_LEFT + 7, \
         INDEX_DISCARD,          INDEX_FOUNDATION2, \
         INDEX_DEPOT9,           INDEX_DEPOT3
 piles.Define \
-        fortunes_foundation2,   PILE_FOUNDATION, 13, \
+        fortunes_foundation2,   PILE_FOUNDATION | VALID_LOCKED, 13, \
         1,                      TABLEAU_LEFT + 10, \
         INDEX_FOUNDATION1,      INDEX_FOUNDATION3, \
         INDEX_DEPOT10,          INDEX_DEPOT4
 piles.Define \
-        fortunes_foundation3,   PILE_FOUNDATION, 13, \
+        fortunes_foundation3,   PILE_FOUNDATION | VALID_LOCKED, 13, \
         1,                      TABLEAU_LEFT + 13, \
         INDEX_FOUNDATION2,      INDEX_FOUNDATION4, \
         INDEX_DEPOT11,          INDEX_DEPOT5
 piles.Define \
-        fortunes_foundation4,   PILE_FOUNDATION, 13, \
+        fortunes_foundation4,   PILE_FOUNDATION | VALID_LOCKED, 13, \
         1,                      TABLEAU_LEFT + 16, \
         INDEX_FOUNDATION3,      INDEX_DECK, \
         INDEX_DEPOT12,          INDEX_DEPOT6
@@ -224,3 +224,81 @@ init:
         ; move the cursor to the card in the first depot pile
         ld      L,      INDEX_DEPOT1
         jp      cursor.pointToPile
+
+
+validatePile:
+;===============================================================================
+;
+; in:   L       pile index (`INDEX_*`)
+; out:  L       (preserved)
+;-------------------------------------------------------------------------------
+        ; the routine must return the original pile index
+        ; as it's being used as the counter over all piles
+        push    HL
+
+        ; any card that is one-lower than any
+        ; other card of the same rank is valid
+        ;
+        rst     piles.rst_poolAddr
+        ld      L,      INDEX_DEPOT1
+        ;-----------------------------------------------------------------------
+-       call    @cp                     ; validate against another depot
+        jr      c,      +               ; if a match is found, stop searching
+        inc     L                       ; move to the next pile
+        ld      A,      INDEX_DEPOT12+1 ; check only the twelve depots
+        cp      L                       ; have we reached the end?
+        jr      nz,     -               ; if not, keep searching
+        ;-----------------------------------------------------------------------
+
+        ; read the source card value once more
++       ld      A,      [DE]
+        ; flip the carry due to the $80->$00
+        ; ordering of the tiles in VRAM
+        ccf
+        ; shift the carry (result bit) into bit 0,
+        ; pushing the old validity bit off
+        rla
+        ; now rotate the byte back so that bit 0
+        ; (the new validity bit) becomes bit 7
+        rrca
+        ; finally, update the pile
+        ; with the validation result
+        ld      [DE],   A
+
+        pop     HL                      ; return original pile index
+        ret
+
+        ;=======================================================================
+@cp:    rst     piles.rst_pileCount
+        ret     z
+
+        ld      A,      [DE]            ; read source card value
+        ld      C,      A               ; put that aside to compare later
+        and     MASK_SUIT               ; isolate the suit
+        ld      B,      A               ; put that aside too
+        push    DE                      ; backup the source card address
+
+        ; compare suits
+        ;-----------------------------------------------------------------------
+        ; L is the index of the depot to compare against. from this,
+        ; get the address (DE) of the first (and only) card
+        rst     piles.rst_poolAddr
+        ld      A,      [DE]
+        and     MASK_SUIT
+        xor     B
+        jr      nz,     +
+
+        ; compare ranks:
+        ;-----------------------------------------------------------------------
+        ld      A,      C
+        and     MASK_RANK
+        ld      C,      A
+
+        ld      A,      [DE]
+        and     MASK_RANK
+        dec     A
+        sub     C
+        cp      1
+
++       pop     DE
+        ret

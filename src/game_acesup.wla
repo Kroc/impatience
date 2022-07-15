@@ -23,7 +23,7 @@ piles.Define \
         INDEX_DEPOT4,           INDEX_DEPOT1, \
         INDEX_DECK,             INDEX_DECK
 piles.Define \
-        acesup_discard,         PILE_DISCARD, 52, \
+        acesup_discard,         PILE_DISCARD | VALID_LOCKED, 52, \
         7,                      TABLEAU_LEFT + 1, \
         INDEX_DEPOT4,           INDEX_DEPOT1, \
         INDEX_DECK,             INDEX_DISCARD
@@ -111,3 +111,133 @@ init:
         ; move the cursor to the bottom card in the first depot pile
         ld      L,      INDEX_DEPOT1
         jp      cursor.pointToPile
+
+
+validatePile:
+;===============================================================================
+; validate lowest rank of each suit:
+;
+; in:   L       pile index (`INDEX_*`)
+; out:  L       (preserved)
+;-------------------------------------------------------------------------------
+        ; the routine must return the original pile index
+        ; as it's being used as the counter over all piles
+        push    HL
+        
+        ; validate top-card:
+        ;=======================================================================
+        ; since only the top-most card requires specific validation,
+        ; we start with the last card in the pile
+        rst     piles.rst_pileCount
+        ld      C,      A               ; use the card count as 1-based counter
+        dec     A                       ; adjust index to 0-based for access
+        rst     piles.rst_cardAddr      ; get address of last card into DE
+
+        ; we need to compare our card with the other depots;
+        ; first extract the suit; we can't use the rank yet
+        ld      A,      [DE]            ; get value of last card
+        and     MASK_SUIT               ; isolate suit bits
+        ld      B,      A               ; B = source suit
+
+        ; check the depots:
+        ;-----------------------------------------------------------------------
+        ; is our card lower than any other card of the same suit on top of
+        ; the other depots? we don't make an effort to avoid checking the
+        ; same depot as our card as it won't be considered lower
+        ;
+        ; since only Aces Up uses this type of validation (so far), we know
+        ; we don't need to check the validation-type of every other pile;
+        ; just the first four depots are relevant
+        ;
+        ; note that once a valid match has been found (c+),
+        ; we skip checking the other depots (`call nc, ...`)
+        ld      L,      INDEX_DEPOT1
+        call            @cp
+        ld      L,      INDEX_DEPOT2
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT3
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT4
+        call    nc,     @cp
+
+        ; read the source card value once more
+        ld      A,      [DE]
+        ; flip the carry due to the $80->$00
+        ; ordering of the tiles in VRAM
+        ccf
+        ; shift the carry (result bit) into bit 0,
+        ; pushing the old validity bit off
+        rla
+        ; now rotate the byte back so that bit 0
+        ; (the new validity bit) becomes bit 7
+        rrca
+        ; finally, update the pile
+        ; with the validation result
+        ld      [DE],   A
+
+        ; all other cards in the pile are automatically invalid:
+        ;=======================================================================
+-       dec     C                       ; decrement card count
+        jr      z,      +               ; stop once we hit zero
+        dec     DE                      ; move to the previous card in RAM
+        ld      A,      [DE]            ; read the card value
+        or      CARD_INVALID            ; set the invalid bit
+        ld      [DE],   A               ; write back the updated card
+        jr      -
+
++       pop     HL                      ; return original pile index
+        ret
+
+        ;=======================================================================
+        ; compare cards:
+        ;
+        ; given the Pile to compare *against*, fetch the top card
+        ; of *that* pile. we have to preserve DE whilst doing this
+        ;
+@cp:    rst     piles.rst_pileCount     ; number of cards in pile, 1-based
+        ret     z                       ; skip depot if empty!
+        dec     A                       ; correct count to 0-based
+        push    AF
+        ld      H,      FIELD_POOL_LO   ; switch field
+        ld      A,      [HL]            ; read pool-addr lo-byte
+        ld      H,      FIELD_POOL_HI   ; switch field
+        ld      H,      [HL]            ; read pool-addr hi-byte
+        ld      L,      A
+        pop     AF
+        add     A,      L
+        ld      L,      A
+        jr      nc,     +
+        inc     H
++       ld      A,      [HL]            ; read the last card in the pile
+
+        ; compare suits:
+        ;
+        ; we compare suits using XOR so that carry is
+        ; unaffected. if the suits match, zero is set
+        and     MASK_SUIT
+        xor     B                       ; compare suits
+        ret     nz                      ; exit if they don't match
+
+        ; compare ranks:
+        ;
+        ; unfortunately we have our registers back-to-front so that,
+        ; if were were to put the original rank in C, we'd be looking
+        ; for the higher value, not the lower one. do some register
+        ; juggling to get the comparison the right way around...
+        ;
+        push    BC
+
+        ld      A,      [HL]            ; read the last depot card
+        sub     2                       ; wrap A low to A high!
+        and     MASK_RANK               ; (isolate the rank)
+        ld      C,      A               ; swap sides
+
+        ld      A,      [DE]            ; get our original card again
+        sub     2                       ; wrap A low to A high!
+        and     MASK_RANK               ; (isolate the rank)
+
+        cp      C                       ; if depot card is higher,
+
+        pop     BC
+        ret                             ; return carry!
+
