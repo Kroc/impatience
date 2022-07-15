@@ -50,12 +50,13 @@
 ; these are the indices of our preset pile roles:
 ; this represents the row-order of each pile in the column fields
 ;-------------------------------------------------------------------------------
-.ENUMID 0
+.ENUMID 0 EXPORT
+.ENUMID INDEX_NONE                      ; (to indicate no pile)
 .ENUMID INDEX_DECK                      ; where cards are drawn from
 .ENUMID INDEX_DISCARD                   ; where cards are thrown away
 .ENUMID INDEX_HAND                      ; a working set of drawn cards
 .ENUMID INDEX_FOUNDATION1               ; up to four foundation piles,
-.ENUMID INDEX_FOUNDATION2               ; where cards are stacked in order
+.ENUMID INDEX_FOUNDATION2               ;  where cards are stacked in order
 .ENUMID INDEX_FOUNDATION3
 .ENUMID INDEX_FOUNDATION4
 .ENUMID INDEX_DEPOT1                    ; up to twelve depot piles,
@@ -70,9 +71,12 @@
 .ENUMID INDEX_DEPOT10
 .ENUMID INDEX_DEPOT11
 .ENUMID INDEX_DEPOT12
-.ENUMID INDEX_CURSOR                    ; for cards held by the cursor
+; the cursor has a private pile for when cards are picked up,
+; that is not treated the same as the other piles
+.ENUMID INDEX_CURSOR
+; number of piles defined, $xx00..$xxnn:
+.ENUMID PILE_COUNT
 
-.ENUMID PILE_COUNT                      ; number of piles defined, $xx00..$xxnn
 
 ; these are the different display attributes of piles:
 ;-------------------------------------------------------------------------------
@@ -89,7 +93,7 @@
 
 ; these can be combined into specific pile types:
 ;-------------------------------------------------------------------------------
-; an unasigned pile is not drawn
+; an unallocated pile is not drawn
 .DEF    PILE_NONE       %00000000
 
 ; regardless of the number of cards in a deck,
@@ -702,20 +706,21 @@ move:
 validate:
 ;===============================================================================
 ; validate the piles on the tableau according to the game rules:
+;
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; let's walk the list of piles in the tableau
-        ; the pile index (L) will act as the counter
-        ld      L,      0
+        ; let's walk the list of piles in the tableau. the pile index (L) will
+        ; act as the counter; we count towards zero for speed/simplicity and
+        ; we skip the last pile as that's the cursor's
+        ;
+        ld      L,      PILE_COUNT-2
         ;-----------------------------------------------------------------------
-@loop:  ld      H,      FIELD_TYPE      ; select `type` field
+-       ld      H,      FIELD_TYPE      ; select `type` field
         ld      A,      [HL]            ; is the pile allocated? type != 0
         and     A,      A               ; (set flags!)
         call    nz,     validatePile    ; validate the specific Pile
-
-        inc     L                       ; move to next Pile in the list
-        ld      A,      L
-        cp      INDEX_CURSOR            ; don't validate cards in cursor!
-        jr      nz,     @loop
+        dec     L                       ; move to next Pile in the list
+        jr      nz,     -
         ;-----------------------------------------------------------------------
         ret
 
@@ -726,7 +731,7 @@ validatePile:
 ; out:  L       (preserved)
 ;-------------------------------------------------------------------------------
         ; an empty pile obviously doesn't need validating
-        rst     piles.rst_pileCount           ; (get pile count, set flags)
+        rst     piles.rst_pileCount
         ret     z
 
         ; if the pile is face-down, e.g. deck,
@@ -763,7 +768,7 @@ _validatePile_AcesUp:
         ld      C,      A               ; use the card count as 1-based counter
         dec     A                       ; adjust index to 0-based for access
         rst     piles.rst_cardAddr      ; get address of last card into DE
-        
+
         ; we need to compare our card with the other depots;
         ; first extract the suit; we can't use the rank yet
         ld      A,      [DE]            ; get value of last card
@@ -808,15 +813,15 @@ _validatePile_AcesUp:
 
         ; all other cards in the pile are automatically invalid:
         ;=======================================================================
--       dec     C
-        jr      z,      +
-        dec     DE
-        ld      A,      [DE]
-        or      CARD_INVALID
-        ld      [DE],   A
+-       dec     C                       ; decrement card count
+        jr      z,      +               ; stop once we hit zero
+        dec     DE                      ; move to the previous card in RAM
+        ld      A,      [DE]            ; read the card value
+        or      CARD_INVALID            ; set the invalid bit
+        ld      [DE],   A               ; write back the updated card
         jr      -
 
-+       pop     HL
++       pop     HL                      ; return original pile index
         ret
 
         ;=======================================================================

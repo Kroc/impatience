@@ -739,7 +739,7 @@ dropPile:
         ; into E, as it's the destination
         ld      HL,     pile_point
         ld      E,      [HL]
-        
+
         ; move the pile of cards in the cursor's hand
         ; on to the top of the pile being pointed at
         ld      L,      INDEX_CURSOR
