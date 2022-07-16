@@ -21,6 +21,7 @@
 
 ; suits:
 .DEF    MASK_SUIT       %00110000
+.DEF    MASK_COLOUR     %00100000
 ;                       %--0x---- = black
 .DEF    SUIT_BLACK      %00000000
 .DEF    SUIT_SPADE      %00000000
@@ -325,7 +326,7 @@
 .ENDM
 
 
-.SECTION "z80_rst_20"      SIZE 8  RETURNORG
+.SECTION "RSTPoolAddr"  SIZE 8  RETURNORG
 ;###############################################################################
 rst_poolAddr:                                                           ;$20
 ;===============================================================================
@@ -348,9 +349,26 @@ rst_poolAddr:                                                           ;$20
 ;###############################################################################
 .ENDS
 
-.SECTION "z80_rst_28"      SIZE 8  RETURNORG
+.SECTION "RSTCardAddr"  SIZE 16 RETURNORG
 ;###############################################################################
-rst_cardAddr:                                                           ;$28
+rst_lastCardAddr:                                                       ;$28
+;===============================================================================
+; get the address of the last card in a pile:
+;
+; if the pile is empty, this will be the address of the first card slot
+; in the pile's card pool -- you can read the card value and check for zero
+; to know if the pile is empty, or call `rst_pileCount`
+;
+; in:   L       pile index (`INDEX_*`)
+;-------------------------------------------------------------------------------
+        ld      H,      FIELD_COUNT     ; select the count field
+        ld      A,      [HL]            ; card count for the pile
+        and     A,      A               ; (set flags!)
+        jr      z,      +               ; empty piles return 0, not $FF!
+        dec     A                       ; change count to 0-based
++       nop                             ; (MUST be 8-bytes!)
+
+rst_cardAddr:                                                           ;$30
 ;===============================================================================
 ; gets the address of a specific card in a pile:
 ;
@@ -366,9 +384,9 @@ rst_cardAddr:                                                           ;$28
 ;###############################################################################
 .ENDS
 
-.SECTION "z80_rst_30"      SIZE 8  RETURNORG
+.SECTION "RSTPileCount" SIZE 8  RETURNORG
 ;###############################################################################
-rst_pileCount:                                                          ;$30
+rst_pileCount:                                                          ;$38
 ;===============================================================================
 ; get the number of cards in a pile:
 ;
@@ -606,7 +624,7 @@ addCard:
         ret
 
 
-getLastCardAddr:
+getLastCard:
 ;===============================================================================
 ; gets the address of the last (top-most) card in a pile:
 ;
@@ -615,10 +633,10 @@ getLastCardAddr:
 ;       L       (preserved)
 ;       H       (clobbered) -- select a field before using HL!
 ;-------------------------------------------------------------------------------
-        rst     rst_pileCount           ; get size of pile
-        jr      z,      +               ; for empty piles return zero, not $FF!
-        dec     A                       ; change count to 0-based
-+       jp      rst_cardAddr            ; use index to get pool addr
+        rst     rst_lastCardAddr        ; get address of last card
+        ld      A,      [DE]            ; return card value
+        and     A,      A               ; (set flags for easy 0-check)
+        ret
 
 
 getPos:
@@ -776,8 +794,7 @@ validatePileLocked:
 
         ; make the top-most card invalid since only it is visible
         ;-----------------------------------------------------------------------
-+       call    getLastCardAddr         ; go straight to the last card
-        ld      A,      [DE]            ; read card value
++       call    getLastCard             ; go straight to the last card
         or      CARD_INVALID            ; set the invalid bit
         ld      [DE],   A               ; update pool
         ret

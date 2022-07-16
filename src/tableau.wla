@@ -176,9 +176,7 @@ drawPile:
         jr      z,      @empty          ; if zero, draw empty space
 
         ; read the top-most card in the pile
-        call    piles.getLastCardAddr
-        ld      A,      [DE]
-
+        call    piles.getLastCard
         ; get the pile's row & col
         call    piles.getPos
         ; the deck in particular extends a row upwards
@@ -197,8 +195,7 @@ drawPile:
 @face:  rst     piles.rst_pileCount     ; (get pile count, set flags)
         jr      z,      @empty          ; if zero, draw empty space
 
-        call    piles.getLastCardAddr
-        ld      A,      [DE]
+        call    piles.getLastCard
         call    piles.getPos            ; get the pile's row & col
         call    tilemap.getBufferAddr   ; translate to a buffer address
 

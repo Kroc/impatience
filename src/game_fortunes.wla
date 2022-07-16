@@ -228,7 +228,6 @@ init:
 
 validatePile:
 ;===============================================================================
-;
 ; in:   L       pile index (`INDEX_*`)
 ; out:  L       (preserved)
 ;-------------------------------------------------------------------------------
@@ -268,6 +267,7 @@ validatePile:
         pop     HL                      ; return original pile index
         ret
 
+        ; compare card against another pile:
         ;=======================================================================
 @cp:    rst     piles.rst_pileCount
         ret     z

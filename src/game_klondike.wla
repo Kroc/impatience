@@ -57,37 +57,37 @@ piles.Define \
 ; (a full K to A sequence) plus the number of unturned cards
 ; which varies across the depots
 piles.Define \
-        klondike_depot1,        PILE_COLUMN, 13+0, \
+        klondike_depot1,        PILE_COLUMN | VALID_KLONDIKE, 13+0, \
         5,                      TABLEAU_LEFT, \
         INDEX_DEPOT7,           INDEX_DEPOT2, \
         INDEX_DECK,             INDEX_DECK
 piles.Define \
-        klondike_depot2,        PILE_COLUMN, 13+1, \
+        klondike_depot2,        PILE_COLUMN | VALID_KLONDIKE, 13+1, \
         5,                      TABLEAU_LEFT + 3, \
         INDEX_DEPOT1,           INDEX_DEPOT3, \
         INDEX_HAND,             INDEX_HAND
 piles.Define \
-        klondike_depot3,        PILE_COLUMN, 13+2, \
+        klondike_depot3,        PILE_COLUMN | VALID_KLONDIKE, 13+2, \
         5,                      TABLEAU_LEFT + 6, \
         INDEX_DEPOT2,           INDEX_DEPOT4, \
         INDEX_HAND,             INDEX_HAND
 piles.Define \
-        klondike_depot4,        PILE_COLUMN, 13+3, \
+        klondike_depot4,        PILE_COLUMN | VALID_KLONDIKE, 13+3, \
         5,                      TABLEAU_LEFT + 9, \
         INDEX_DEPOT3,           INDEX_DEPOT5, \
         INDEX_FOUNDATION1,      INDEX_FOUNDATION1
 piles.Define \
-        klondike_depot5,        PILE_COLUMN, 13+4, \
+        klondike_depot5,        PILE_COLUMN | VALID_KLONDIKE, 13+4, \
         5,                      TABLEAU_LEFT + 12, \
         INDEX_DEPOT4,           INDEX_DEPOT6, \
         INDEX_FOUNDATION2,      INDEX_FOUNDATION2
 piles.Define \
-        klondike_depot6,        PILE_COLUMN, 13+5, \
+        klondike_depot6,        PILE_COLUMN | VALID_KLONDIKE, 13+5, \
         5,                      TABLEAU_LEFT + 15, \
         INDEX_DEPOT5,           INDEX_DEPOT7, \
         INDEX_FOUNDATION3,      INDEX_FOUNDATION3
 piles.Define \
-        klondike_depot7,        PILE_COLUMN, 13+6, \
+        klondike_depot7,        PILE_COLUMN | VALID_KLONDIKE, 13+6, \
         5,                      TABLEAU_LEFT + 18, \
         INDEX_DEPOT6,           INDEX_DEPOT1, \
         INDEX_FOUNDATION4,      INDEX_FOUNDATION4
@@ -151,7 +151,7 @@ init:
         call    piles.addCard
         ; depots:
         ld      L,      INDEX_DEPOT1
-        ld      A,      CARD_4 | SUIT_SPADE
+        ld      A,      CARD_5 | SUIT_HEART
         call    piles.addCard
         ld      L,      INDEX_DEPOT2
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
@@ -183,7 +183,7 @@ init:
         call    piles.addCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
         call    piles.addCard
-        ld      A,      CARD_A | SUIT_DIAMOND
+        ld      A,      CARD_9 | SUIT_DIAMOND
         call    piles.addCard
         ld      L,      INDEX_DEPOT6
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
@@ -209,7 +209,7 @@ init:
         call    piles.addCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
         call    piles.addCard
-        ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
+        ld      A,      CARD_4 | SUIT_SPADE
         call    piles.addCard
         ld      A,      CARD_3 | SUIT_DIAMOND
         call    piles.addCard
@@ -226,8 +226,120 @@ init:
 
 validatePile:
 ;===============================================================================
+; validate a depot pile according to Klondike rules:
+;
+; a card is valid if it, and any cards on top of it, can continue
+; the descending, alternating colour, sequence of another pile
+;
+; TODO: also valid if top card can go to foundation
 ;
 ; in:   L       pile index (`INDEX_*`)
 ; out:  L       (preserved)
 ;-------------------------------------------------------------------------------
+        ; the routine must return the original pile index
+        ; as it's being used as the counter over all piles
+        push    HL
+
+        ; walk down the input pile of cards;
+        ; we will be checking if each card can continue
+        ; a sequence at the end of the other depots
+        ;
+        rst     piles.rst_pileCount     ; number of cards in pile, 1-based
+        ld      C,      A               ; this will be our counter
+        rst     piles.rst_poolAddr      ; addr of cards for our pile (DE)
+        ;-----------------------------------------------------------------------
+-       ld      A,      [DE]            ; read card value
+        bit     6,      A               ; `CARD_BACK`?
+        call    nz,     @back           ; mark face-down cards as invalid
+        call    z,      @pile           ; compare our card with other piles
+        inc     DE                      ; move to next card
+        dec     C                       ; one less card,
+        jr      nz,     -               ; keep going until all cards done
+        ;-----------------------------------------------------------------------
+        pop     HL                      ; return original pile index
         ret
+
+        ;-----------------------------------------------------------------------
+@back:  ld      A,      [DE]
+        or      CARD_INVALID
+        ld      [DE],   A
+        ret                             ; the OR always returns non-zero flag
+
+        ; compare card with other piles:
+        ;=======================================================================
+        ; prepare a pre-computed 'valid card' value to match against,
+        ; this is, a card of the opposite colour and one above in rank:
+        ;
+@pile:  and     MASK_RANK               ; isolate the card's rank
+        cp      CARD_K                  ; if our card is king, there can be no
+        jr      z,      @back           ;  no higher card so mark it invalid
+        inc     A                       ; add 1, for the card we're looking for
+        ld      B,      A               ; put rank aside to handle suit
+        ld      A,      [DE]            ; start again with card value
+        and     %00100000               ; keep only the suit colour
+        xor     MASK_COLOUR             ; flip the suit colour
+        or      B                       ; add suit colour to the rank
+        ld      B,      A               ; B = card rank+colour to match
+
+        ; begin searching the other depots:
+        ; note that once a valid match has been found (c+),
+        ; we skip checking the other depots (`call nc, ...`)
+        ld      L,      INDEX_DEPOT1
+        call            @cp
+        ld      L,      INDEX_DEPOT2
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT3
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT4
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT5
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT6
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT7
+        call    nc,     @cp
+
+        ; read the source card value once more
+        ld      A,      [DE]
+        ; flip the carry due to the $80->$00
+        ; ordering of the tiles in VRAM
+        ccf
+        ; shift the carry (result bit) into bit 0,
+        ; pushing the old validity bit off
+        rla
+        ; now rotate the byte back so that bit 0
+        ; (the new validity bit) becomes bit 7
+        rrca
+        ; finally, update the pile
+        ; with the validation result
+        ld      [DE],   A
+        ret
+
+        ;=======================================================================
+@cp:    rst     piles.rst_pileCount     ; is the pile (L) empty?
+        ret     z
+
+        ; preserve the address of the original card (DE)
+        ; whilst we look up the last card in the other pile (L)
+        push    DE
+        ; fetch the top-most card (A) of the pile (L) we're comparing against
+        call    piles.getLastCard
+        ; mask out unrelated bits; we want the rank and the colour, but not
+        ; the pip type (heart|diamond vs club|spade) or other properties
+        and     MASK_COLOUR | MASK_RANK
+        ; compare with the pre-computed matching card
+        cp      B
+        ; we need to return carry set for a match, unset for no-match,
+        ; but our type of comparison is only valid for the zero-flag
+        ; so we will conditionally set the carry flag on our way out
+        ;
+        ; "fun" fact, unlike the 6502, the Z80/SM83 doesn't have
+        ; a 'clear carry flag' instruction; it can only set it
+        ; and flip ("compliment") the current state
+        ;
+        scf                             ; set carry flag by default
+        jr      z,      +               ; if card matched, return the carry
+        ccf                             ; no match -- flip the carry to off
+
++       pop     DE                      ; return address of original card
+        ret                             ;  to be able to update the invalid bit
