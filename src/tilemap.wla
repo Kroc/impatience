@@ -14,7 +14,7 @@
 ;
 .SECTION "TilesCards"   ALIGN 16        RETURNORG
 ;###############################################################################
-.DEF    TILE_PALETTE    %01110010
+.DEF    TILE_PALETTE    %01111000
 
 tiles_main:
 ;===============================================================================
@@ -27,38 +27,38 @@ tiles_main:
         ;;MAP   0 TO 127  = $80
         ;;MAP 128 TO 255  = $00
 
-        MAP     " "     = $50
-        MAP     "a"     = $51
-        MAP     "b"     = $52
-        MAP     "c"     = $53
-        MAP     "d"     = $54
-        MAP     "e"     = $55
-        MAP     "f"     = $56
-        MAP     "g"     = $57
-        MAP     "h"     = $58
-        MAP     "i"     = $59
-        MAP     "j"     = $5a
-        MAP     "k"     = $5b
-        MAP     "l"     = $5c
+        MAP     " "     = $8d
+        MAP     "a"     = $9d
+        MAP     "b"     = $ad
+        MAP     "c"     = $bd
+        MAP     "d"     = $cd
+        MAP     "e"     = $dd
+        MAP     "f"     = $ed
+        MAP     "g"     = $fd
+        MAP     "h"     = $0d
+        MAP     "i"     = $1d
+        MAP     "j"     = $2d
+        MAP     "k"     = $3d
+        MAP     "l"     = $4d
         MAP     "m"     = $5d
-        MAP     "n"     = $5e
-        MAP     "o"     = $5f
-        MAP     "p"     = $60
-        MAP     "q"     = $61
-        MAP     "r"     = $62
-        MAP     "s"     = $63
-        MAP     "t"     = $64
-        MAP     "u"     = $65
-        MAP     "v"     = $66
-        MAP     "w"     = $67
-        MAP     "x"     = $68
-        MAP     "y"     = $69
-        MAP     "z"     = $6a
-        MAP     "!"     = $6b
-        MAP     ","     = $6c
-        MAP     "."     = $6d
+        MAP     "n"     = $6d
+        MAP     "o"     = $7d
+        MAP     "p"     = $8e
+        MAP     "q"     = $9e
+        MAP     "r"     = $ae
+        MAP     "s"     = $be
+        MAP     "t"     = $ce
+        MAP     "u"     = $de
+        MAP     "v"     = $ee
+        MAP     "w"     = $fe
+        MAP     "x"     = $0e
+        MAP     "y"     = $1e
+        MAP     "z"     = $2e
+        MAP     "!"     = $3e
+        MAP     ","     = $4e
+        MAP     "."     = $5e
         MAP     "A"     = $6e           ; GameBoy button "A"
-        MAP     "B"     = $6f           ; GameBoy button "B"
+        MAP     "B"     = $7e           ; GameBoy button "B"
 
         MAP     "0"     = $70
         MAP     "1"     = $71
@@ -71,13 +71,13 @@ tiles_main:
         MAP     "8"     = $78
         MAP     "9"     = $79
 
-        MAP     "S"     = $7a           ; spades symbol
-        MAP     "C"     = $7b           ; clubs symbol
-        MAP     "H"     = $7c           ; hearts symbol
-        MAP     "D"     = $7d           ; diamonds symbol
+        MAP     "S"     = $8f           ; spades symbol
+        MAP     "H"     = $9f           ; hearts symbol
+        MAP     "C"     = $af           ; clubs symbol
+        MAP     "D"     = $bf           ; diamonds symbol
 .ENDA
 
-.DEF    TILE_TABLEAU_BG         $7e
+.DEF    TILE_TABLEAU_BG         $6f
 
 ; cards:
 ;===============================================================================
@@ -86,59 +86,59 @@ tiles_main:
 ; a foundation is a blank space on the playfield where cards
 ; are "played off", into their final destination
 ;
-.DEF    TILE_FNDT_Y1X1          $da     ; foundation, top-left
-.DEF    TILE_FNDT_Y1X2          $ea     ; foundation, top-centre
-.DEF    TILE_FNDT_Y1X3          $fa     ; foundation, top-right
-.DEF    TILE_FNDT_Y2X1          $db     ; foundation, upper-middle left
-.DEF    TILE_FNDT_Y2X2          $eb     ; foundation, upper-middle centre
-.DEF    TILE_FNDT_Y2X3          $fb     ; foundation, upper-middle right
-.DEF    TILE_FNDT_Y3X1          $dc     ; foundation, lower-middle left
-.DEF    TILE_FNDT_Y3X2          $ec     ; foundation, lower-middle centre
-.DEF    TILE_FNDT_Y3X3          $fc     ; foundation, lower-middle right
-.DEF    TILE_FNDT_Y4X1          $dd     ; foundation, bottom-left
-.DEF    TILE_FNDT_Y4X2          $ed     ; foundation, bottom-centre
-.DEF    TILE_FNDT_Y4X3          $fd     ; foundation, bottom-right
+.DEF    TILE_FNDT_Y1X1          $d9     ; foundation, top-left
+.DEF    TILE_FNDT_Y1X2          $e9     ; foundation, top-centre
+.DEF    TILE_FNDT_Y1X3          $f9     ; foundation, top-right
+.DEF    TILE_FNDT_Y2X1          $da     ; foundation, upper-middle left
+.DEF    TILE_FNDT_Y2X2          $ea     ; foundation, upper-middle centre
+.DEF    TILE_FNDT_Y2X3          $fa     ; foundation, upper-middle right
+.DEF    TILE_FNDT_Y3X1          $db     ; foundation, lower-middle left
+.DEF    TILE_FNDT_Y3X2          $eb     ; foundation, lower-middle centre
+.DEF    TILE_FNDT_Y3X3          $fb     ; foundation, lower-middle right
+.DEF    TILE_FNDT_Y4X1          $dc     ; foundation, bottom-left
+.DEF    TILE_FNDT_Y4X2          $ec     ; foundation, bottom-centre
+.DEF    TILE_FNDT_Y4X3          $fc     ; foundation, bottom-right
 
 ; deck:
 ;-------------------------------------------------------------------------------
 ; a deck is a pile of face-down cards
 ;
-.DEF    TILE_DECK_Y0X1          $d1     ; deck, top-left
-.DEF    TILE_DECK_Y0X2          $e1     ; deck, top-centre
-.DEF    TILE_DECK_Y0X3          $f1     ; deck, top-right
+.DEF    TILE_DECK_Y0X1          $d0     ; deck, top-left
+.DEF    TILE_DECK_Y0X2          $e0     ; deck, top-centre
+.DEF    TILE_DECK_Y0X3          $f0     ; deck, top-right
 
 ; the middle three rows of the deck repeat
-.DEF    TILE_DECK_Y1X1          $d3     ; deck, middle-left (row 2)
-.DEF    TILE_DECK_Y1X2          $e3     ; deck, middle-centre (row 2)
-.DEF    TILE_DECK_Y1X3          $f3     ; deck, middle-right (row 2)
-.DEF    TILE_DECK_Y2X1          $d3     ; deck, middle-left (row 3)
-.DEF    TILE_DECK_Y2X2          $e3     ; deck, middle-centre (row 3)
-.DEF    TILE_DECK_Y2X3          $f3     ; deck, middle-right (row 3)
-.DEF    TILE_DECK_Y3X1          $d3     ; deck, bottom-left (row 4)
-.DEF    TILE_DECK_Y3X2          $e3     ; deck, bottom-centre (row 4)
-.DEF    TILE_DECK_Y3X3          $f3     ; deck, bottom-right (row 4)
+.DEF    TILE_DECK_Y1X1          $d2     ; deck, middle-left (row 2)
+.DEF    TILE_DECK_Y1X2          $e2     ; deck, middle-centre (row 2)
+.DEF    TILE_DECK_Y1X3          $f2     ; deck, middle-right (row 2)
+.DEF    TILE_DECK_Y2X1          $d2     ; deck, middle-left (row 3)
+.DEF    TILE_DECK_Y2X2          $e2     ; deck, middle-centre (row 3)
+.DEF    TILE_DECK_Y2X3          $f2     ; deck, middle-right (row 3)
+.DEF    TILE_DECK_Y3X1          $d2     ; deck, bottom-left (row 4)
+.DEF    TILE_DECK_Y3X2          $e2     ; deck, bottom-centre (row 4)
+.DEF    TILE_DECK_Y3X3          $f2     ; deck, bottom-right (row 4)
 
 ; bottom-row of the deck
-.DEF    TILE_DECK_Y4X1          $d6     ; deck, pile-left
-.DEF    TILE_DECK_Y4X2          $e6     ; deck, pile-centre
-.DEF    TILE_DECK_Y4X3          $f6     ; deck, pile-right
+.DEF    TILE_DECK_Y4X1          $d5     ; deck, pile-left
+.DEF    TILE_DECK_Y4X2          $e5     ; deck, pile-centre
+.DEF    TILE_DECK_Y4X3          $f5     ; deck, pile-right
 
 ; back:
 ;-------------------------------------------------------------------------------
 ; a card, face-down:
 ;
-.DEF    TILE_BACK_Y1X1          $d2     ; back, top-left
-.DEF    TILE_BACK_Y1X2          $e2     ; back, top-centre
-.DEF    TILE_BACK_Y1X3          $f2     ; back, top-right
-.DEF    TILE_BACK_Y2X1          $d3     ; back, middle-left (row 2)
-.DEF    TILE_BACK_Y2X2          $e3     ; back, middle-centre (row 2)
-.DEF    TILE_BACK_Y2X3          $f3     ; back, middle-right (row 2)
-.DEF    TILE_BACK_Y3X1          $d4     ; back, middle-left (row 3)
-.DEF    TILE_BACK_Y3X2          $e4     ; back, middle-centre (row 3)
-.DEF    TILE_BACK_Y3X3          $f4     ; back, middle-right (row 3)
-.DEF    TILE_BACK_Y4X1          $d5     ; back, bottom-left
-.DEF    TILE_BACK_Y4X2          $e5     ; back, bottom-centre
-.DEF    TILE_BACK_Y4X3          $f5     ; back, bottom-right
+.DEF    TILE_BACK_Y1X1          $d1     ; back, top-left
+.DEF    TILE_BACK_Y1X2          $e1     ; back, top-centre
+.DEF    TILE_BACK_Y1X3          $f1     ; back, top-right
+.DEF    TILE_BACK_Y2X1          $d2     ; back, middle-left (row 2)
+.DEF    TILE_BACK_Y2X2          $e2     ; back, middle-centre (row 2)
+.DEF    TILE_BACK_Y2X3          $f2     ; back, middle-right (row 2)
+.DEF    TILE_BACK_Y3X1          $d3     ; back, middle-left (row 3)
+.DEF    TILE_BACK_Y3X2          $e3     ; back, middle-centre (row 3)
+.DEF    TILE_BACK_Y3X3          $f3     ; back, middle-right (row 3)
+.DEF    TILE_BACK_Y4X1          $d4     ; back, bottom-left
+.DEF    TILE_BACK_Y4X2          $e4     ; back, bottom-centre
+.DEF    TILE_BACK_Y4X3          $f4     ; back, bottom-right
 
 ; face-up:
 ;-------------------------------------------------------------------------------
