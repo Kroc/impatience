@@ -14,7 +14,7 @@
 ;
 .SECTION "TilesCards"   ALIGN 16        RETURNORG
 ;###############################################################################
-.DEF    TILE_PALETTE    %11010010
+.DEF    TILE_PALETTE    %01110010
 
 tiles_main:
 ;===============================================================================
@@ -86,124 +86,124 @@ tiles_main:
 ; a foundation is a blank space on the playfield where cards
 ; are "played off", into their final destination
 ;
-.DEF    TILE_FNDT_1X1           $da     ; foundation, top-left
-.DEF    TILE_FNDT_1X2           $ea     ; foundation, top-centre
-.DEF    TILE_FNDT_1X3           $fa     ; foundation, top-right
-.DEF    TILE_FNDT_2X1           $db     ; foundation, upper-middle left
-.DEF    TILE_FNDT_2X2           $eb     ; foundation, upper-middle centre
-.DEF    TILE_FNDT_2X3           $fb     ; foundation, upper-middle right
-.DEF    TILE_FNDT_3X1           $dc     ; foundation, lower-middle left
-.DEF    TILE_FNDT_3X2           $ec     ; foundation, lower-middle centre
-.DEF    TILE_FNDT_3X3           $fc     ; foundation, lower-middle right
-.DEF    TILE_FNDT_4X1           $dd     ; foundation, bottom-left
-.DEF    TILE_FNDT_4X2           $ed     ; foundation, bottom-centre
-.DEF    TILE_FNDT_4X3           $fd     ; foundation, bottom-right
+.DEF    TILE_FNDT_Y1X1          $da     ; foundation, top-left
+.DEF    TILE_FNDT_Y1X2          $ea     ; foundation, top-centre
+.DEF    TILE_FNDT_Y1X3          $fa     ; foundation, top-right
+.DEF    TILE_FNDT_Y2X1          $db     ; foundation, upper-middle left
+.DEF    TILE_FNDT_Y2X2          $eb     ; foundation, upper-middle centre
+.DEF    TILE_FNDT_Y2X3          $fb     ; foundation, upper-middle right
+.DEF    TILE_FNDT_Y3X1          $dc     ; foundation, lower-middle left
+.DEF    TILE_FNDT_Y3X2          $ec     ; foundation, lower-middle centre
+.DEF    TILE_FNDT_Y3X3          $fc     ; foundation, lower-middle right
+.DEF    TILE_FNDT_Y4X1          $dd     ; foundation, bottom-left
+.DEF    TILE_FNDT_Y4X2          $ed     ; foundation, bottom-centre
+.DEF    TILE_FNDT_Y4X3          $fd     ; foundation, bottom-right
 
 ; deck:
 ;-------------------------------------------------------------------------------
 ; a deck is a pile of face-down cards
 ;
-.DEF    TILE_DECK_0X1           $d1     ; deck, top-left
-.DEF    TILE_DECK_0X2           $e1     ; deck, top-centre
-.DEF    TILE_DECK_0X3           $f1     ; deck, top-right
+.DEF    TILE_DECK_Y0X1          $d1     ; deck, top-left
+.DEF    TILE_DECK_Y0X2          $e1     ; deck, top-centre
+.DEF    TILE_DECK_Y0X3          $f1     ; deck, top-right
 
 ; the middle three rows of the deck repeat
-.DEF    TILE_DECK_1X1           $d3     ; deck, middle-left (row 2)
-.DEF    TILE_DECK_1X2           $e3     ; deck, middle-centre (row 2)
-.DEF    TILE_DECK_1X3           $f3     ; deck, middle-right (row 2)
-.DEF    TILE_DECK_2X1           $d3     ; deck, middle-left (row 3)
-.DEF    TILE_DECK_2X2           $e3     ; deck, middle-centre (row 3)
-.DEF    TILE_DECK_2X3           $f3     ; deck, middle-right (row 3)
-.DEF    TILE_DECK_3X1           $d3     ; deck, bottom-left (row 4)
-.DEF    TILE_DECK_3X2           $e3     ; deck, bottom-centre (row 4)
-.DEF    TILE_DECK_3X3           $f3     ; deck, bottom-right (row 4)
+.DEF    TILE_DECK_Y1X1          $d3     ; deck, middle-left (row 2)
+.DEF    TILE_DECK_Y1X2          $e3     ; deck, middle-centre (row 2)
+.DEF    TILE_DECK_Y1X3          $f3     ; deck, middle-right (row 2)
+.DEF    TILE_DECK_Y2X1          $d3     ; deck, middle-left (row 3)
+.DEF    TILE_DECK_Y2X2          $e3     ; deck, middle-centre (row 3)
+.DEF    TILE_DECK_Y2X3          $f3     ; deck, middle-right (row 3)
+.DEF    TILE_DECK_Y3X1          $d3     ; deck, bottom-left (row 4)
+.DEF    TILE_DECK_Y3X2          $e3     ; deck, bottom-centre (row 4)
+.DEF    TILE_DECK_Y3X3          $f3     ; deck, bottom-right (row 4)
 
 ; bottom-row of the deck
-.DEF    TILE_DECK_4X1           $d6     ; deck, pile-left
-.DEF    TILE_DECK_4X2           $e6     ; deck, pile-centre
-.DEF    TILE_DECK_4X3           $f6     ; deck, pile-right
+.DEF    TILE_DECK_Y4X1          $d6     ; deck, pile-left
+.DEF    TILE_DECK_Y4X2          $e6     ; deck, pile-centre
+.DEF    TILE_DECK_Y4X3          $f6     ; deck, pile-right
 
 ; back:
 ;-------------------------------------------------------------------------------
 ; a card, face-down:
 ;
-.DEF    TILE_BACK_1X1           $d2     ; back, top-left
-.DEF    TILE_BACK_1X2           $e2     ; back, top-centre
-.DEF    TILE_BACK_1X3           $f2     ; back, top-right
-.DEF    TILE_BACK_2X1           $d3     ; back, middle-left (row 2)
-.DEF    TILE_BACK_2X2           $e3     ; back, middle-centre (row 2)
-.DEF    TILE_BACK_2X3           $f3     ; back, middle-right (row 2)
-.DEF    TILE_BACK_3X1           $d4     ; back, middle-left (row 3)
-.DEF    TILE_BACK_3X2           $e4     ; back, middle-centre (row 3)
-.DEF    TILE_BACK_3X3           $f4     ; back, middle-right (row 3)
-.DEF    TILE_BACK_4X1           $d5     ; back, bottom-left
-.DEF    TILE_BACK_4X2           $e5     ; back, bottom-centre
-.DEF    TILE_BACK_4X3           $f5     ; back, bottom-right
+.DEF    TILE_BACK_Y1X1          $d2     ; back, top-left
+.DEF    TILE_BACK_Y1X2          $e2     ; back, top-centre
+.DEF    TILE_BACK_Y1X3          $f2     ; back, top-right
+.DEF    TILE_BACK_Y2X1          $d3     ; back, middle-left (row 2)
+.DEF    TILE_BACK_Y2X2          $e3     ; back, middle-centre (row 2)
+.DEF    TILE_BACK_Y2X3          $f3     ; back, middle-right (row 2)
+.DEF    TILE_BACK_Y3X1          $d4     ; back, middle-left (row 3)
+.DEF    TILE_BACK_Y3X2          $e4     ; back, middle-centre (row 3)
+.DEF    TILE_BACK_Y3X3          $f4     ; back, middle-right (row 3)
+.DEF    TILE_BACK_Y4X1          $d5     ; back, bottom-left
+.DEF    TILE_BACK_Y4X2          $e5     ; back, bottom-centre
+.DEF    TILE_BACK_Y4X3          $f5     ; back, bottom-right
 
 ; face-up:
 ;-------------------------------------------------------------------------------
 ; the top-left corner of a face-up card has the
 ; ordinal (number) of the card, Ace through King:
 ;
-.DEF    TILE_CARD_1X1           $80
-.DEF    TILE_CARD_1X1_A         $80     ; Ace
-.DEF    TILE_CARD_1X1_2         $82     ; Two
-.DEF    TILE_CARD_1X1_3         $84     ; Three
-.DEF    TILE_CARD_1X1_4         $86     ; Four
-.DEF    TILE_CARD_1X1_5         $88     ; Five
-.DEF    TILE_CARD_1X1_6         $8a     ; Six
-.DEF    TILE_CARD_1X1_7         $8c     ; Seven
-.DEF    TILE_CARD_1X1_8         $8e     ; Eight
-.DEF    TILE_CARD_1X1_9         $90     ; Nine
-.DEF    TILE_CARD_1X1_10        $92     ; Ten
-.DEF    TILE_CARD_1X1_J         $94     ; Jack
-.DEF    TILE_CARD_1X1_Q         $96     ; Queen
-.DEF    TILE_CARD_1X1_K         $98     ; King
+.DEF    TILE_CARD_Y1X1          $80
+.DEF    TILE_CARD_Y1X1_A        $80+0   ; Ace
+.DEF    TILE_CARD_Y1X1_2        $80+1   ; Two
+.DEF    TILE_CARD_Y1X1_3        $80+2   ; Three
+.DEF    TILE_CARD_Y1X1_4        $80+3   ; Four
+.DEF    TILE_CARD_Y1X1_5        $80+4   ; Five
+.DEF    TILE_CARD_Y1X1_6        $80+5   ; Six
+.DEF    TILE_CARD_Y1X1_7        $80+6   ; Seven
+.DEF    TILE_CARD_Y1X1_8        $80+7   ; Eight
+.DEF    TILE_CARD_Y1X1_9        $80+8   ; Nine
+.DEF    TILE_CARD_Y1X1_10       $80+9   ; Ten
+.DEF    TILE_CARD_Y1X1_J        $80+10  ; Jack
+.DEF    TILE_CARD_Y1X1_Q        $80+11  ; Queen
+.DEF    TILE_CARD_Y1X1_K        $80+12  ; King
 
 ; the top-centre of a face-up card is blank
-.DEF    TILE_CARD_1X2           $9a
+.DEF    TILE_CARD_Y1X2          $a5
 
 ; the top-right of a face-up card has the suit:
-.DEF    TILE_CARD_1X3           $c0
-.DEF    TILE_CARD_1X3_SPD       $c2     ; Spades
-.DEF    TILE_CARD_1X3_CLB       $c4     ; Clubs
-.DEF    TILE_CARD_1X3_HRT       $c6     ; Hearts
-.DEF    TILE_CARD_1X3_DMD       $c8     ; Diamonds
+.DEF    TILE_CARD_Y1X3          $a0
+.DEF    TILE_CARD_Y1X3_SPD      $a0+1   ; Spades
+.DEF    TILE_CARD_Y1X3_CLB      $a0+2   ; Clubs
+.DEF    TILE_CARD_Y1X3_HRT      $a0+3   ; Hearts
+.DEF    TILE_CARD_Y1X3_DMD      $a0+4   ; Diamonds
 
 ; the left, centre and right of the middle
 ; portion of the card (two-rows) is blank:
-.DEF    TILE_CARD_2X1           $81
-.DEF    TILE_CARD_2X2           $9b
-.DEF    TILE_CARD_2X3           $a0
-.DEF    TILE_CARD_3X1           $81
-.DEF    TILE_CARD_3X2           $9b
-.DEF    TILE_CARD_3X3           $a0
+.DEF    TILE_CARD_Y2X1          $a4
+.DEF    TILE_CARD_Y2X2          $a6
+.DEF    TILE_CARD_Y2X3          $a8
+.DEF    TILE_CARD_Y3X1          $a4
+.DEF    TILE_CARD_Y3X2          $a6
+.DEF    TILE_CARD_Y3X3          $a8
 
 ; the bottom-left of a face-up card has the suit:
-.DEF    TILE_CARD_4X1           $c9
-.DEF    TILE_CARD_4X1_SPD       $c9     ; Spades
-.DEF    TILE_CARD_4X1_CLB       $cb     ; Clubs
-.DEF    TILE_CARD_4X1_HRT       $cd     ; Hearts
-.DEF    TILE_CARD_4X1_DMD       $cf     ; Diamonds
+.DEF    TILE_CARD_Y4X1          $a9
+.DEF    TILE_CARD_Y4X1_SPD      $a9+0   ; Spades
+.DEF    TILE_CARD_Y4X1_CLB      $a9+1   ; Clubs
+.DEF    TILE_CARD_Y4X1_HRT      $a9+2   ; Hearts
+.DEF    TILE_CARD_Y4X1_DMD      $a9+3   ; Diamonds
 
 ; the bottom-centre is blank
-.DEF    TILE_CARD_4X2           $9d
+.DEF    TILE_CARD_Y4X2          $a7
 
 ; the bottom-right of a face-up card has the ordinal:
-.DEF    TILE_CARD_4X3           $a1
-.DEF    TILE_CARD_4X3_A         $a1     ; Ace
-.DEF    TILE_CARD_4X3_2         $a3     ; Two
-.DEF    TILE_CARD_4X3_3         $a5     ; Three
-.DEF    TILE_CARD_4X3_4         $a7     ; Four
-.DEF    TILE_CARD_4X3_5         $a9     ; Five
-.DEF    TILE_CARD_4X3_6         $ab     ; Six
-.DEF    TILE_CARD_4X3_7         $ad     ; Seven
-.DEF    TILE_CARD_4X3_8         $af     ; Eight
-.DEF    TILE_CARD_4X3_9         $b1     ; Nine
-.DEF    TILE_CARD_4X3_10        $b3     ; Ten
-.DEF    TILE_CARD_4X3_J         $b5     ; Jack
-.DEF    TILE_CARD_4X3_Q         $b7     ; Queen
-.DEF    TILE_CARD_4X3_K         $b9     ; King
+.DEF    TILE_CARD_Y4X3          $b0
+.DEF    TILE_CARD_Y4X3_A        $b0+0   ; Ace
+.DEF    TILE_CARD_Y4X3_2        $b0+1   ; Two
+.DEF    TILE_CARD_Y4X3_3        $b0+2   ; Three
+.DEF    TILE_CARD_Y4X3_4        $b0+3   ; Four
+.DEF    TILE_CARD_Y4X3_5        $b0+4   ; Five
+.DEF    TILE_CARD_Y4X3_6        $b0+5   ; Six
+.DEF    TILE_CARD_Y4X3_7        $b0+6   ; Seven
+.DEF    TILE_CARD_Y4X3_8        $b0+7   ; Eight
+.DEF    TILE_CARD_Y4X3_9        $b0+8   ; Nine
+.DEF    TILE_CARD_Y4X3_10       $b0+9   ; Ten
+.DEF    TILE_CARD_Y4X3_J        $b0+10  ; Jack
+.DEF    TILE_CARD_Y4X3_Q        $b0+11  ; Queen
+.DEF    TILE_CARD_Y4X3_K        $b0+12  ; King
 
 ; card tilemaps:
 ;===============================================================================
@@ -212,30 +212,30 @@ tilemap_empty:
         ; this is the dotted-outline used for showing an empty pile,
         ; such as the deck, hand, or foundation
         ;
-@row1:  .byte   TILE_FNDT_1X1, TILE_FNDT_1X2, TILE_FNDT_1X3
-@row2:  .byte   TILE_FNDT_2X1, TILE_FNDT_2X2, TILE_FNDT_2X3
-@row3:  .byte   TILE_FNDT_3X1, TILE_FNDT_3X2, TILE_FNDT_3X3
-@row4:  .byte   TILE_FNDT_4X1, TILE_FNDT_4X2, TILE_FNDT_4X3
+@row1:  .byte   TILE_FNDT_Y1X1, TILE_FNDT_Y1X2, TILE_FNDT_Y1X3
+@row2:  .byte   TILE_FNDT_Y2X1, TILE_FNDT_Y2X2, TILE_FNDT_Y2X3
+@row3:  .byte   TILE_FNDT_Y3X1, TILE_FNDT_Y3X2, TILE_FNDT_Y3X3
+@row4:  .byte   TILE_FNDT_Y4X1, TILE_FNDT_Y4X2, TILE_FNDT_Y4X3
 
 tilemap_deck:
         ;-----------------------------------------------------------------------
         ; a full deck
         ;
-@row0:  .byte   TILE_DECK_0X1, TILE_DECK_0X2, TILE_DECK_0X3
-@row1:  .byte   TILE_DECK_1X1, TILE_DECK_1X2, TILE_DECK_1X3
-@row2:  .byte   TILE_DECK_2X1, TILE_DECK_2X2, TILE_DECK_2X3
-@row3:  .byte   TILE_DECK_3X1, TILE_DECK_3X2, TILE_DECK_3X3
-@row4:  .byte   TILE_DECK_4X1, TILE_DECK_4X2, TILE_DECK_4X3
+@row0:  .byte   TILE_DECK_Y0X1, TILE_DECK_Y0X2, TILE_DECK_Y0X3
+@row1:  .byte   TILE_DECK_Y1X1, TILE_DECK_Y1X2, TILE_DECK_Y1X3
+@row2:  .byte   TILE_DECK_Y2X1, TILE_DECK_Y2X2, TILE_DECK_Y2X3
+@row3:  .byte   TILE_DECK_Y3X1, TILE_DECK_Y3X2, TILE_DECK_Y3X3
+@row4:  .byte   TILE_DECK_Y4X1, TILE_DECK_Y4X2, TILE_DECK_Y4X3
 
 
 tilemap_back:
         ;-----------------------------------------------------------------------
         ; the back of a card
         ;
-@row1:  .byte   TILE_BACK_1X1, TILE_BACK_1X2, TILE_BACK_1X3
-@row2:  .byte   TILE_BACK_2X1, TILE_BACK_2X2, TILE_BACK_2X3
-@row3:  .byte   TILE_BACK_3X1, TILE_BACK_3X2, TILE_BACK_3X3
-@row4:  .byte   TILE_BACK_4X1, TILE_BACK_4X2, TILE_BACK_4X3
+@row1:  .byte   TILE_BACK_Y1X1, TILE_BACK_Y1X2, TILE_BACK_Y1X3
+@row2:  .byte   TILE_BACK_Y2X1, TILE_BACK_Y2X2, TILE_BACK_Y2X3
+@row3:  .byte   TILE_BACK_Y3X1, TILE_BACK_Y3X2, TILE_BACK_Y3X3
+@row4:  .byte   TILE_BACK_Y4X1, TILE_BACK_Y4X2, TILE_BACK_Y4X3
 
 ;###############################################################################
 .ENDS

@@ -278,23 +278,23 @@ drawCard:
         ;-----------------------------------------------------------------------
         ; middle:
         ;-----------------------------------------------------------------------
-        ld      A,      TILE_CARD_2X1
+        ld      A,      TILE_CARD_Y2X1
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A
-        ld      A,      TILE_CARD_2X2
+        ld      A,      TILE_CARD_Y2X2
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A
-        ld      A,      TILE_CARD_2X3
+        ld      A,      TILE_CARD_Y2X3
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A
         add     HL,     BC              ; move to the next row
-        ld      A,      TILE_CARD_2X1
+        ld      A,      TILE_CARD_Y2X1
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A
-        ld      A,      TILE_CARD_2X2
+        ld      A,      TILE_CARD_Y2X2
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A
-        ld      A,      TILE_CARD_2X3
+        ld      A,      TILE_CARD_Y2X3
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A
         add     HL,     BC              ; move to the next row
@@ -304,14 +304,13 @@ drawCard:
         ld      A,      D
         swap    A                       ; move the suit to the bottom nybble
         and     %00000011               ; mask out the other bits
-        rlca
-        add     TILE_CARD_4X1
+        add     TILE_CARD_Y4X1
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A
         ;-----------------------------------------------------------------------
         ; bottom-middle:
         ;-----------------------------------------------------------------------
-        ld      A,      TILE_CARD_4X2
+        ld      A,      TILE_CARD_Y4X2
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A
         ;-----------------------------------------------------------------------
@@ -319,8 +318,7 @@ drawCard:
         ;-----------------------------------------------------------------------
         ld      A,      D               ; retrieve ordinal from earlier
         and     %00001111               ; trim out the other bits
-        rlca
-        add     TILE_CARD_4X3-2         ; offset the tile with the ordinal
+        add     TILE_CARD_Y4X3-1        ; offset the tile with the ordinal
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance
 
@@ -373,14 +371,13 @@ drawCardEdgeTop:
         ;-----------------------------------------------------------------------
         ld      A,      D               ; return to the original card value
         and     %00001111               ; trim out the other bits
-        rlca
-        add     TILE_CARD_1X1-2         ; offset the tile with the ordinal
+        add     TILE_CARD_Y1X1-1        ; offset the tile with the ordinal
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ;-----------------------------------------------------------------------
         ; top-middle:
         ;-----------------------------------------------------------------------
-        ld      A,      TILE_CARD_1X2
+        ld      A,      TILE_CARD_Y1X2
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A
         ;-----------------------------------------------------------------------
@@ -389,8 +386,7 @@ drawCardEdgeTop:
         ld      A,      D
         swap    A                       ; move the suit to the bottom nybble
         and     %00000011               ; mask out the other bits
-        rlca
-        add     TILE_CARD_1X3
+        add     TILE_CARD_Y1X3
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance
 
