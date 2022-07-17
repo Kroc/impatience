@@ -108,16 +108,21 @@ drawPile:
         and     A,      A               ; (set flags!)
         ret     z                       ; if pile is unallocated, quit
 
-        ; check the type of pile:
-        bit     7,      A               ; is it a stack?
-        jr      nz,     @stack          ; -> handle stack-type piles
-
         ; is the pile empty?
         rst     piles.rst_pileCount     ; (get pile count, set flags)
         jr      z,      @empty          ; if zero, draw empty space
 
+        ; check the specific type of pile:
+        ; (note that A, card-count, is preserved through this)
+        ;
+        ld      H,      FIELD_TYPE      ; switch field back again
+        bit     7,      [HL]            ; is it a stack?
+        jr      nz,     @stack          ; -> handle stack-type piles
+        bit     6,      [HL]            ; is it a horizontal pile?
+        jr      nz,     @row            ; -> handle horizontal spreads
+
         ; column:
-        ;-----------------------------------------------------------------------
+        ;=======================================================================
         ; (note that A, card-count, is preserved through this)
 @col:   rst     piles.rst_poolAddr      ; get card pool address (DE)
         call    piles.getPos            ; get pile row & col (BC)
@@ -153,7 +158,25 @@ drawPile:
 
         ret
 
-        ;-----------------------------------------------------------------------
+        ;=======================================================================
+        ; row:
+        ;
+        ; (note that A, card-count, is preserved through this)
+@row:   rst     piles.rst_poolAddr      ; get card pool address (DE)
+        call    piles.getPos            ; get pile row & col (BC)
+
+        ; get screen-buffer address for the X/Y co-ords (BC). note that
+        ; this returns the address in HL, but clobbers BC. we depend upon
+        ; it preserving A (our card count) and DE (the pile pool address)
+        call    tilemap.getBufferAddr
+        ; retain the card-count for iterating through the pile
+        ld      C,      A
+        ; begin the pile at the first card
+        ld      B,      0
+
+        ret
+
+        ;=======================================================================
         ; empty pile:
         ;
 @empty: call    piles.getPos            ; first get the pile's row & col
@@ -163,17 +186,13 @@ drawPile:
         ld      DE,     tilemap.tilemap_empty
         jp      tilemap.writeTiles_4rows
 
-        ;-----------------------------------------------------------------------
+        ;=======================================================================
         ; stacks:
         ;
         ; is it a face-down stack (e.g. deck),
         ; or face-up stack (e.g. foundation)?
-@stack: bit     5,      A               ; =`PILE_FACE`?
+@stack: bit     5,      [HL]            ; =`PILE_FACE`?
         jr      nz,     @face
-
-        ; is the pile empty?
-        rst     piles.rst_pileCount     ; (get pile count, set flags)
-        jr      z,      @empty          ; if zero, draw empty space
 
         ; read the top-most card in the pile
         call    piles.getLastCard
@@ -188,14 +207,10 @@ drawPile:
         ld      DE,     tilemap.tilemap_deck
         jp      tilemap.writeTiles_5rows
 
-        ;-----------------------------------------------------------------------
+        ;=======================================================================
         ; stack with face-up card:
         ;
-        ; is the pile empty?
-@face:  rst     piles.rst_pileCount     ; (get pile count, set flags)
-        jr      z,      @empty          ; if zero, draw empty space
-
-        call    piles.getLastCard
+@face:  call    piles.getLastCard
         call    piles.getPos            ; get the pile's row & col
         call    tilemap.getBufferAddr   ; translate to a buffer address
 
@@ -233,7 +248,13 @@ drawCard:
         ; remember the state of the carry flag;
         ; if set, we draw only the first row
 @face:  push    AF
-        ld      BC,     TILEMAP_WIDTH-3 ; amount to skip to next row
+
+        call    drawCardEdgeTop
+
+        ; should we only draw the first row?
+        pop     AF                      ; restore carry
+        ret     c                       ; return now if carry-set
+
         ld      D,      A               ; keep a copy of the original value
 
         ; "invalid" (disabled) card?
@@ -253,36 +274,7 @@ drawCard:
         ;
         and     %10000000               ; isolate the validity bit,
         ld      E,      A               ; and put it aside
-        ;-----------------------------------------------------------------------
-        ; top-left corner: ordinal
-        ;-----------------------------------------------------------------------
-        ld      A,      D               ; return to the original card value
-        and     %00001111               ; trim out the other bits
-        rlca
-        add     TILE_CARD_1X1-2         ; offset the tile with the ordinal
-        xor     E                       ; add the invalid bit, if present
-        ld      [HL+],  A               ; write the tile and advance
-        ;-----------------------------------------------------------------------
-        ; top-middle:
-        ;-----------------------------------------------------------------------
-        ld      A,      TILE_CARD_1X2
-        xor     E                       ; add the invalid bit, if present
-        ld      [HL+],  A
-        ;-----------------------------------------------------------------------
-        ; top-right corner: suit
-        ;-----------------------------------------------------------------------
-        ld      A,      D
-        swap    A                       ; move the suit to the bottom nybble
-        and     %00000011               ; mask out the other bits
-        rlca
-        add     TILE_CARD_1X3
-        xor     E                       ; add the invalid bit, if present
-        ld      [HL+],  A
-        add     HL,     BC              ; move to the next row
 
-        ; should we only draw the first row?
-        pop     AF                      ; restore carry
-        ret     c                       ; return now if carry-set
         ;-----------------------------------------------------------------------
         ; middle:
         ;-----------------------------------------------------------------------
@@ -332,4 +324,78 @@ drawCard:
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance
 
+        ret
+
+
+drawCardEdgeTop:
+;===============================================================================
+; for cards in a column where one card covers another,
+; and we need to draw only the top edge of a card:
+;
+; in:   HL      address in the front-buffer to draw the card
+;       A       the card to draw
+; out:  HL      the buffer address is advanced to the next tilemap row
+;-------------------------------------------------------------------------------
+        bit     6,      A               ; is the card face-down?
+        jr      z,      @face           ; if not, skip onto drawing face-up
+
+        ; face-down:
+        ;=======================================================================
+        ; face-down cards do not differ between valid & invalid
+        ld      DE,     tilemap.tilemap_back
+        ; draw only the first line of the tiles
+        jp      tilemap.writeTiles_1row
+
+        ;=======================================================================
+        ; face-up:
+        ;
+@face:  ld      D,      A               ; keep a copy of the original value
+
+        ; "invalid" (disabled) card?
+        ;
+        ; the highest bit of the card value is used to indicate an "invalid"
+        ; card -- one that cannot be played. these are drawn in 'greyed-out'
+        ; graphics. because the original mono GameBoy only has 1 background
+        ; tile palette, we can't just recolour existing tiles and instead
+        ; have to provide a second "invalid" set of card tiles in VRAM
+        ;
+        ; I've arranged VRAM such that the "valid" and "invalid" card tiles
+        ; are exactly... $80 apart! in practice, this works in reverse because
+        ; background tiles begin at $80 to $ff for the lower block and then
+        ; $00 to $7f for the upper block (this due to sprites sharing half
+        ; the tile data). since we need to add the opposite of bit 7 to
+        ; tile indices we use XOR instead of OR to apply it
+        ;
+        and     %10000000               ; isolate the validity bit,
+        ld      E,      A               ; and put it aside
+        ;-----------------------------------------------------------------------
+        ; top-left corner: ordinal
+        ;-----------------------------------------------------------------------
+        ld      A,      D               ; return to the original card value
+        and     %00001111               ; trim out the other bits
+        rlca
+        add     TILE_CARD_1X1-2         ; offset the tile with the ordinal
+        xor     E                       ; add the invalid bit, if present
+        ld      [HL+],  A               ; write the tile and advance
+        ;-----------------------------------------------------------------------
+        ; top-middle:
+        ;-----------------------------------------------------------------------
+        ld      A,      TILE_CARD_1X2
+        xor     E                       ; add the invalid bit, if present
+        ld      [HL+],  A
+        ;-----------------------------------------------------------------------
+        ; top-right corner: suit
+        ;-----------------------------------------------------------------------
+        ld      A,      D
+        swap    A                       ; move the suit to the bottom nybble
+        and     %00000011               ; mask out the other bits
+        rlca
+        add     TILE_CARD_1X3
+        xor     E                       ; add the invalid bit, if present
+        ld      [HL+],  A               ; write the tile and advance
+
+        ; move to the next tilemap row
+        ;-----------------------------------------------------------------------
+        ld      BC,     TILEMAP_WIDTH-3 ; amount to skip to next row
+        add     HL,     BC              ; bump buffer address
         ret

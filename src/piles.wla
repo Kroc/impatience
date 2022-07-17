@@ -86,8 +86,8 @@
 .DEF    PILE_STACK      %10000000       ; stacked, e.g. deck / foundation
 .DEF    PILE_SPREAD     %00000000       ; spread-out, e.g. column / hand
 
-.DEF    PILE_VERT       %01000000       ; vertically spread, e.g. column
-.DEF    PILE_HORZ       %00000000       ; horizontally spread, e.g. hand
+.DEF    PILE_VERT       %00000000       ; vertically spread, e.g. column
+.DEF    PILE_HORZ       %01000000       ; horizontally spread, e.g. hand
 
 .DEF    PILE_FACE       %00100000       ; face-up, e.g. foundation
 .DEF    PILE_BACK       %00000000       ; face-down, e.g. deck

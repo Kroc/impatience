@@ -12,6 +12,8 @@
 ;       | 1 | | 2 | | 3 | | 4 | | 5 | | 6 | | 7 |
 ;       '---' '---' '---' '---' '---' '---' '---'
 ;
+.DEF    PILE_COLUMN_KLONDIKE    PILE_COLUMN | VALID_KLONDIKE
+
 piles.Begin
         ; label,                type, max-cards,
         ; row,                  col,
@@ -57,37 +59,37 @@ piles.Define \
 ; (a full K to A sequence) plus the number of unturned cards
 ; which varies across the depots
 piles.Define \
-        klondike_depot1,        PILE_COLUMN | VALID_KLONDIKE, 13+0, \
+        klondike_depot1,        PILE_COLUMN_KLONDIKE, 13+0, \
         5,                      TABLEAU_LEFT, \
         INDEX_DEPOT7,           INDEX_DEPOT2, \
         INDEX_DECK,             INDEX_DECK
 piles.Define \
-        klondike_depot2,        PILE_COLUMN | VALID_KLONDIKE, 13+1, \
+        klondike_depot2,        PILE_COLUMN_KLONDIKE, 13+1, \
         5,                      TABLEAU_LEFT + 3, \
         INDEX_DEPOT1,           INDEX_DEPOT3, \
         INDEX_HAND,             INDEX_HAND
 piles.Define \
-        klondike_depot3,        PILE_COLUMN | VALID_KLONDIKE, 13+2, \
+        klondike_depot3,        PILE_COLUMN_KLONDIKE, 13+2, \
         5,                      TABLEAU_LEFT + 6, \
         INDEX_DEPOT2,           INDEX_DEPOT4, \
         INDEX_HAND,             INDEX_HAND
 piles.Define \
-        klondike_depot4,        PILE_COLUMN | VALID_KLONDIKE, 13+3, \
+        klondike_depot4,        PILE_COLUMN_KLONDIKE, 13+3, \
         5,                      TABLEAU_LEFT + 9, \
         INDEX_DEPOT3,           INDEX_DEPOT5, \
         INDEX_FOUNDATION1,      INDEX_FOUNDATION1
 piles.Define \
-        klondike_depot5,        PILE_COLUMN | VALID_KLONDIKE, 13+4, \
+        klondike_depot5,        PILE_COLUMN_KLONDIKE, 13+4, \
         5,                      TABLEAU_LEFT + 12, \
         INDEX_DEPOT4,           INDEX_DEPOT6, \
         INDEX_FOUNDATION2,      INDEX_FOUNDATION2
 piles.Define \
-        klondike_depot6,        PILE_COLUMN | VALID_KLONDIKE, 13+5, \
+        klondike_depot6,        PILE_COLUMN_KLONDIKE, 13+5, \
         5,                      TABLEAU_LEFT + 15, \
         INDEX_DEPOT5,           INDEX_DEPOT7, \
         INDEX_FOUNDATION3,      INDEX_FOUNDATION3
 piles.Define \
-        klondike_depot7,        PILE_COLUMN | VALID_KLONDIKE, 13+6, \
+        klondike_depot7,        PILE_COLUMN_KLONDIKE, 13+6, \
         5,                      TABLEAU_LEFT + 18, \
         INDEX_DEPOT6,           INDEX_DEPOT1, \
         INDEX_FOUNDATION4,      INDEX_FOUNDATION4
@@ -135,6 +137,10 @@ init:
         ; hand:
         ld      L,      INDEX_HAND
         ld      A,      CARD_5 | SUIT_DIAMOND
+        call    piles.addCard
+        ld      A,      CARD_6 | SUIT_CLUB
+        call    piles.addCard
+        ld      A,      CARD_7 | SUIT_DIAMOND
         call    piles.addCard
         ; foundations:
         ld      L,      INDEX_FOUNDATION1
