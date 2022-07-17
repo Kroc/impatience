@@ -391,26 +391,26 @@ pointToCard:
         ld      A,              L
         ld      [pile_point],   A
 
+        ; is the pile empty?
+        rst     piles.rst_pileCount     ; get pile count, set flags
+        jr      z,      @empty
+
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; we point to the top of the pile without counting cards
         ld      H,      FIELD_TYPE
         bit     7,      [HL]            ; =PILE_STACK?
         jr      nz,     @empty          ; TODO: the deck is slightly raised
 
-        ; is the pile empty?
-        rst     piles.rst_pileCount     ; get pile count, set flags
-        jr      z,      @empty
-
         ; for a spread, the cursor will be positioned
         ; differently for the top card, vs the spread
         ;-----------------------------------------------------------------------
         ; compare the number of cards in the pile to the target card
         ; (empty has already been checked so A must be > 0)
-@col:   dec     A                       ; (adjust for 0-based)
+        dec     A                       ; (adjust for 0-based)
         cp      C                       ; compare against target card
         jr      z,      @top
 
-        call    @pos
+        call    piles.getPos            ; get Pile row (B) & col (C)
         call    @spread
 
         call    sprites.tilePosToScrXY
@@ -421,28 +421,9 @@ pointToCard:
         ld      B,      A
         jp      moveToScrXY
 
-        ; retrieve the row/column of the pile
-        ;-----------------------------------------------------------------------
-@pos:   call    piles.getPos            ; get Pile row (B) & col (C)
-
-        ; we will always be pointing to the horizontal middle of the card;
-        ; in the case of face-up cards, we want to point to the space
-        ; between the suit / number so as not to obscure either
-        inc     C
-        ret
-
-        ; offset the cursor according to the card number in the stack
-        ;-----------------------------------------------------------------------
-        ; add the card number to the row number as each
-        ; card in a pile adds another tile's height
-@spread ld      A,      [card_point]    ; retrieve card number to point to
-        add     A,      B
-        ld      B,      A
-        ret
-
         ; top card:
         ;-----------------------------------------------------------------------
-@top:   call    @pos
+@top:   call    piles.getPos            ; get Pile row (B) & col (C)
         call    @spread
         inc     B
 
@@ -450,11 +431,38 @@ pointToCard:
         inc     B
         jp      moveToScrXY
 
-        ; empty pile:
+        ; offset the cursor according to the card number in the stack
         ;-----------------------------------------------------------------------
+        ; we will always be pointing to the horizontal middle of the card;
+        ; in the case of face-up cards, we want to point to the space
+        ; between the suit / number so as not to obscure either
+@spread inc     C
+        
+        ld      A,      [card_point]    ; retrieve card number to point to
+        
+        ld      H,      FIELD_TYPE
+        bit     6,      [HL]
+        jr      nz,     @row
+
+        ; add the card number to the row number as
+        ; each card in a pile adds another tile's height
+        add     A,      B
+        ld      B,      A
+        ret
+
+        ;-----------------------------------------------------------------------
+        ; add the card number to the column number as
+        ; each card in a pile adds another tile's width
+@row:   add     A,      C
+        ld      C,      A
+        ret
+
+        ; empty pile:
+        ;=======================================================================
         ; for empty piles, we want to point to the centre of the space
         ;
-@empty: call    @pos                    ; get Pile row/col
+@empty: call    piles.getPos            ; get Pile row (B) & col (C)
+        inc     C                       ; move right one col, to the middle
         inc     B                       ; move down one row, to the middle
 
         ; fall through to the move routine below!

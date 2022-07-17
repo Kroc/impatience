@@ -280,7 +280,7 @@
 
 .DEF    __pool_addr     piles.storage
 
-; for the purposes of providing pre-defined pile definitions in ROM,
+; for the purposes of providing pre-defined piles in ROM,
 ; this struct is used to store (most) fields linearly
 ;
 .STRUCT PileROM
