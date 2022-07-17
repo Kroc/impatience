@@ -212,30 +212,36 @@ tilemap_empty:
         ; this is the dotted-outline used for showing an empty pile,
         ; such as the deck, hand, or foundation
         ;
-@row1:  .byte   TILE_FNDT_Y1X1, TILE_FNDT_Y1X2, TILE_FNDT_Y1X3
-@row2:  .byte   TILE_FNDT_Y2X1, TILE_FNDT_Y2X2, TILE_FNDT_Y2X3
-@row3:  .byte   TILE_FNDT_Y3X1, TILE_FNDT_Y3X2, TILE_FNDT_Y3X3
-@row4:  .byte   TILE_FNDT_Y4X1, TILE_FNDT_Y4X2, TILE_FNDT_Y4X3
+@row1:  .BYTE   TILE_FNDT_Y1X1, TILE_FNDT_Y1X2, TILE_FNDT_Y1X3
+@row2:  .BYTE   TILE_FNDT_Y2X1, TILE_FNDT_Y2X2, TILE_FNDT_Y2X3
+@row3:  .BYTE   TILE_FNDT_Y3X1, TILE_FNDT_Y3X2, TILE_FNDT_Y3X3
+@row4:  .BYTE   TILE_FNDT_Y4X1, TILE_FNDT_Y4X2, TILE_FNDT_Y4X3
 
 tilemap_deck:
         ;-----------------------------------------------------------------------
         ; a full deck
         ;
-@row0:  .byte   TILE_DECK_Y0X1, TILE_DECK_Y0X2, TILE_DECK_Y0X3
-@row1:  .byte   TILE_DECK_Y1X1, TILE_DECK_Y1X2, TILE_DECK_Y1X3
-@row2:  .byte   TILE_DECK_Y2X1, TILE_DECK_Y2X2, TILE_DECK_Y2X3
-@row3:  .byte   TILE_DECK_Y3X1, TILE_DECK_Y3X2, TILE_DECK_Y3X3
-@row4:  .byte   TILE_DECK_Y4X1, TILE_DECK_Y4X2, TILE_DECK_Y4X3
+@row0:  .BYTE   TILE_DECK_Y0X1, TILE_DECK_Y0X2, TILE_DECK_Y0X3
+@row1:  .BYTE   TILE_DECK_Y1X1, TILE_DECK_Y1X2, TILE_DECK_Y1X3
+@row2:  .BYTE   TILE_DECK_Y2X1, TILE_DECK_Y2X2, TILE_DECK_Y2X3
+@row3:  .BYTE   TILE_DECK_Y3X1, TILE_DECK_Y3X2, TILE_DECK_Y3X3
+@row4:  .BYTE   TILE_DECK_Y4X1, TILE_DECK_Y4X2, TILE_DECK_Y4X3
 
 
 tilemap_back:
         ;-----------------------------------------------------------------------
         ; the back of a card
         ;
-@row1:  .byte   TILE_BACK_Y1X1, TILE_BACK_Y1X2, TILE_BACK_Y1X3
-@row2:  .byte   TILE_BACK_Y2X1, TILE_BACK_Y2X2, TILE_BACK_Y2X3
-@row3:  .byte   TILE_BACK_Y3X1, TILE_BACK_Y3X2, TILE_BACK_Y3X3
-@row4:  .byte   TILE_BACK_Y4X1, TILE_BACK_Y4X2, TILE_BACK_Y4X3
+@row1:  .BYTE   TILE_BACK_Y1X1, TILE_BACK_Y1X2, TILE_BACK_Y1X3
+@row2:  .BYTE   TILE_BACK_Y2X1, TILE_BACK_Y2X2, TILE_BACK_Y2X3
+@row3:  .BYTE   TILE_BACK_Y3X1, TILE_BACK_Y3X2, TILE_BACK_Y3X3
+@row4:  .BYTE   TILE_BACK_Y4X1, TILE_BACK_Y4X2, TILE_BACK_Y4X3
+
+tilemap_back_left:
+        ;-----------------------------------------------------------------------
+        ; the left-edge (1-column) of the back of a card
+        ;
+        .BYTE   TILE_BACK_Y1X1, TILE_BACK_Y2X1, TILE_BACK_Y3X1, TILE_BACK_Y4X1
 
 ;###############################################################################
 .ENDS
@@ -385,6 +391,56 @@ writeTiles:
         ; we could use `add HL, BC` but we want to preserve BC
         ;
 @next:  ld      A,      TILEMAP_WIDTH-3 ; number of tiles to skip to next row
+        add     A,      L               ; add this to the address lo-byte
+        jr      nc,     +               ; did that overflow?
+        inc     H                       ; if so, bump the address hi-byte
++       ld      L,      A
+        ret
+
+
+writeTiles_1col:
+;===============================================================================
+; in:   DE      address with tiles to read from (1-column arranged in order)
+;       HL      address to write to, where 4 tiles are written vertically,
+;               then the address is moved to the next column of the tilemap
+;
+; out:  HL      the front-buffer address is advanced to the next tilemap column
+;       DE      the read address is advanced by 3
+;       BC      (preserved)
+;       AF      (clobbered)
+;-------------------------------------------------------------------------------
+        ld      A,      [DE]
+        inc     DE
+        ld      [HL],   A
+        call    @next
+        ld      A,      [DE]
+        inc     DE
+        ld      [HL],   A
+        call    @next
+        ld      A,      [DE]
+        inc     DE
+        ld      [HL],   A
+        call    @next
+        ld      A,      [DE]
+        ld      [HL],   A
+        inc     DE
+
+        ; move front-buffer address to the next column;
+        ; this involves moving up by 3 tilemap rows
+        ;
+        ld      A,      L
+        sub     (TILEMAP_WIDTH*3)-1     ; (less one tile, to move right a col)
+        jr      nc,     +               ; did that underflow?
+        dec     H                       ; if so, bump the address hi-byte
++       ld      L,      A
+        ret
+
+        ;=======================================================================
+        ; move to the next tilemap row:
+        ;-----------------------------------------------------------------------
+        ; we could use `add HL, BC` but we want to preserve BC
+        ;
+@next:  ld      A,      TILEMAP_WIDTH   ; number of tiles to skip to next row
         add     A,      L               ; add this to the address lo-byte
         jr      nc,     +               ; did that overflow?
         inc     H                       ; if so, bump the address hi-byte

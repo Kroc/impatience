@@ -104,13 +104,15 @@
 .DEF    PILE_DECK       PILE_STACK | PILE_BACK
 ; like a deck, but displays the top card face-up
 .DEF    PILE_DISCARD    PILE_STACK | PILE_FACE
-; a hand is spread horizontally
-.DEF    PILE_HAND       PILE_SPREAD | PILE_HORZ | PILE_FACE
 ; the foundation does not spread, and displays only the top card
 ; face-up. unlike a discard pile it does not show any thickness
 .DEF    PILE_FOUNDATION PILE_STACK | PILE_FACE
 ; a downward spread of cards as you would typically see in Klondike
 .DEF    PILE_COLUMN     PILE_SPREAD | PILE_VERT | PILE_FACE
+; a sideways spread, like in draw-3 Klondike
+.DEF    PILE_ROW        PILE_SPREAD | PILE_HORZ | PILE_FACE
+; a hand is spread horizontally
+.DEF    PILE_HAND       PILE_ROW
 
 ; the lower bits of the pile type are a number that
 ; chooses which validation rules the pile should use:
