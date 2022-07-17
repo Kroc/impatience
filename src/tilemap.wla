@@ -359,24 +359,36 @@ writeTiles:
 ; in:   DE      address with tiles to read from
 ;       HL      address to write to, where 3 tiles are written and then
 ;               the address is moved to the next row of the tilemap
-; out: carry    (preserved)
+;
+; out:  HL      the front-buffer address is advanced to the next tilemap row
+;       DE      the read address is advanced by 3
+;       BC      (preserved)
+;       AF      (clobbered)
 ;-------------------------------------------------------------------------------
-        ; number of bytes to add to the address to skip to the next screen row
-        ld      BC,     TILEMAP_WIDTH-3
+        ld      A,      [DE]
+        inc     DE
+        ld      [HL+],  A
+        ld      A,      [DE]
+        inc     DE
+        ld      [HL+],  A
+        ld      A,      [DE]
+        inc     DE
+        ld      [HL+],  A
 
-        ld      A,      [DE]
-        inc     DE
-        ld      [HL+],  A
-        ld      A,      [DE]
-        inc     DE
-        ld      [HL+],  A
-        ld      A,      [DE]
-        inc     DE
-        ld      [HL+],  A
-        rla                             ; preserve carry flag!
-        add     HL,     BC
-        rra                             ; restore carry flag!
+        ; fall through to automatically
+        ; move to the next tilemap row
+        ;
 
+        ;=======================================================================
+        ; move to the next tilemap row:
+        ;-----------------------------------------------------------------------
+        ; we could use `add HL, BC` but we want to preserve BC
+        ;
+@next:  ld      A,      TILEMAP_WIDTH-3 ; number of tiles to skip to next row
+        add     A,      L               ; add this to the address lo-byte
+        jr      nc,     +               ; did that overflow?
+        inc     H                       ; if so, bump the address hi-byte
++       ld      L,      A
         ret
 
 
