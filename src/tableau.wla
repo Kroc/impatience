@@ -116,9 +116,9 @@ drawPile:
         ; (note that A, card-count, is preserved through this)
         ;
         ld      H,      FIELD_TYPE      ; switch field back again
-        bit     7,      [HL]            ; is it a stack?
+        bit     BIT_STACK,      [HL]    ; is it a stack?
         jr      nz,     @stack          ; -> handle stack-type piles
-        bit     6,      [HL]            ; is it a horizontal pile?
+        bit     BIT_HORZ,       [HL]    ; is it a horizontal pile?
         jr      nz,     @row            ; -> handle horizontal spreads
 
         ; column:
@@ -205,7 +205,7 @@ drawPile:
         ;
         ; is it a face-down stack (e.g. deck),
         ; or face-up stack (e.g. foundation)?
-@stack: bit     5,      [HL]            ; =`PILE_FACE`?
+@stack: bit     BIT_FACE,       [HL]
         jr      nz,     @face
 
         ; read the top-most card in the pile
@@ -242,7 +242,7 @@ drawCard:
 ;       DE, HL  (clobbered)
 ;       AF      (clobbered)
 ;-------------------------------------------------------------------------------
-        bit     6,      A               ; is the card face-down?
+        bit     BIT_BACK,       A       ; is the card face-down?
         jr      z,      @face           ; if not, skip onto drawing face-up
 
         ; face-down:
@@ -341,7 +341,7 @@ drawCardEdgeTop:
 ;       BC      (preserved)
 ;       AF, DE  (clobbered)
 ;-------------------------------------------------------------------------------
-        bit     6,      A               ; is the card face-down?
+        bit     BIT_BACK,       A       ; is the card face-down?
         jr      z,      @face           ; if not, skip onto drawing face-up
 
         ; face-down:
@@ -425,7 +425,7 @@ drawCardEdgeLeft:
 ;       BC      (preserved)
 ;       AF, DE  (clobbered)
 ;-------------------------------------------------------------------------------
-        bit     6,      A               ; is the card face-down?
+        bit     BIT_BACK,       A       ; is the card face-down?
         jr      z,      @face           ; if not, skip onto drawing face-up
 
         ; face-down:

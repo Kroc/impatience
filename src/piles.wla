@@ -13,11 +13,12 @@
 ;
 .DEF    CARD_NONE       %00000000
 
-.DEF    CARD_VALID      %00000000       ; card is playable
 .DEF    CARD_INVALID    %10000000       ; card is disabled
+.DEF    CARD_VALID      %00000000       ; card is playable
 
-.DEF    CARD_FRONT      %00000000       ; face-up card
 .DEF    CARD_BACK       %01000000       ; face-down card
+.DEF    CARD_FACE       %00000000       ; face-up card
+.DEF    BIT_BACK        6
 
 ; suits:                %--xx----
 ; NOTE: the bit for colour is toward the right, next to the rank,
@@ -87,12 +88,15 @@
 ;
 .DEF    PILE_STACK      %10000000       ; stacked, e.g. deck / foundation
 .DEF    PILE_SPREAD     %00000000       ; spread-out, e.g. column / hand
+.DEF    BIT_STACK       7
 
-.DEF    PILE_VERT       %00000000       ; vertically spread, e.g. column
-.DEF    PILE_HORZ       %01000000       ; horizontally spread, e.g. hand
-
-.DEF    PILE_FACE       %00100000       ; face-up, e.g. foundation
+.DEF    PILE_FACE       %01000000       ; face-up, e.g. foundation
 .DEF    PILE_BACK       %00000000       ; face-down, e.g. deck
+.DEF    BIT_FACE        6
+
+.DEF    PILE_HORZ       %00100000       ; horizontally spread, e.g. hand
+.DEF    PILE_VERT       %00000000       ; vertically spread, e.g. column
+.DEF    BIT_HORZ        5
 
 ; these can be combined into specific pile types:
 ;-------------------------------------------------------------------------------
@@ -767,7 +771,7 @@ validatePile:
         ; it doesn't need validation
         ld      H,      FIELD_TYPE
         ld      A,      [HL]
-        bit     5,      A
+        bit     BIT_FACE,       A
         ret     z
         ; isolate the validation type
         and     MASK_VALID
@@ -793,7 +797,7 @@ validatePileLocked:
 ; out:  L       (preserved)
 ;-------------------------------------------------------------------------------
         ld      H,      FIELD_TYPE
-        bit     7,      [HL]            ; is this a stack?
+        bit     BIT_STACK,      [HL]    ; is this a stack?
         jr      z,      +               ; if not, invalidate all cards
 
         ; make the top-most card invalid since only it is visible

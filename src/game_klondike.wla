@@ -255,7 +255,7 @@ validatePile:
         rst     piles.rst_poolAddr      ; addr of cards for our pile (DE)
         ;-----------------------------------------------------------------------
 -       ld      A,      [DE]            ; read card value
-        bit     6,      A               ; `CARD_BACK`?
+        bit     BIT_BACK,       A       ; `CARD_BACK`?
         call    nz,     @back           ; mark face-down cards as invalid
         call    z,      @pile           ; compare our card with other piles
         inc     DE                      ; move to next card

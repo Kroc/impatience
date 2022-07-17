@@ -250,6 +250,9 @@ moveLeft:
         ; retrieve current pile index (L)
         call    getPointPile
 
+        ; check type to see if this is a horizontal pile
+        ;;ld      H,      FIELD_TYPE
+
         ; select the field that contains the pile to the left
         ld      H,      FIELD_LEFT
         ; read the index of the the pile to the left
@@ -289,7 +292,7 @@ moveUp:
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; there are no cards to step through, just move to the next pile
         ld      H,      FIELD_TYPE
-        bit     7,      [HL]            ; =PILE_STACK?
+        bit     BIT_STACK,      [HL]
         jr      nz,     @pile
 
         ; is the current position 0? i.e. at the
@@ -320,7 +323,7 @@ moveDown:
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; there are no cards to step through, just move to the next pile
         ld      H,      FIELD_TYPE
-        bit     7,      [HL]            ; =PILE_STACK?
+        bit     BIT_STACK,      [HL]
         jr      nz,     @pile
 
         ; get the number of cards in the pile
@@ -398,7 +401,7 @@ pointToCard:
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; we point to the top of the pile without counting cards
         ld      H,      FIELD_TYPE
-        bit     7,      [HL]            ; =PILE_STACK?
+        bit     BIT_STACK,      [HL]
         jr      nz,     @empty          ; TODO: the deck is slightly raised
 
         ; for a spread, the cursor will be positioned
@@ -441,7 +444,7 @@ pointToCard:
         ld      A,      [card_point]    ; retrieve card number to point to
         
         ld      H,      FIELD_TYPE
-        bit     6,      [HL]
+        bit     BIT_HORZ,       [HL]
         jr      nz,     @row
 
         ; add the card number to the row number as
