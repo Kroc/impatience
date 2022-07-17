@@ -303,7 +303,7 @@ drawCard:
         ;-----------------------------------------------------------------------
         ld      A,      D
         swap    A                       ; move the suit to the bottom nybble
-        and     %00000011               ; mask out the other bits
+        and     MASK_SUIT >> 4          ; mask out the other bits
         add     TILE_CARD_Y4X1
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A
@@ -317,7 +317,7 @@ drawCard:
         ; bottom-right: ordinal
         ;-----------------------------------------------------------------------
         ld      A,      D               ; retrieve ordinal from earlier
-        and     %00001111               ; trim out the other bits
+        and     MASK_RANK | MASK_COLOUR ; trim out the other bits
         add     TILE_CARD_Y4X3-1        ; offset the tile with the ordinal
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance
@@ -370,7 +370,7 @@ drawCardEdgeTop:
         ; top-left corner: ordinal
         ;-----------------------------------------------------------------------
         ld      A,      D               ; return to the original card value
-        and     %00001111               ; trim out the other bits
+        and     MASK_RANK | MASK_COLOUR ; trim out the other bits
         add     TILE_CARD_Y1X1-1        ; offset the tile with the ordinal
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance
@@ -385,7 +385,7 @@ drawCardEdgeTop:
         ;-----------------------------------------------------------------------
         ld      A,      D
         swap    A                       ; move the suit to the bottom nybble
-        and     %00000011               ; mask out the other bits
+        and     MASK_SUIT >> 4          ; mask out the other bits
         add     TILE_CARD_Y1X3
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance

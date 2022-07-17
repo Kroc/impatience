@@ -5,9 +5,9 @@
 ;-------------------------------------------------------------------------------
 ; this section defines how we store cards in memory, one byte per card
 ;
-; %bissnnnn     b     = "back" (back is visible)
-;               i     = validation, 0=valid, 1=invalid (unplayable card)
-;               ss    = suit, 0-3,  0=spades, 1=clubs, 2=hearts, 3=diamonds
+; %ibssnnnn     i     = validation, 0=valid, 1=invalid (unplayable card)
+;               b     = "back" (back is visible)
+;               ss    = suit, 0-3,  0=spades, 1=hearts, 2=clubs, 3=diamonds
 ;               nnnn  = number, 1 (A), 2-9, 10 (J), 11 (Q), 12 (K),
 ;                       13-15 unused. 0 = no-card / null
 ;
@@ -19,16 +19,18 @@
 .DEF    CARD_FRONT      %00000000       ; face-up card
 .DEF    CARD_BACK       %01000000       ; face-down card
 
-; suits:
+; suits:                %--xx----
+; NOTE: the bit for colour is toward the right, next to the rank,
+;       so that the we can use black/red ordinals in the tilemap
 .DEF    MASK_SUIT       %00110000
-.DEF    MASK_COLOUR     %00100000
-;                       %--0x---- = black
+.DEF    MASK_COLOUR     %00010000
+;                       %--x0---- = black
 .DEF    SUIT_BLACK      %00000000
 .DEF    SUIT_SPADE      %00000000
-.DEF    SUIT_CLUB       %00010000
-;                       %--1x---- = red
-.DEF    SUIT_RED        %00100000
-.DEF    SUIT_HEART      %00100000
+.DEF    SUIT_CLUB       %00100000
+;                       %--x1---- = red
+.DEF    SUIT_RED        %00010000
+.DEF    SUIT_HEART      %00010000
 .DEF    SUIT_DIAMOND    %00110000
 
 .DEF    MASK_RANK       %00001111

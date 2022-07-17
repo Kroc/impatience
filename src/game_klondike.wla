@@ -282,7 +282,7 @@ validatePile:
         inc     A                       ; add 1, for the card we're looking for
         ld      B,      A               ; put rank aside to handle suit
         ld      A,      [DE]            ; start again with card value
-        and     %00100000               ; keep only the suit colour
+        and     MASK_COLOUR             ; keep only the suit colour
         xor     MASK_COLOUR             ; flip the suit colour
         or      B                       ; add suit colour to the rank
         ld      B,      A               ; B = card rank+colour to match
