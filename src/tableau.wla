@@ -293,13 +293,13 @@ drawCard:
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance
         call    drawCardEdgeTop@next    ; move to the next row
-        ld      A,      TILE_CARD_Y2X1
+        ld      A,      TILE_CARD_Y3X1
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance
-        ld      A,      TILE_CARD_Y2X2
+        ld      A,      TILE_CARD_Y3X2
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance
-        ld      A,      TILE_CARD_Y2X3
+        ld      A,      TILE_CARD_Y3X3
         xor     E                       ; add the invalid bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ;-----------------------------------------------------------------------

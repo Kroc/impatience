@@ -247,14 +247,26 @@ moveLeft:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; retrieve current pile index (L)
+        ; retrieve current pile index (L),
+        ; and the card index being pointed at (A)
         call    getPointPile
 
-        ; check type to see if this is a horizontal pile
-        ;;ld      H,      FIELD_TYPE
+        ;;ld      B,B
+        ld      H,      FIELD_TYPE      ; check pile type to see
+        bit     BIT_HORZ,       [HL]    ;  is this is a horizontal pile?
+        jr      z,      @pile           ;  no? move straight to next pile
 
+        ; is the current position 0? i.e. at the
+        ; bottom (left, visually) of the pile?
+        and     A,      A               ; (set flags!)
+        jr      z,      @pile           ; if yes, move to next pile to the left
+
+        dec     A                       ; move left a card
+        jp      pointToCard             ; point to same pile, previous card
+
+        ;-----------------------------------------------------------------------
         ; select the field that contains the pile to the left
-        ld      H,      FIELD_LEFT
+@pile:  ld      H,      FIELD_LEFT
         ; read the index of the the pile to the left
         ld      L,      [HL]
         ; move to the default card in the next pile
@@ -267,14 +279,39 @@ moveRight:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; retrieve current pile index (L)
-        call    getPointPile
+        call    getPointPile            ; retrieve current pile index
+        ld      C,      A               ; card index pointed at (0-based)
 
-        ; select the field that contains the pile to the right
-        ld      H,      FIELD_RIGHT
-        ; read the index of the pile to the right
-        ld      L,      [HL]
-        ; move to the default card in the next pile
+        ;;ld      B,B
+        ld      H,      FIELD_TYPE      ; check pile type to see
+        bit     BIT_HORZ,       [HL]    ;  is this is a horizontal pile?
+        jr      z,      @pile           ;  no? move straight to next pile
+
+        ; move right within the current pile:
+        ;-----------------------------------------------------------------------
+        ; get the number of cards in the pile (L)
+        rst     piles.rst_pileCount
+        ; if there are no cards in the pile
+        ; we can move to the pile to the right
+        jr      z,      @pile
+
+        ; have we reached the end of the row?
+        ;
+        ; a neat trick is used here to both do the comparison and effectively
+        ; add 1 to the card index to be able to move to the next card, *if*
+        ; we're not at the end of the pile
+        ;
+        inc     C                       ; adjust pointed-to card index
+        cp      A,      C               ;  to 1-based and compare with count
+
+        ; if they are not equal, the pointer has not reached the top of
+        ; the pile (visually, right on screen). move the cursor to the
+        ; next card by using the 1-based index as 0-based!
+        jp      nz,     pointToCard
+
+        ;-----------------------------------------------------------------------
+@pile:  ld      H,      FIELD_RIGHT     ; read the 'right' field that
+        ld      L,      [HL]            ; tells us the pile to move to
         jp      pointToPile
 
 
@@ -294,20 +331,27 @@ moveUp:
         ld      H,      FIELD_TYPE
         bit     BIT_STACK,      [HL]
         jr      nz,     @pile
+        ; if currently in a horizontal pile, pressing up should just move
+        ; to the next pile and not try flipping through the current pile!
+        bit     BIT_HORZ,       [HL]
+        jr      nz,     @pile
 
+        ; move up within the current pile:
+        ;-----------------------------------------------------------------------
         ; is the current position 0? i.e. at the
         ; bottom (top, visually) of the pile?
         and     A,      A               ; (set flags!)
         jr      z,      @pile
 
         dec     A                       ; move up a card
-        jp      pointToCard
+        jr      pointToCard
 
-        ; move up to the next pile:
         ;-----------------------------------------------------------------------
+        ; move up to the next pile:
+        ;
 @pile:  ld      H,      FIELD_UP        ; read the `up` field that
         ld      L,      [HL]            ;  tells us the pile to move to
-        jp      pointToPile
+        jr      pointToPile
 
 
 moveDown:
@@ -318,14 +362,20 @@ moveDown:
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         call    getPointPile            ; retrieve current pile index
-        ld      C,      A               ; card number pointed at (0-based)
+        ld      C,      A               ; card index pointed at (0-based)
 
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; there are no cards to step through, just move to the next pile
         ld      H,      FIELD_TYPE
         bit     BIT_STACK,      [HL]
         jr      nz,     @pile
+        ; if currently in a horizontal pile, pressing down should just move
+        ; to the next pile and not try flipping through the current pile!
+        bit     BIT_HORZ,       [HL]
+        jr      nz,     @pile
 
+        ; move down within the current pile:
+        ;-----------------------------------------------------------------------
         ; get the number of cards in the pile
         rst     piles.rst_pileCount
         ; if there are no cards in the pile
@@ -333,18 +383,18 @@ moveDown:
         jr      z,      @pile
 
         ; have we reached the bottom of the column?
-        ;-----------------------------------------------------------------------
+        ;
         ; a neat trick is used here to both do the comparison and effectively
         ; add 1 to the card index to be able to move to the next card, *if*
         ; we're not at the end of the pile
         ;
-@col:   inc     C                       ; adjust pointed-to card index
-        cp      C                       ;  to 1-based and compare with count
+        inc     C                       ; adjust pointed-to card index
+        cp      A,      C               ;  to 1-based and compare with count
 
         ; if they are not equal, the pointer has not reached the top of
         ; the pile (visually, bottom on screen). move the cursor to the
         ; next card by using the 1-based index as 0-based!
-        jp      nz,     pointToCard
+        jr      nz,     pointToCard
 
         ; move down to the next pile:
         ;-----------------------------------------------------------------------
@@ -369,7 +419,7 @@ pointToPile:
 
         ; column piles must point to the last card:
         dec     A                       ; (adjust to 0-based)
-        
+
         ; fall through below
         ;
 
@@ -386,17 +436,21 @@ pointToCard:
         ; if a pile has multiple cards, then pushing up/down will go through
         ; the cards before leaving the pile
         ;
-        ; save the card number to point to: (0-based)
+        ; save the card index to point to: (0-based)
         ld      [card_point],   A
         ; (also put in a register for later comparison)
-        ld      C,              A
+        ld      E,              A
         ; save the index of the pile to point to:
         ld      A,              L
         ld      [pile_point],   A
 
+        ; get pile (L) row (B) & col (C)
+        call    piles.getPos
+
         ; is the pile empty?
-        rst     piles.rst_pileCount     ; get pile count, set flags
-        jr      z,      @empty
+        rst     piles.rst_pileCount     ; get pile count (A), set flags
+        jr      z,      @empty          ; -> draw an empty pile space
+        ld      D,      A               ; also remember count for later
 
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; we point to the top of the pile without counting cards
@@ -404,68 +458,101 @@ pointToCard:
         bit     BIT_STACK,      [HL]
         jr      nz,     @empty          ; TODO: the deck is slightly raised
 
+        ; is this a horizontal or vertical spread of cards?
+        bit     BIT_HORZ,       [HL]    ; check orientation bit
+        jr      nz,     @horz           ; -> handle horizontal pile
+
+        ; vertical spread:
+        ;=======================================================================
+        ; add the card index (A) to the row number (B),
+        ; as each card in a pile adds another tile's height
+        ;
+@vert:  ld      A,      E               ; index of card pointed at
+        add     A,      B               ; add the tilemap row of the pile
+        ld      B,      A
+        ; point to the horizontal middle of the card; want to point to
+        ; the space between the suit / number so as not to obscure either
+        inc     C
+
         ; for a spread, the cursor will be positioned
         ; differently for the top card, vs the spread
-        ;-----------------------------------------------------------------------
-        ; compare the number of cards in the pile to the target card
-        ; (empty has already been checked so A must be > 0)
+        ;
+        ; compare the number of cards in the pile (A) to the target
+        ; card (C). empty has already been checked so A must be > 0
+        ;
+        ld      A,      D               ; number of cards in the pile
         dec     A                       ; (adjust for 0-based)
-        cp      C                       ; compare against target card
-        jr      z,      @top
+        cp      E                       ; compare count against target card
+        jr      z,      +
 
-        call    piles.getPos            ; get Pile row (B) & col (C)
-        call    @spread
-
+        ; within the spread:
+        ;-----------------------------------------------------------------------
+        ; translate the tile row (B)  & col (C)
+        ; into the X & Y position in pixels
         call    sprites.tilePosToScrXY
+
         ; offset the cursor a little so that it appears
         ; over the cards rather than on the outside edge
         ld      A,      5
         add     A,      B
         ld      B,      A
-        jp      moveToScrXY
+        jr      moveToScrXY
 
-        ; top card:
+        ; top-card:
         ;-----------------------------------------------------------------------
-@top:   call    piles.getPos            ; get Pile row (B) & col (C)
-        call    @spread
-        inc     B
-
+        ; for the card on top of the pile,
+        ; point to the centre
++       inc     B
+        ; translate the tile row (B)  & col (C)
+        ; into the X & Y position in pixels
         call    sprites.tilePosToScrXY
+        ; offset the cursor a little so that it appears
+        ; over the cards rather than on the outside edge
         inc     B
-        jp      moveToScrXY
+        jr      moveToScrXY
 
-        ; offset the cursor according to the card number in the stack
-        ;-----------------------------------------------------------------------
-        ; we will always be pointing to the horizontal middle of the card;
-        ; in the case of face-up cards, we want to point to the space
-        ; between the suit / number so as not to obscure either
-@spread inc     C
-        
-        ld      A,      [card_point]    ; retrieve card number to point to
-        
-        ld      H,      FIELD_TYPE
-        bit     BIT_HORZ,       [HL]
-        jr      nz,     @row
-
-        ; add the card number to the row number as
-        ; each card in a pile adds another tile's height
-        add     A,      B
-        ld      B,      A
-        ret
-
-        ;-----------------------------------------------------------------------
-        ; add the card number to the column number as
-        ; each card in a pile adds another tile's width
-@row:   add     A,      C
-        ld      C,      A
-        ret
-
-        ; empty pile:
         ;=======================================================================
+        ; horizontal spread:
+        ;
+        ; add the card index (E) to the column number (C),
+        ; as each card in a pile adds another tile's width
+@horz:  ld      A,      C
+        add     A,      E
+        ld      C,      A
+        ; point to the 2nd row, below the suit/ordinal
+        inc     B
+
+        ; for a horizontal spread, the cursor will be positioned
+        ; differently for the top card, vs the other cards
+        ;
+        ; compare the number of cards in the pile to the target
+        ; card. empty has already been checked so A must be > 0
+        ;
+        ld      A,      D               ; number of cards in the pile
+        dec     A                       ; (adjust for 0-based)
+        cp      E                       ; compare count against target card
+        jr      nz,     +
+
+        ; for the card on top of the pile,
+        ; point to the centre
+        inc     C
+
+        ; translate the tile row (B)  & col (C)
+        ; into the X & Y position in pixels
++       call    sprites.tilePosToScrXY
+
+        ; offset the cursor a little so that it appears
+        ; over the cards rather than on the outside edge
+        inc     B
+        dec     C
+        jr      moveToScrXY
+
+        ;=======================================================================
+        ; empty pile:
+        ;
         ; for empty piles, we want to point to the centre of the space
         ;
-@empty: call    piles.getPos            ; get Pile row (B) & col (C)
-        inc     C                       ; move right one col, to the middle
+@empty: inc     C                       ; move right one col, to the middle
         inc     B                       ; move down one row, to the middle
 
         ; fall through to the move routine below!
@@ -482,8 +569,7 @@ moveToTile:
 ; in:   B       row position to move the cursor to
 ;       C       column position to move the cursor to
 ;
-; out:  HL      (preserved)
-;       A, BC   (clobbered)
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         ; convert the tile row/col to screen-space pixels
         call    sprites.tilePosToScrXY
