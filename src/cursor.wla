@@ -282,7 +282,6 @@ moveRight:
         call    getPointPile            ; retrieve current pile index
         ld      C,      A               ; card index pointed at (0-based)
 
-        ;;ld      B,B
         ld      H,      FIELD_TYPE      ; check pile type to see
         bit     BIT_HORZ,       [HL]    ;  is this is a horizontal pile?
         jr      z,      @pile           ;  no? move straight to next pile
@@ -303,6 +302,7 @@ moveRight:
         ;
         inc     C                       ; adjust pointed-to card index
         cp      A,      C               ;  to 1-based and compare with count
+        ld      A,      C
 
         ; if they are not equal, the pointer has not reached the top of
         ; the pile (visually, right on screen). move the cursor to the
@@ -390,6 +390,7 @@ moveDown:
         ;
         inc     C                       ; adjust pointed-to card index
         cp      A,      C               ;  to 1-based and compare with count
+        ld      A,      C
 
         ; if they are not equal, the pointer has not reached the top of
         ; the pile (visually, bottom on screen). move the cursor to the
@@ -417,7 +418,8 @@ pointToPile:
         rst     piles.rst_pileCount     ; get pile count, set flags
         jr      z,      pointToCard     ; =0? point to it
 
-        ; column piles must point to the last card:
+        ; for any pile with multiple cards,
+        ; we point to the last card by default
         dec     A                       ; (adjust to 0-based)
 
         ; fall through below
