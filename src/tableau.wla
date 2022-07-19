@@ -108,6 +108,8 @@ drawPile:
         and     A,      A               ; (set flags!)
         ret     z                       ; if pile is unallocated, quit
 
+        call    piles.getPos            ; get pile row & col (BC)
+
         ; is the pile empty?
         rst     piles.rst_pileCount     ; (get pile count, set flags)
         jr      z,      @empty          ; if zero, draw empty space
@@ -123,9 +125,7 @@ drawPile:
 
         ; column:
         ;=======================================================================
-        ; (note that A, card-count, is preserved through this)
 @col:   rst     piles.rst_poolAddr      ; get card pool address (DE)
-        call    piles.getPos            ; get pile row & col (BC)
 
         ; get screen-buffer address for the X/Y co-ords (BC). note that
         ; this returns the address in HL, but clobbers BC. we depend upon
@@ -158,9 +158,7 @@ drawPile:
         ;=======================================================================
         ; row:
         ;
-        ; (note that A, card-count, is preserved through this)
 @row:   rst     piles.rst_poolAddr      ; get card pool address (DE)
-        call    piles.getPos            ; get pile row & col (BC)
 
         ; get screen-buffer address for the X/Y co-ords (BC). note that
         ; this returns the address in HL, but clobbers BC. we depend upon
@@ -193,8 +191,7 @@ drawPile:
         ;=======================================================================
         ; empty pile:
         ;
-@empty: call    piles.getPos            ; first get the pile's row & col
-        call    tilemap.getBufferAddr   ; translate to a buffer address
+@empty: call    tilemap.getBufferAddr   ; translate row/col to buffer address
 
         ; draw the pre-baked empty pile tiles
         ld      DE,     tilemap.tilemap_empty
@@ -210,8 +207,6 @@ drawPile:
 
         ; read the top-most card in the pile
         call    piles.getLastCard
-        ; get the pile's row & col
-        call    piles.getPos
         ; the deck in particular extends a row upwards
         ; to give it that thicker appearance
         dec     B
@@ -225,12 +220,12 @@ drawPile:
         ; stack with face-up card:
         ;
 @face:  call    piles.getLastCard
-        call    piles.getPos            ; get the pile's row & col
         call    tilemap.getBufferAddr   ; translate to a buffer address
 
         ; fall through to below to draw
         ; the singular face-up card!
         ;
+
 
 drawCard:
 ;===============================================================================
@@ -255,7 +250,7 @@ drawCard:
         ;=======================================================================
         ; face-up:
         ;
-@face:  push    AF
+@face:  push    AF                      ; preserve carry and card value
 
         call    drawCardEdgeTop
 
@@ -390,7 +385,7 @@ drawCardEdgeTop:
         ;-----------------------------------------------------------------------
         ; top-right corner: suit
         ;-----------------------------------------------------------------------
-        ld      A,      D
+        ld      A,      D               ; return to the original card value
         swap    A                       ; move the suit to the bottom nybble
         and     MASK_SUIT >> 4          ; mask out the other bits
         add     TILE_CARD_Y1X3

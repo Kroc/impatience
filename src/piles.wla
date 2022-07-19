@@ -742,8 +742,8 @@ move:
 
 isCardPlayable:
 ;===============================================================================
-; given a pile and card index, returns if that card is "playable"
-; according to game rules:
+; given a pile and card index, returns if that card
+; is "playable" according to game rules:
 ;
 ; in:   L       pile index
 ;       A       card index
