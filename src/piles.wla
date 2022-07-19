@@ -13,8 +13,9 @@
 ;
 .DEF    CARD_NONE       %00000000
 
-.DEF    CARD_INVALID    %10000000       ; card is disabled
-.DEF    CARD_VALID      %00000000       ; card is playable
+.DEF    CARD_DISABLED   %10000000       ; card is disabled, cannot be picked up
+.DEF    CARD_ENABLED    %00000000       ; card is playable, can be picked up
+.DEF    BIT_DISABLED    7
 
 .DEF    CARD_BACK       %01000000       ; face-down card
 .DEF    CARD_FACE       %00000000       ; face-up card
@@ -819,7 +820,7 @@ validatePileLocked:
         ; make the top-most card invalid since only it is visible
         ;-----------------------------------------------------------------------
 +       call    getLastCard             ; go straight to the last card
-        or      CARD_INVALID            ; set the invalid bit
+        or      CARD_DISABLED           ; set the disable bit
         ld      [DE],   A               ; update pool
         ret
 
@@ -829,7 +830,7 @@ validatePileLocked:
         rst     rst_pileCount           ; number of cards to invalidate
         ld      C,      A               ; this will be our counter (1-based)
         rst     rst_poolAddr            ; addr of pile's card list
-        ld      B,      CARD_INVALID    ; (this to save 4-cycles per loop)
+        ld      B,      CARD_DISABLED   ; (this to save 4-cycles per loop)
         ;-----------------------------------------------------------------------
 -       ld      A,      [DE]            ; read a card
         or      B                       ; add the invalid bit

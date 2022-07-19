@@ -257,22 +257,22 @@ drawCard:
         pop     AF
         ld      D,      A               ; keep a copy of the original value
 
-        ; "invalid" (disabled) card?
+        ; disabled card?
         ;
-        ; the highest bit of the card value is used to indicate an "invalid"
+        ; the highest bit of the card value is used to indicate a disabled
         ; card -- one that cannot be played. these are drawn in 'greyed-out'
         ; graphics. because the original mono GameBoy only has 1 background
         ; tile palette, we can't just recolour existing tiles and instead
-        ; have to provide a second "invalid" set of card tiles in VRAM
+        ; have to provide a second disabled set of card tiles in VRAM
         ;
-        ; I've arranged VRAM such that the "valid" and "invalid" card tiles
+        ; I've arranged VRAM such that the enabled and disabled card tiles
         ; are exactly... $80 apart! in practice, this works in reverse because
         ; background tiles begin at $80 to $ff for the lower block and then
         ; $00 to $7f for the upper block (this due to sprites sharing half
         ; the tile data). since we need to add the opposite of bit 7 to
         ; tile indices we use XOR instead of OR to apply it
         ;
-        and     CARD_INVALID            ; isolate the validity bit,
+        and     CARD_DISABLED           ; isolate the disabled bit,
         ld      E,      A               ; and put it aside
 
         ;-----------------------------------------------------------------------
@@ -350,22 +350,22 @@ drawCardEdgeTop:
         ;
 @face:  ld      D,      A               ; keep a copy of the original value
 
-        ; "invalid" (disabled) card?
+        ; disabled card?
         ;
-        ; the highest bit of the card value is used to indicate an "invalid"
+        ; the highest bit of the card value is used to indicate a disabled
         ; card -- one that cannot be played. these are drawn in 'greyed-out'
         ; graphics. because the original mono GameBoy only has 1 background
         ; tile palette, we can't just recolour existing tiles and instead
-        ; have to provide a second "invalid" set of card tiles in VRAM
+        ; have to provide a second disabled set of card tiles in VRAM
         ;
-        ; I've arranged VRAM such that the "valid" and "invalid" card tiles
+        ; I've arranged VRAM such that the enabled and disabled card tiles
         ; are exactly... $80 apart! in practice, this works in reverse because
         ; background tiles begin at $80 to $ff for the lower block and then
         ; $00 to $7f for the upper block (this due to sprites sharing half
         ; the tile data). since we need to add the opposite of bit 7 to
         ; tile indices we use XOR instead of OR to apply it
         ;
-        and     CARD_INVALID            ; isolate the validity bit,
+        and     CARD_DISABLED           ; isolate the disabled bit,
         ld      E,      A               ; and put it aside
         ;-----------------------------------------------------------------------
         ; top-left corner: ordinal
@@ -433,22 +433,22 @@ drawCardEdgeLeft:
         ;
 @face:  ld      D,      A               ; keep a copy of the original value
 
-        ; "invalid" (disabled) card?
+        ; disabled card?
         ;
-        ; the highest bit of the card value is used to indicate an "invalid"
+        ; the highest bit of the card value is used to indicate a disabled
         ; card -- one that cannot be played. these are drawn in 'greyed-out'
         ; graphics. because the original mono GameBoy only has 1 background
         ; tile palette, we can't just recolour existing tiles and instead
-        ; have to provide a second "invalid" set of card tiles in VRAM
+        ; have to provide a second disabled set of card tiles in VRAM
         ;
-        ; I've arranged VRAM such that the "valid" and "invalid" card tiles
+        ; I've arranged VRAM such that the enabled and disabled card tiles
         ; are exactly... $80 apart! in practice, this works in reverse because
         ; background tiles begin at $80 to $ff for the lower block and then
         ; $00 to $7f for the upper block (this due to sprites sharing half
         ; the tile data). since we need to add the opposite of bit 7 to
         ; tile indices we use XOR instead of OR to apply it
         ;
-        and     CARD_INVALID            ; isolate the validity bit,
+        and     CARD_DISABLED           ; isolate the disabled bit,
         ld      E,      A               ; and put it aside
         ;-----------------------------------------------------------------------
         ; top-left corner: ordinal

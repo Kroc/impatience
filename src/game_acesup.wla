@@ -168,10 +168,10 @@ validatePile:
         ; ordering of the tiles in VRAM
         ccf
         ; shift the carry (result bit) into bit 0,
-        ; pushing the old validity bit off
+        ; pushing the old disabled bit off
         rla
         ; now rotate the byte back so that bit 0
-        ; (the new validity bit) becomes bit 7
+        ; (the new disabled bit) becomes bit 7
         rrca
         ; finally, update the pile
         ; with the validation result
@@ -183,7 +183,7 @@ validatePile:
         jr      z,      +               ; stop once we hit zero
         dec     DE                      ; move to the previous card in RAM
         ld      A,      [DE]            ; read the card value
-        or      CARD_INVALID            ; set the invalid bit
+        or      CARD_DISABLED           ; set the disabled bit
         ld      [DE],   A               ; write back the updated card
         jr      -
 
