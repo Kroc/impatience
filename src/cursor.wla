@@ -49,7 +49,7 @@
         ; pile-left,            pile-right,
         ; pile-up,              pile-down
 piles.Define \
-        pile_template,          PILE_COLUMN | PILE_HORZ, 13, \
+        pile_template,          TYPE_COLUMN | TYPE_HORZ, 13, \
         TILEMAP_HEIGHT-4,       TABLEAU_LEFT + 1, \
         0,                      0, \
         0,                      0

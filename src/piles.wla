@@ -84,57 +84,61 @@
 
 ; these are the different display attributes of piles:
 ;-------------------------------------------------------------------------------
-; #FIXME: a valid `PILE_*`|`VALID_*` constant must never equal 0!
+; #FIXME: a valid `TYPE_*`|`RULE_*` constant must never equal 0!
 ;
-.DEF    PILE_STACK      %10000000       ; stacked, e.g. deck / foundation
-.DEF    PILE_SPREAD     %00000000       ; spread-out, e.g. column / hand
+.DEF    TYPE_STACK      %10000000       ; stacked, e.g. deck / foundation
+.DEF    TYPE_SPREAD     %00000000       ; spread-out, e.g. column / hand
 .DEF    BIT_STACK       7
 
-.DEF    PILE_FACE       %01000000       ; face-up, e.g. foundation
-.DEF    PILE_BACK       %00000000       ; face-down, e.g. deck
+.DEF    TYPE_FACE       %01000000       ; face-up, e.g. foundation
+.DEF    TYPE_BACK       %00000000       ; face-down, e.g. deck
 .DEF    BIT_FACE        6
 
-.DEF    PILE_HORZ       %00100000       ; horizontally spread, e.g. hand
-.DEF    PILE_VERT       %00000000       ; vertically spread, e.g. column
+.DEF    TYPE_HORZ       %00100000       ; horizontally spread, e.g. hand
+.DEF    TYPE_VERT       %00000000       ; vertically spread, e.g. column
 .DEF    BIT_HORZ        5
 
 ; these can be combined into specific pile types:
 ;-------------------------------------------------------------------------------
 ; an unallocated pile is not drawn
-.DEF    PILE_NONE       %00000000
+.DEF    TYPE_NONE       %00000000
 
 ; regardless of the number of cards in a deck,
 ; it always displays as one face-down card
-.DEF    PILE_DECK       PILE_STACK | PILE_BACK
+.DEF    TYPE_DECK       TYPE_STACK | TYPE_BACK
 ; like a deck, but displays the top card face-up
-.DEF    PILE_DISCARD    PILE_STACK | PILE_FACE
+.DEF    TYPE_DISCARD    TYPE_STACK | TYPE_FACE
 ; the foundation does not spread, and displays only the top card
 ; face-up. unlike a discard pile it does not show any thickness
-.DEF    PILE_FOUNDATION PILE_STACK | PILE_FACE
+.DEF    TYPE_FOUNDATION TYPE_STACK | TYPE_FACE
 ; a downward spread of cards as you would typically see in Klondike
-.DEF    PILE_COLUMN     PILE_SPREAD | PILE_VERT | PILE_FACE
+.DEF    TYPE_COLUMN     TYPE_SPREAD | TYPE_VERT | TYPE_FACE
 ; a sideways spread, like in draw-3 Klondike
-.DEF    PILE_ROW        PILE_SPREAD | PILE_HORZ | PILE_FACE
+.DEF    TYPE_ROW        TYPE_SPREAD | TYPE_HORZ | TYPE_FACE
 ; a hand is spread horizontally
-.DEF    PILE_HAND       PILE_ROW
+.DEF    TYPE_HAND       TYPE_ROW
 
 ; the lower bits of the pile type are a number that
-; chooses which validation rules the pile should use:
-.DEF    MASK_VALID      %00011111
-.DEF    VALID_ANY       0
-.DEF    VALID_LOCKED    1
+; chooses which game rules the pile should use:
+.DEF    MASK_RULES      %00011111
+.DEF    RULE_ANY        0
+; the top-most (exposed) card, is available for play
+.DEF    RULE_EXPOSED    1
+; the pile is locked, no cards can be picked or dropped by the player
+; (the game can still move cards to/from this pile via auto moves)
+.DEF    RULE_LOCKED     2
 ; Aces Up: the lowest ranked card of the same suit
-; as the cards on the other depots are valid
-.DEF    VALID_ACESUP    2
-; Fortune's Favour: cards that are of the same suit and one
-; lower in rank as the cards on the other depots are valid
-.DEF    VALID_FORTUNES  3
+; as the cards on the other depots are valid for play
+.DEF    RULE_ACESUP     3
+; Fortune's Favour: cards that are of the same suit and one lower
+; in rank as the cards on the other depots are valid for play
+.DEF    RULE_FORTUNES   4
 ; standard Klondike rules: cards must build down by alternating colour and
 ; a packed sequence can be moved to another pile if it continues the sequence
-.DEF    VALID_KLONDIKE  4
+.DEF    RULE_KLONDIKE   5
 
 
-; TODO:types of pile validation:
+; TODO: types of pile validation:
 ;
 ; ascending by suit, A-first, i.e. foundations in most games
 ; descending by alternating colour, e.g. standard Klondike depots
@@ -736,6 +740,18 @@ move:
         ret
 
 
+isCardPlayable:
+;===============================================================================
+; given a pile and card index, returns if that card is "playable"
+; according to game rules:
+;
+; in:   L       pile index
+;       A       card index
+;-------------------------------------------------------------------------------
+
+        ret
+
+
 validate:
 ;===============================================================================
 ; validate the piles on the tableau according to the game rules:
@@ -773,16 +789,16 @@ validatePile:
         ld      A,      [HL]
         bit     BIT_FACE,       A
         ret     z
-        ; isolate the validation type
-        and     MASK_VALID
+        ; isolate the rule type
+        and     MASK_RULES
 
-        cp      VALID_LOCKED
+        cp      RULE_LOCKED
         jp      z,      validatePileLocked
-        cp      VALID_ACESUP
+        cp      RULE_ACESUP
         jp      z,      acesup.validatePile
-        cp      VALID_FORTUNES
+        cp      RULE_FORTUNES
         jp      z,      fortunes.validatePile
-        cp      VALID_KLONDIKE
+        cp      RULE_KLONDIKE
         jp      z,      klondike.validatePile
 
         ret
