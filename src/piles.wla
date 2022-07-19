@@ -52,6 +52,9 @@
 .DEF    CARD_K          13
 .DEF    CARD_AH         16              ; ace high!
 
+; both rank and suit combined
+.DEF    MASK_VALUE      MASK_SUIT | MASK_RANK
+
 ; these are the indices of our preset pile roles:
 ; this represents the row-order of each pile in the column fields
 ;-------------------------------------------------------------------------------
@@ -87,7 +90,7 @@
 ;-------------------------------------------------------------------------------
 ; #FIXME: a valid `TYPE_*`|`RULE_*` constant must never equal 0!
 ;
-.DEF    TYPE_STACK      %10000000       ; stacked, e.g. deck / foundation
+.DEF    TYPE_SQUARE     %10000000       ; squared, e.g. deck / foundation
 .DEF    TYPE_SPREAD     %00000000       ; spread-out, e.g. column / hand
 .DEF    BIT_STACK       7
 
@@ -106,12 +109,12 @@
 
 ; regardless of the number of cards in a deck,
 ; it always displays as one face-down card
-.DEF    TYPE_DECK       TYPE_STACK | TYPE_BACK
+.DEF    TYPE_DECK       TYPE_SQUARE | TYPE_BACK
 ; like a deck, but displays the top card face-up
-.DEF    TYPE_DISCARD    TYPE_STACK | TYPE_FACE
+.DEF    TYPE_DISCARD    TYPE_SQUARE | TYPE_FACE
 ; the foundation does not spread, and displays only the top card
 ; face-up. unlike a discard pile it does not show any thickness
-.DEF    TYPE_FOUNDATION TYPE_STACK | TYPE_FACE
+.DEF    TYPE_FOUNDATION TYPE_SQUARE | TYPE_FACE
 ; a downward spread of cards as you would typically see in Klondike
 .DEF    TYPE_COLUMN     TYPE_SPREAD | TYPE_VERT | TYPE_FACE
 ; a sideways spread, like in draw-3 Klondike
@@ -121,13 +124,14 @@
 
 ; the lower bits of the pile type are a number that
 ; chooses which game rules the pile should use:
+;-------------------------------------------------------------------------------
 .DEF    MASK_RULES      %00011111
 .DEF    RULE_ANY        0
-; the top-most (exposed) card, is available for play
-.DEF    RULE_EXPOSED    1
 ; the pile is locked, no cards can be picked or dropped by the player
 ; (the game can still move cards to/from this pile via auto moves)
-.DEF    RULE_LOCKED     2
+.DEF    RULE_LOCKED     1
+; the top-most (exposed) card, is available for play
+.DEF    RULE_EXPOSED    2
 ; Aces Up: the lowest ranked card of the same suit
 ; as the cards on the other depots are valid for play
 .DEF    RULE_ACESUP     3
@@ -138,6 +142,10 @@
 ; a packed sequence can be moved to another pile if it continues the sequence
 .DEF    RULE_KLONDIKE   5
 
+;-------------------------------------------------------------------------------
+.DEF    PILE_HAND       TYPE_HAND | RULE_EXPOSED
+; the default type of foundation allows the top card to be used
+.DEF    PILE_FOUNDATION TYPE_FOUNDATION | RULE_EXPOSED
 
 ; TODO: types of pile validation:
 ;
@@ -492,7 +500,7 @@ allocateDeck:
 -       ld      A,      C               ; begin with the suit 0-3
         swap    A                       ; suit bits go in the upper nybble
         or      B                       ; add the ordinal (1-13)
-        or      CARD_BACK               ; flip the card over!
+        or      A,      CARD_BACK       ; flip the card over!
         ld      [DE],   A               ; store card,
         inc     DE                      ; and move to next slot
 
@@ -741,21 +749,11 @@ move:
         ret
 
 
-isCardPlayable:
+checkPiles:
 ;===============================================================================
-; given a pile and card index, returns if that card
-; is "playable" according to game rules:
-;
-; in:   L       pile index
-;       A       card index
-;-------------------------------------------------------------------------------
-
-        ret
-
-
-validate:
-;===============================================================================
-; validate the piles on the tableau according to the game rules:
+; evaluate which cards are available for play and which are not, marking cards
+; as enabled or disabled as appropriate. when the piles are drawn, disabled
+; cards will be drawn 'greyed-out'
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
@@ -763,29 +761,29 @@ validate:
         ; act as the counter; we count towards zero for speed/simplicity and
         ; we skip the last pile as that's the cursor's private pile
         ;
-        ld      L,      PILE_COUNT-2
+        ld      L,      PILE_COUNT-2    ; ignore the last pile, for the cursor
         ;-----------------------------------------------------------------------
 -       ld      H,      FIELD_TYPE      ; select `type` field
-        ld      A,      [HL]            ; is the pile allocated? type != 0
+        ld      A,      [HL]            ; is the pile allocated?
         and     A,      A               ; (set flags!)
-        call    nz,     validatePile    ; validate the specific Pile
+        call    nz,     checkPile       ; check the specific pile
         dec     L                       ; move to next Pile in the list
         jr      nz,     -
         ;-----------------------------------------------------------------------
         ret
 
 
-validatePile:
+checkPile:
 ;===============================================================================
 ; in:   L       pile index (`INDEX_*`)
 ; out:  L       (preserved)
 ;-------------------------------------------------------------------------------
-        ; an empty pile obviously doesn't need validating
+        ; an empty pile obviously doesn't need checking
         rst     piles.rst_pileCount
         ret     z
 
         ; if the pile is face-down, e.g. deck,
-        ; it doesn't need validation
+        ; it doesn't need checking
         ld      H,      FIELD_TYPE
         ld      A,      [HL]
         bit     BIT_FACE,       A
@@ -793,8 +791,15 @@ validatePile:
         ; isolate the rule type
         and     MASK_RULES
 
+        ; check the pile according to its rules:
+        ;-----------------------------------------------------------------------
+        ; a "locked" pile is always disabled, preventing the player from adding
+        ; or removing cards, although the game logic can manipulate the pile
         cp      RULE_LOCKED
-        jp      z,      validatePileLocked
+        jp      z,      checkPile_Locked
+        cp      RULE_EXPOSED
+        jp      z,      checkPile_Exposed
+
         cp      RULE_ACESUP
         jp      z,      acesup.validatePile
         cp      RULE_FORTUNES
@@ -805,37 +810,77 @@ validatePile:
         ret
 
 
-validatePileLocked:
+checkPile_Locked:
 ;===============================================================================
-; validates a pile of cards as always invalid -- for locked piles that the
+; validates a pile of cards as always disabled -- for locked piles that the
 ; player cannot take cards from, such as the discard pile in Aces Up
 ;
 ; in:   L       pile index (`INDEX_*`)
 ; out:  L       (preserved)
 ;-------------------------------------------------------------------------------
+        ; if the pile is squared (only top card shows),
+        ; we only need to modify the top card alone
         ld      H,      FIELD_TYPE
         bit     BIT_STACK,      [HL]    ; is this a stack?
-        jr      z,      +               ; if not, invalidate all cards
+        jr      nz,     @top            ; -> disable only top card
 
-        ; make the top-most card invalid since only it is visible
-        ;-----------------------------------------------------------------------
-+       call    getLastCard             ; go straight to the last card
-        or      CARD_DISABLED           ; set the disable bit
-        ld      [DE],   A               ; update pool
-        ret
-
-        ;=======================================================================
         ; mark all cards in the pile as invalid:
-        ;
-        rst     rst_pileCount           ; number of cards to invalidate
-        ld      C,      A               ; this will be our counter (1-based)
+        ;-----------------------------------------------------------------------
         rst     rst_poolAddr            ; addr of pile's card list
         ld      B,      CARD_DISABLED   ; (this to save 4-cycles per loop)
         ;-----------------------------------------------------------------------
 -       ld      A,      [DE]            ; read a card
+        and     A,      A               ; (set flags)
+        ret     z                       ; stop looping at zero-terminator
         or      B                       ; add the invalid bit
         ld      [DE],   A               ; update pool
-        dec     C                       ; one less card to do
-        jr      nz,     -               ; keep looping until done
+        jr      -                       ; keep looping
+
         ;-----------------------------------------------------------------------
+        ; disable the top-most card since only it is visible
+        ;
+@top:   call    getLastCard             ; go straight to the last card
+        or      CARD_DISABLED           ; set the disabled bit
+        ld      [DE],   A               ; update pool
+        ret
+
+
+checkPile_Exposed:
+;===============================================================================
+; disables all cards in a pile except the top-most "exposed" card:
+;
+; in:   L       pile index (`INDEX_*`)
+; out:  L       (preserved)
+;-------------------------------------------------------------------------------
+        ; if the pile is squared (only top card shows),
+        ; we only need to modify the top card alone
+        ld      H,      FIELD_TYPE
+        bit     BIT_STACK,      [HL]    ; is this a stack?
+        jr      nz,     @top            ; -> enable only top card
+
+        ; disable all but the top-most card: another way to think
+        ; of this is to enable the top card and disable the rest
+        ;
+        rst     rst_pileCount           ; number of cards
+        ld      C,      A               ;  will be our counter
+        call    @top                    ; enable top card first
+        dec     C                       ; was that the only card?
+        ret     z                       ; if yes, we're done
+
+        dec     DE                      ; move to previous card
+        ;-----------------------------------------------------------------------
+-       ld      A,      [DE]            ; read card value
+        or      CARD_DISABLED           ; add the disabled bit
+        ld      [DE],   A               ; update the pool
+        dec     DE                      ; move to previous card
+        dec     C                       ; one less card
+        jr      nz,     -               ; finished?
+        ;-----------------------------------------------------------------------
+        ret
+
+        ; enable the top-most card:
+        ;-----------------------------------------------------------------------
+@top:   call    getLastCard             ; go straight to the last card
+        and     ~CARD_DISABLED          ; remove the disabled bit
+        ld      [DE],   A               ; update pool
         ret

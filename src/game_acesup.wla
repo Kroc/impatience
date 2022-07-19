@@ -12,7 +12,7 @@
 ;       |   |
 ;       '---'
 ;
-.DEF    TYPE_DEPOT_ACESUP       TYPE_COLUMN | RULE_ACESUP
+.DEF    TYPE_DEPOT_ACESUP       TYPE_COLUMN | RULE_EXPOSED
 
 piles.Begin
         ; label,                type, max-cards,

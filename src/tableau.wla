@@ -46,9 +46,10 @@ refresh:
         ; we're going to redraw all piles,
         ; so clear the tabelau of tiles first
         call    clearTiles
-        ; re-validate all piles to ensure they draw correctly
-        ; given the game rules and current state of the game
-        call    piles.validate
+        ; evaluate which cards are available for play and which are not,
+        ; marking cards as enabled or disabled as appropriate. when the
+        ; piles are drawn, disabled cards will be drawn 'greyed-out'
+        call    piles.checkPiles
 
         ; redraw each pile:
         ld      L,      INDEX_DECK
@@ -226,7 +227,6 @@ drawPile:
         ; the singular face-up card!
         ;
 
-
 drawCard:
 ;===============================================================================
 ; draws a card, handling all of its different properties:
@@ -250,7 +250,7 @@ drawCard:
         ;=======================================================================
         ; face-up:
         ;
-@face:  push    AF                      ; preserve carry and card value
+@face:  push    AF
 
         call    drawCardEdgeTop
 
