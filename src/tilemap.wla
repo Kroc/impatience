@@ -14,7 +14,7 @@
 ;
 .SECTION "TilesCards"   ALIGN 16        RETURNORG
 ;###############################################################################
-.DEF    TILE_PALETTE    %01111000
+.DEF    TILE_PALETTE    %11011000
 
 tiles_main:
 ;===============================================================================
@@ -24,57 +24,54 @@ tiles_main:
 ;
 .ASCIITABLE
         ;-----------------------------------------------------------------------
-        ;;MAP   0 TO 127  = $80
-        ;;MAP 128 TO 255  = $00
+        MAP     "a"     = $50
+        MAP     "b"     = $60
+        MAP     "c"     = $70
+        MAP     "d"     = $51
+        MAP     "e"     = $61
+        MAP     "f"     = $71
+        MAP     "g"     = $52
+        MAP     "h"     = $62
+        MAP     "i"     = $72
+        MAP     "j"     = $53
+        MAP     "k"     = $63
+        MAP     "l"     = $73
+        MAP     "m"     = $54
+        MAP     "n"     = $64
+        MAP     "o"     = $74
+        MAP     "p"     = $55
+        MAP     "q"     = $65
+        MAP     "r"     = $75
+        MAP     "s"     = $56
+        MAP     "t"     = $66
+        MAP     "u"     = $76
+        MAP     "v"     = $57
+        MAP     "w"     = $67
+        MAP     "x"     = $77
+        MAP     "y"     = $58
+        MAP     "z"     = $68
+        MAP     "!"     = $78
+        MAP     ","     = $79
+        MAP     "."     = $79
+        MAP     " "     = $79
 
-        MAP     " "     = $8d
-        MAP     "a"     = $9d
-        MAP     "b"     = $ad
-        MAP     "c"     = $bd
-        MAP     "d"     = $cd
-        MAP     "e"     = $dd
-        MAP     "f"     = $ed
-        MAP     "g"     = $fd
-        MAP     "h"     = $0d
-        MAP     "i"     = $1d
-        MAP     "j"     = $2d
-        MAP     "k"     = $3d
-        MAP     "l"     = $4d
-        MAP     "m"     = $5d
-        MAP     "n"     = $6d
-        MAP     "o"     = $7d
-        MAP     "p"     = $8e
-        MAP     "q"     = $9e
-        MAP     "r"     = $ae
-        MAP     "s"     = $be
-        MAP     "t"     = $ce
-        MAP     "u"     = $de
-        MAP     "v"     = $ee
-        MAP     "w"     = $fe
-        MAP     "x"     = $0e
-        MAP     "y"     = $1e
-        MAP     "z"     = $2e
-        MAP     "!"     = $3e
-        MAP     ","     = $4e
-        MAP     "."     = $5e
-        MAP     "A"     = $6e           ; GameBoy button "A"
-        MAP     "B"     = $7e           ; GameBoy button "B"
+        MAP     "0"     = $40
+        MAP     "1"     = $41
+        MAP     "2"     = $42
+        MAP     "3"     = $43
+        MAP     "4"     = $44
+        MAP     "5"     = $45
+        MAP     "6"     = $46
+        MAP     "7"     = $47
+        MAP     "8"     = $48
+        MAP     "9"     = $49
+        MAP     "A"     = $4a           ; GameBoy button "A"
+        MAP     "B"     = $4b           ; GameBoy button "B"
 
-        MAP     "0"     = $70
-        MAP     "1"     = $71
-        MAP     "2"     = $72
-        MAP     "3"     = $73
-        MAP     "4"     = $74
-        MAP     "5"     = $75
-        MAP     "6"     = $76
-        MAP     "7"     = $77
-        MAP     "8"     = $78
-        MAP     "9"     = $79
-
-        MAP     "S"     = $8f           ; spades symbol
-        MAP     "H"     = $9f           ; hearts symbol
-        MAP     "C"     = $af           ; clubs symbol
-        MAP     "D"     = $bf           ; diamonds symbol
+        MAP     "S"     = $4a           ; spades symbol
+        MAP     "H"     = $5a           ; hearts symbol
+        MAP     "C"     = $6a           ; clubs symbol
+        MAP     "D"     = $7a           ; diamonds symbol
 .ENDA
 
 .DEF    TILE_TABLEAU_BG         $6f
@@ -86,18 +83,18 @@ tiles_main:
 ; a foundation is a blank space on the playfield where cards
 ; are "played off", into their final destination
 ;
-.DEF    TILE_FNDT_Y1X1          $d9     ; foundation, top-left
-.DEF    TILE_FNDT_Y1X2          $e9     ; foundation, top-centre
-.DEF    TILE_FNDT_Y1X3          $f9     ; foundation, top-right
-.DEF    TILE_FNDT_Y2X1          $da     ; foundation, upper-middle left
-.DEF    TILE_FNDT_Y2X2          $ea     ; foundation, upper-middle centre
-.DEF    TILE_FNDT_Y2X3          $fa     ; foundation, upper-middle right
-.DEF    TILE_FNDT_Y3X1          $db     ; foundation, lower-middle left
-.DEF    TILE_FNDT_Y3X2          $eb     ; foundation, lower-middle centre
-.DEF    TILE_FNDT_Y3X3          $fb     ; foundation, lower-middle right
-.DEF    TILE_FNDT_Y4X1          $dc     ; foundation, bottom-left
-.DEF    TILE_FNDT_Y4X2          $ec     ; foundation, bottom-centre
-.DEF    TILE_FNDT_Y4X3          $fc     ; foundation, bottom-right
+.DEF    TILE_FNDT_Y1X1          $d6     ; foundation, top-left
+.DEF    TILE_FNDT_Y1X2          $e6     ; foundation, top-centre
+.DEF    TILE_FNDT_Y1X3          $f6     ; foundation, top-right
+.DEF    TILE_FNDT_Y2X1          $d7     ; foundation, upper-middle left
+.DEF    TILE_FNDT_Y2X2          $e7     ; foundation, upper-middle centre
+.DEF    TILE_FNDT_Y2X3          $f7     ; foundation, upper-middle right
+.DEF    TILE_FNDT_Y3X1          $d8     ; foundation, lower-middle left
+.DEF    TILE_FNDT_Y3X2          $e8     ; foundation, lower-middle centre
+.DEF    TILE_FNDT_Y3X3          $f8     ; foundation, lower-middle right
+.DEF    TILE_FNDT_Y4X1          $d9     ; foundation, bottom-left
+.DEF    TILE_FNDT_Y4X2          $e9     ; foundation, bottom-centre
+.DEF    TILE_FNDT_Y4X3          $f9     ; foundation, bottom-right
 
 ; deck:
 ;-------------------------------------------------------------------------------
@@ -145,65 +142,65 @@ tiles_main:
 ; the top-left corner of a face-up card has the
 ; ordinal (number) of the card, Ace through King:
 ;
-.DEF    TILE_CARD_Y1X1          $80
-.DEF    TILE_CARD_Y1X1_A        $80+0   ; Ace
-.DEF    TILE_CARD_Y1X1_2        $80+1   ; Two
-.DEF    TILE_CARD_Y1X1_3        $80+2   ; Three
-.DEF    TILE_CARD_Y1X1_4        $80+3   ; Four
-.DEF    TILE_CARD_Y1X1_5        $80+4   ; Five
-.DEF    TILE_CARD_Y1X1_6        $80+5   ; Six
-.DEF    TILE_CARD_Y1X1_7        $80+6   ; Seven
-.DEF    TILE_CARD_Y1X1_8        $80+7   ; Eight
-.DEF    TILE_CARD_Y1X1_9        $80+8   ; Nine
-.DEF    TILE_CARD_Y1X1_10       $80+9   ; Ten
-.DEF    TILE_CARD_Y1X1_J        $80+10  ; Jack
-.DEF    TILE_CARD_Y1X1_Q        $80+11  ; Queen
-.DEF    TILE_CARD_Y1X1_K        $80+12  ; King
+.DEF    TILE_CARD_Y1X1          $81
+.DEF    TILE_CARD_Y1X1_A        $81+0   ; Ace
+.DEF    TILE_CARD_Y1X1_2        $81+1   ; Two
+.DEF    TILE_CARD_Y1X1_3        $81+2   ; Three
+.DEF    TILE_CARD_Y1X1_4        $81+3   ; Four
+.DEF    TILE_CARD_Y1X1_5        $81+4   ; Five
+.DEF    TILE_CARD_Y1X1_6        $81+5   ; Six
+.DEF    TILE_CARD_Y1X1_7        $81+6   ; Seven
+.DEF    TILE_CARD_Y1X1_8        $81+7   ; Eight
+.DEF    TILE_CARD_Y1X1_9        $81+8   ; Nine
+.DEF    TILE_CARD_Y1X1_10       $81+9   ; Ten
+.DEF    TILE_CARD_Y1X1_J        $81+10  ; Jack
+.DEF    TILE_CARD_Y1X1_Q        $81+11  ; Queen
+.DEF    TILE_CARD_Y1X1_K        $81+12  ; King
 
 ; the top-centre of a face-up card is blank
-.DEF    TILE_CARD_Y1X2          $a5
+.DEF    TILE_CARD_Y1X2          $8f
 
 ; the top-right of a face-up card has the suit:
-.DEF    TILE_CARD_Y1X3          $a0
-.DEF    TILE_CARD_Y1X3_SPD      $a0+1   ; Spades
-.DEF    TILE_CARD_Y1X3_CLB      $a0+2   ; Clubs
-.DEF    TILE_CARD_Y1X3_HRT      $a0+3   ; Hearts
-.DEF    TILE_CARD_Y1X3_DMD      $a0+4   ; Diamonds
+.DEF    TILE_CARD_Y1X3          $80
+.DEF    TILE_CARD_Y1X3_SPD      $90     ; Spades
+.DEF    TILE_CARD_Y1X3_CLB      $a0     ; Clubs
+.DEF    TILE_CARD_Y1X3_HRT      $b0     ; Hearts
+.DEF    TILE_CARD_Y1X3_DMD      $c0     ; Diamonds
 
 ; the left, centre and right of the middle
 ; portion of the card (two-rows) is blank:
-.DEF    TILE_CARD_Y2X1          $a4
-.DEF    TILE_CARD_Y2X2          $a6
-.DEF    TILE_CARD_Y2X3          $a8
-.DEF    TILE_CARD_Y3X1          $a4
-.DEF    TILE_CARD_Y3X2          $a6
-.DEF    TILE_CARD_Y3X3          $a8
+.DEF    TILE_CARD_Y2X1          $9f
+.DEF    TILE_CARD_Y2X2          $af
+.DEF    TILE_CARD_Y2X3          $bf
+.DEF    TILE_CARD_Y3X1          $9f
+.DEF    TILE_CARD_Y3X2          $af
+.DEF    TILE_CARD_Y3X3          $bf
 
 ; the bottom-left of a face-up card has the suit:
-.DEF    TILE_CARD_Y4X1          $a9
-.DEF    TILE_CARD_Y4X1_SPD      $a9+0   ; Spades
-.DEF    TILE_CARD_Y4X1_CLB      $a9+1   ; Clubs
-.DEF    TILE_CARD_Y4X1_HRT      $a9+2   ; Hearts
-.DEF    TILE_CARD_Y4X1_DMD      $a9+3   ; Diamonds
+.DEF    TILE_CARD_Y4X1          $8e
+.DEF    TILE_CARD_Y4X1_SPD      $9e     ; Spades
+.DEF    TILE_CARD_Y4X1_CLB      $ae     ; Clubs
+.DEF    TILE_CARD_Y4X1_HRT      $be     ; Hearts
+.DEF    TILE_CARD_Y4X1_DMD      $ce     ; Diamonds
 
 ; the bottom-centre is blank
-.DEF    TILE_CARD_Y4X2          $a7
+.DEF    TILE_CARD_Y4X2          $cf
 
 ; the bottom-right of a face-up card has the ordinal:
-.DEF    TILE_CARD_Y4X3          $b0
-.DEF    TILE_CARD_Y4X3_A        $b0+0   ; Ace
-.DEF    TILE_CARD_Y4X3_2        $b0+1   ; Two
-.DEF    TILE_CARD_Y4X3_3        $b0+2   ; Three
-.DEF    TILE_CARD_Y4X3_4        $b0+3   ; Four
-.DEF    TILE_CARD_Y4X3_5        $b0+4   ; Five
-.DEF    TILE_CARD_Y4X3_6        $b0+5   ; Six
-.DEF    TILE_CARD_Y4X3_7        $b0+6   ; Seven
-.DEF    TILE_CARD_Y4X3_8        $b0+7   ; Eight
-.DEF    TILE_CARD_Y4X3_9        $b0+8   ; Nine
-.DEF    TILE_CARD_Y4X3_10       $b0+9   ; Ten
-.DEF    TILE_CARD_Y4X3_J        $b0+10  ; Jack
-.DEF    TILE_CARD_Y4X3_Q        $b0+11  ; Queen
-.DEF    TILE_CARD_Y4X3_K        $b0+12  ; King
+.DEF    TILE_CARD_Y4X3          $a1
+.DEF    TILE_CARD_Y4X3_A        $a1+0   ; Ace
+.DEF    TILE_CARD_Y4X3_2        $a1+1   ; Two
+.DEF    TILE_CARD_Y4X3_3        $a1+2   ; Three
+.DEF    TILE_CARD_Y4X3_4        $a1+3   ; Four
+.DEF    TILE_CARD_Y4X3_5        $a1+4   ; Five
+.DEF    TILE_CARD_Y4X3_6        $a1+5   ; Six
+.DEF    TILE_CARD_Y4X3_7        $a1+6   ; Seven
+.DEF    TILE_CARD_Y4X3_8        $a1+7   ; Eight
+.DEF    TILE_CARD_Y4X3_9        $a1+8   ; Nine
+.DEF    TILE_CARD_Y4X3_10       $a1+9   ; Ten
+.DEF    TILE_CARD_Y4X3_J        $a1+10  ; Jack
+.DEF    TILE_CARD_Y4X3_Q        $a1+11  ; Queen
+.DEF    TILE_CARD_Y4X3_K        $a1+12  ; King
 
 ; card tilemaps:
 ;===============================================================================
