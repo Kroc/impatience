@@ -230,6 +230,47 @@ init:
         jp      cursor.pointToPile
 
 
+checkPile:
+;===============================================================================
+; enable / disable cards in Klondike depots:
+;
+; the face-up cards are valid, the face-down cards are not;
+; this is so that the cursor will not navigate over the face-down cards
+;
+; in:   L       pile index (`INDEX_*`)
+; out:  L, BC   (preserved)
+;       AF, DE  (clobbered)
+;       H       (clobbered) -- select a field before using HL!
+;-------------------------------------------------------------------------------
+        ; we will start with the end (top-most)
+        ; of the pile and work backwards
+        ;
+        rst     piles.rst_pileCount     ; number of cards in pile
+        ld      C,      A               ; will be our counter
+        rst     piles.rst_lastCardAddr  ; get pool addr of last card
+        ;-----------------------------------------------------------------------
+-       ld      A,      [DE]            ; read card value
+        bit     BIT_BACK,       A       ; is the card face-down?
+        jr      nz,     +               ; if so, begin disabling cards
+        and     ~CARD_DISABLED          ; remove disabled bit
+        ld      [DE],   A               ; update the pool
+        dec     C                       ; one less card
+        jr      nz,     -               ; finished?
+        ;-----------------------------------------------------------------------
+        ret
+
+        ; disable the rest of the cards:
++       ;-----------------------------------------------------------------------
+-       ld      A,      [DE]            ; read card value
+        or      CARD_DISABLED           ; add the disabled bit
+        ld      [DE],   A               ; update the pool
+        dec     DE                      ; move to previous card
+        dec     C                       ; one less card
+        jr      nz,     -               ; finished?
+        ;-----------------------------------------------------------------------
+        ret
+
+
 validatePile:
 ;===============================================================================
 ; validate a depot pile according to Klondike rules:

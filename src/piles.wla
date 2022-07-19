@@ -797,6 +797,7 @@ checkPile:
         ; or removing cards, although the game logic can manipulate the pile
         cp      RULE_LOCKED
         jp      z,      checkPile_Locked
+        ; an "exposed" pile is where only the top-most card is enabled
         cp      RULE_EXPOSED
         jp      z,      checkPile_Exposed
 
@@ -805,7 +806,7 @@ checkPile:
         cp      RULE_FORTUNES
         jp      z,      fortunes.validatePile
         cp      RULE_KLONDIKE
-        jp      z,      klondike.validatePile
+        jp      z,      klondike.checkPile
 
         ret
 
