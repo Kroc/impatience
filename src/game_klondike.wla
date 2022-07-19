@@ -247,13 +247,16 @@ checkPile:
         ;
         rst     piles.rst_pileCount     ; number of cards in pile
         ld      C,      A               ; will be our counter
-        rst     piles.rst_lastCardAddr  ; get pool addr of last card
+        dec     A                       ; (adjust to 0-based)
+        rst     piles.rst_cardAddr      ; get pool addr of last card
+
         ;-----------------------------------------------------------------------
 -       ld      A,      [DE]            ; read card value
         bit     BIT_BACK,       A       ; is the card face-down?
         jr      nz,     +               ; if so, begin disabling cards
         and     ~CARD_DISABLED          ; remove disabled bit
         ld      [DE],   A               ; update the pool
+        dec     DE                      ; move to previous card
         dec     C                       ; one less card
         jr      nz,     -               ; finished?
         ;-----------------------------------------------------------------------

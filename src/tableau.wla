@@ -119,7 +119,7 @@ drawPile:
         ; (note that A, card-count, is preserved through this)
         ;
         ld      H,      FIELD_TYPE      ; switch field back again
-        bit     BIT_STACK,      [HL]    ; is it a stack?
+        bit     BIT_SQUARE,     [HL]    ; is it a stack?
         jr      nz,     @stack          ; -> handle stack-type piles
         bit     BIT_HORZ,       [HL]    ; is it a horizontal pile?
         jr      nz,     @row            ; -> handle horizontal spreads

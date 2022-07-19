@@ -251,25 +251,32 @@ moveLeft:
         ; and the card index being pointed at (A)
         call    getPointPile
 
-        ;;ld      B,B
         ld      H,      FIELD_TYPE      ; check pile type to see
         bit     BIT_HORZ,       [HL]    ;  is this is a horizontal pile?
         jr      z,      @pile           ;  no? move straight to next pile
 
+        ; horizontal spread:
+        ;-----------------------------------------------------------------------
         ; is the current position 0? i.e. at the
         ; bottom (left, visually) of the pile?
         and     A,      A               ; (set flags!)
         jr      z,      @pile           ; if yes, move to next pile to the left
 
+        ; do not point at a disabled card!
         dec     A                       ; move left a card
-        jp      pointToCard             ; point to same pile, previous card
+        rst     piles.rst_cardAddr      ; get the addr of that card
+        ld      A,      [DE]            ; read its value
+        bit     BIT_DISABLED,   A       ; if the card is enabled,
+        jp      z,      pointToCard     ;  point to same pile, previous card
 
+        ; card is disabled, move to
+        ; the next pile instead
+        ;
+
+        ; move to the pile to the left:
         ;-----------------------------------------------------------------------
-        ; select the field that contains the pile to the left
-@pile:  ld      H,      FIELD_LEFT
-        ; read the index of the the pile to the left
-        ld      L,      [HL]
-        ; move to the default card in the next pile
+@pile:  ld      H,      FIELD_LEFT      ; read the `left` field that
+        ld      L,      [HL]            ;  tells us the pile to point to
         jp      pointToPile
 
 
@@ -279,39 +286,46 @@ moveRight:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        call    getPointPile            ; retrieve current pile index
-        ld      C,      A               ; card index pointed at (0-based)
+        call    getPointPile            ; get pile (L) and card (A) index
+        ld      C,      A               ; put aside card index
+        rst     piles.rst_pileCount     ; get the card-count of the pile
+        jr      z,      @pile           ; move cursor if this pile is emepty
 
         ld      H,      FIELD_TYPE      ; check pile type to see
         bit     BIT_HORZ,       [HL]    ;  is this is a horizontal pile?
         jr      z,      @pile           ;  no? move straight to next pile
 
-        ; move right within the current pile:
+        ; horizontal spread:
         ;-----------------------------------------------------------------------
-        ; get the number of cards in the pile (L)
-        rst     piles.rst_pileCount
-        ; if there are no cards in the pile
-        ; we can move to the pile to the right
-        jr      z,      @pile
-
         ; have we reached the end of the row?
         ;
         ; a neat trick is used here to both do the comparison and effectively
         ; add 1 to the card index to be able to move to the next card, *if*
-        ; we're not at the end of the pile
+        ; we're not at the end of the pile (and the card isn't disabled)
         ;
         inc     C                       ; adjust pointed-to card index
-        cp      A,      C               ;  to 1-based and compare with count
-        ld      A,      C
+        cp      A                       ;  to 1-based and compare with count
 
-        ; if they are not equal, the pointer has not reached the top of
-        ; the pile (visually, right on screen). move the cursor to the
-        ; next card by using the 1-based index as 0-based!
-        jp      nz,     pointToCard
+        ; if equal, the end of the pile has been hit,
+        ; move the cursor to the next pile
+        jr      z,      @pile
 
+        ; do not point at a disabled card!
+        ld      A,      C               ; retrieve new card index
+        rst     piles.rst_cardAddr      ; get the addr of that card
+        ld      A,      [DE]            ; read its value
+        bit     BIT_DISABLED,   A       ; if the card is enabled,
+        ld      A,      C               ;  retrieve the new card index, and
+        jp      z,      pointToCard     ;  point to same pile; next card
+
+        ; card is disabled, move to
+        ; the next pile instead
+        ;
+
+        ; move to the pile to the right:
         ;-----------------------------------------------------------------------
-@pile:  ld      H,      FIELD_RIGHT     ; read the 'right' field that
-        ld      L,      [HL]            ; tells us the pile to move to
+@pile:  ld      H,      FIELD_RIGHT     ; read the `right` field that
+        ld      L,      [HL]            ;  tells us the pile to point to
         jp      pointToPile
 
 
@@ -329,28 +343,35 @@ moveUp:
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; there are no cards to step through, just move to the next pile
         ld      H,      FIELD_TYPE
-        bit     BIT_STACK,      [HL]
+        bit     BIT_SQUARE,     [HL]
         jr      nz,     @pile
         ; if currently in a horizontal pile, pressing up should just move
-        ; to the next pile and not try flipping through the current pile!
+        ; to the next pile and not try flipping through the cards!
         bit     BIT_HORZ,       [HL]
         jr      nz,     @pile
 
         ; move up within the current pile:
         ;-----------------------------------------------------------------------
-        ; is the current position 0? i.e. at the
-        ; bottom (top, visually) of the pile?
-        and     A,      A               ; (set flags!)
-        jr      z,      @pile
+        and     A,      A               ; is the current position 0?
+        jr      z,      @pile           ; if yes, move to next pile above
 
+        ; do not point at a disabled card!
         dec     A                       ; move up a card
-        jr      pointToCard
+        ld      C,      A               ; before we read card, backup index
+        rst     piles.rst_cardAddr      ; get the addr of that card
+        ld      A,      [DE]            ; read its value
+        bit     BIT_DISABLED,   A       ; if the card is enabled,
+        ld      A,      C               ;  restore the new index, and
+        jp      z,      pointToCard     ;  point to same pile; previous card
 
-        ;-----------------------------------------------------------------------
-        ; move up to the next pile:
+        ; card is disabled, move to
+        ; the next pile instead
         ;
+
+        ; move up to the next pile:
+        ;-----------------------------------------------------------------------
 @pile:  ld      H,      FIELD_UP        ; read the `up` field that
-        ld      L,      [HL]            ;  tells us the pile to move to
+        ld      L,      [HL]            ;  tells us the pile to point to
         jr      pointToPile
 
 
@@ -367,7 +388,7 @@ moveDown:
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; there are no cards to step through, just move to the next pile
         ld      H,      FIELD_TYPE
-        bit     BIT_STACK,      [HL]
+        bit     BIT_SQUARE,     [HL]
         jr      nz,     @pile
         ; if currently in a horizontal pile, pressing down should just move
         ; to the next pile and not try flipping through the current pile!
@@ -392,6 +413,9 @@ moveDown:
         cp      A,      C               ;  to 1-based and compare with count
         ld      A,      C
 
+        ; (NOTE: we do not *yet* support a situation where the cursor
+        ;  may be on an enabled card that is topped by a disabled card)
+
         ; if they are not equal, the pointer has not reached the top of
         ; the pile (visually, bottom on screen). move the cursor to the
         ; next card by using the 1-based index as 0-based!
@@ -400,7 +424,7 @@ moveDown:
         ; move down to the next pile:
         ;-----------------------------------------------------------------------
 @pile:  ld      H,      FIELD_DOWN      ; read the `down` field that
-        ld      L,      [HL]            ;  tells us the pile to move to
+        ld      L,      [HL]            ;  tells us the pile to point to
 
         ; fall through to below
         ; to point to the new pile!
@@ -457,7 +481,7 @@ pointToCard:
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; we point to the top of the pile without counting cards
         ld      H,      FIELD_TYPE
-        bit     BIT_STACK,      [HL]
+        bit     BIT_SQUARE,     [HL]
         jr      nz,     @empty          ; TODO: the deck is slightly raised
 
         ; is this a horizontal or vertical spread of cards?

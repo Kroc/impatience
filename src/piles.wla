@@ -92,7 +92,7 @@
 ;
 .DEF    TYPE_SQUARE     %10000000       ; squared, e.g. deck / foundation
 .DEF    TYPE_SPREAD     %00000000       ; spread-out, e.g. column / hand
-.DEF    BIT_STACK       7
+.DEF    BIT_SQUARE      7
 
 .DEF    TYPE_FACE       %01000000       ; face-up, e.g. foundation
 .DEF    TYPE_BACK       %00000000       ; face-down, e.g. deck
@@ -801,10 +801,11 @@ checkPile:
         cp      RULE_EXPOSED
         jp      z,      checkPile_Exposed
 
-        cp      RULE_ACESUP
-        jp      z,      acesup.validatePile
-        cp      RULE_FORTUNES
-        jp      z,      fortunes.validatePile
+        ;;cp      RULE_ACESUP
+        ;;jp      z,      acesup.validatePile
+        ;;cp      RULE_FORTUNES
+        ;;jp      z,      fortunes.validatePile
+        
         cp      RULE_KLONDIKE
         jp      z,      klondike.checkPile
 
@@ -822,7 +823,7 @@ checkPile_Locked:
         ; if the pile is squared (only top card shows),
         ; we only need to modify the top card alone
         ld      H,      FIELD_TYPE
-        bit     BIT_STACK,      [HL]    ; is this a stack?
+        bit     BIT_SQUARE,     [HL]    ; is this a stack?
         jr      nz,     @top            ; -> disable only top card
 
         ; mark all cards in the pile as invalid:
@@ -856,7 +857,7 @@ checkPile_Exposed:
         ; if the pile is squared (only top card shows),
         ; we only need to modify the top card alone
         ld      H,      FIELD_TYPE
-        bit     BIT_STACK,      [HL]    ; is this a stack?
+        bit     BIT_SQUARE,     [HL]    ; is this a squared pile?
         jr      nz,     @top            ; -> enable only top card
 
         ; disable all but the top-most card: another way to think
