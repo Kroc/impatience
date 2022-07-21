@@ -500,3 +500,12 @@ drawCardEdgeLeft:
         inc     H                       ; if so, bump the address hi-byte
 +       ld      L,      A
         ret
+
+
+moveCard:
+;===============================================================================
+; visually moves a card from one pile to another:
+; the move takes multiple frames to complete
+;
+;-------------------------------------------------------------------------------
+        ret

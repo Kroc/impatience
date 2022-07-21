@@ -226,6 +226,10 @@ init:
         call    tilemap.refresh
         rst     rst_screenOn
 
+        ; everything ready, set this as the current running game
+        ld      HL,     game_id
+        ld      [HL],   GAME_KLONDIKE
+
         ld      L,      INDEX_DECK
         jp      cursor.pointToPile
 

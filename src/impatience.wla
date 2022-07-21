@@ -6,6 +6,16 @@
 
 .INC    "interrupts.wla"
 
+.RAMSECTION "Global"
+        game_id         BYTE    ; index of current game being played
+.ENDS
+
+.ENUMID 0
+.ENUMID GAME_NONE
+.ENUMID GAME_ACESUP
+.ENUMID GAME_FORTUNES
+.ENUMID GAME_KLONDIKE
+
 init:
 ;===============================================================================
         di                              ; disable interrupts
@@ -53,6 +63,12 @@ init:
         ; we can jump into `fill` at the exact place needed
         call    fill@x{40 * _sizeof_Sprite}
 
+        ; no game is selected:
+        ; (this should ensure no unwanted actions
+        ;  occur whilst a game is initialising)
+        ld      HL,     game_id
+        ld      [HL],   0
+
         ei
 
         ; begin initialising the game:
@@ -60,9 +76,9 @@ init:
         call    sprites.init
         call    tilemap.init
 
-        ;;call    acesup.init
+        call    acesup.init
         ;;call    fortunes.init
-        call    klondike.init
+        ;;call    klondike.init
 
         ; play loop:
         ;=======================================================================

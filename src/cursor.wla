@@ -7,7 +7,8 @@
 .DEF    CURSOR_START_Y  72
 
 .DEF    MODE_FREE       0               ; cursor is free to move
-.DEF    MODE_HOLD       %10000000       ; cursor is holding cards
+.DEF    MODE_HOLD       1               ; cursor is holding cards
+.DEF    MODE_CARD       2               ; moving card, no cursor
 
 ; (musn't cross an 8-bit boundary for a micro-optimisation)
 ;
@@ -26,8 +27,6 @@
         ; the number of the card in the pile the cursor is pointing at.
         ; note that this is 0-based and not 1-based like the pile size!
         card_point      BYTE
-        ;-----------------------------------------------------------------------
-        temp            BYTE
         ;-----------------------------------------------------------------------
         ; when the cursor picks up a pile of cards, they are removed from
         ; the original pile and have to be stored elsewhere, so this pool
@@ -92,6 +91,50 @@ init:
         jp      piles.allocate
 
 
+setMode:
+;===============================================================================
+; change the cursor behaviour mode:
+;
+; out:  BC      (preserved)
+;       A       (clobbered)
+;-------------------------------------------------------------------------------
+        ld      [mode], A
+        and     A,      A
+        jr      z,      @free
+        dec     A
+        jr      z,      @hold
+        dec     A
+        jr      z,      @card
+
+        ret
+
+        ; set the cursor to free-mode:
+        ;-----------------------------------------------------------------------
+        ; reset the hand sprite to the default cursor
+@free:  ld      A,      SPRITE_HAND_LHS
+        ld      [sprites.attrs.1.tile], A
+        ld      A,      SPRITE_HAND_RHS
+        ld      [sprites.attrs.2.tile], A
+        ret
+
+        ; set the cursor to hold-mode:
+        ;-----------------------------------------------------------------------
+        ; change the cursor to the holding hand
+@hold:  ld      A,      SPRITE_HOLD_LHS
+        ld      [sprites.attrs.1.tile], A
+        ld      A,      SPRITE_HOLD_RHS
+        ld      [sprites.attrs.2.tile], A
+        ret
+
+        ; set the cursor to card-mode:
+        ;-----------------------------------------------------------------------
+        ; hide the cursor, only the card will be visible
+@card:  xor     A                       ; set A to 0 = SPRITE_NONE
+        ld      [sprites.attrs.1.tile], A
+        ld      [sprites.attrs.2.tile], A
+        ret
+
+
 clearHand:
 ;===============================================================================
 ; removes the cards from the cursor hand / pile:
@@ -120,13 +163,8 @@ clearSprites:
 ;       A, HL   (clobbered)
 ;-------------------------------------------------------------------------------
         ; reset the hand sprite to the default cursor
-        ld      A,      SPRITE_HAND_LHS
-        ld      [sprites.attrs.1.tile], A
-        ld      A,      SPRITE_HAND_RHS
-        ld      [sprites.attrs.2.tile], A
-        ; reset the cursor mode to free-hand
-        ld      HL,     mode
-        ld      [HL],   MODE_FREE
+        ld      A,      MODE_FREE
+        call    setMode
         ; address of the third sprite in the local sprite table;
         ; the first two sprites are the hand cursor
         ld      HL,     sprites.attrs.3
@@ -635,11 +673,28 @@ moveToScrXY:
 
 doAction:
 ;===============================================================================
-; button pressed; pick up a pile or drop held cards, according to context:
+; button pressed; pick up a pile / drop held cards
+; or auto-play, according to context:
 ;
 ;-------------------------------------------------------------------------------
+        ld      HL,     game_id         ; ID of game currently running
+        ld      C,      [HL]            ; (we will need to reuse HL & A)
+
+        ; retrieve the pile being pointed at (L)
+        ; and the card-index (A) in that pile
+        call    getPointPile
+
+        ; which game is currently running?
+        dec     C                       ; was it `1`?
+        jp      z,      acesup.tapCard
+
+        ;-----------------------------------------------------------------------
         ld      A,      [mode]  ; get cursor mode
         and     A,      A       ; (set flags!)
+
+        ; retrieve current pile index (L) and the card index (A)
+        ; being pointed at -- note this routine will not change the flags!
+        call    getPointPile
 
         ; if the cursor is free (not holding any cards),
         ; attempt to pick up the pile being pointed at
@@ -650,23 +705,20 @@ doAction:
 
 pickPile:
 ;===============================================================================
-; attempt to pick up a pile:
+; pick up a pile:
 ;
-; this will attempt to pick up all the cards from the one
-; currently pointed to, down to the top of the pile
+; this will pick up all the cards in the specified pile,
+; from the specified index, down to the top of the pile
 ;
+; in:   L       index (`INDEX_*`) of the source pile
+;       A       index of the card in the pile to start from (0-based)
 ;-------------------------------------------------------------------------------
-        ; retrieve current pile index (L),
-        ; and the card index being pointed at (A)
-        call    getPointPile
-        ld      C,      A               ; put aside for later
+        ld      C,      A               ; put aside card index for later
 
         ; is the pile empty?
         ;-----------------------------------------------------------------------
         rst     piles.rst_pileCount     ; (get pile card count, set flags)
         jp      z,      @err            ; if pile is empty, exit
-
-        ; TODO: validate pick
 
         ; move cards to cursor's pile:
         ;-----------------------------------------------------------------------
@@ -683,15 +735,8 @@ pickPile:
 
         ; initialise sprites:
         ;-----------------------------------------------------------------------
-        ; change the cursor to the holding hand
-        ld      A,      SPRITE_HOLD_LHS
-        ld      [sprites.attrs.1.tile], A
-        ld      A,      SPRITE_HOLD_RHS
-        ld      [sprites.attrs.2.tile], A
-        ; change the cursor mode so that 
-        ; the cards move with the cursor
-        ld      HL,     mode
-        ld      [HL],   MODE_HOLD
+        ld      A,      MODE_HOLD       ; change the cursor to the holding hand
+        call    setMode
 
         ; set our starting X/Y position for building card sprites:
         ld      A,      [ypos]
@@ -707,63 +752,12 @@ pickPile:
         ld      HL,     sprites.attrs.40.attr
 
         ; convert cards to sprites:
+        ld      A,      [DE]            ; seed loop with first card value
         ;-----------------------------------------------------------------------
-        ; seed the loop with the first card value
-        ld      A,      [DE]
-
-        ; we must remember the current card value so that after
-        ; the zero-terminator is encountered, we can construct
-        ; the bottom-half of the last card (not covered)
-@loop:  ld      [temp], A
-
         ; create sprites for the top half of each card:
         ; (only the last card has a bottom half)
-        ;=======================================================================
-        ; top-left corner: ordinal
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L                       ; (move to sprite tile byte)
-        and     %00001111               ; trim out the other bits of card value
-        rlca                            ; x2 tile index due to 8x16 sprites
-        add     SPRITE_CARD_12X1-2      ; offset the tile with the ordinal
-        ld      [HL-],  A               ; set the sprite's tile
-        ld      A,      C
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
-        ;-----------------------------------------------------------------------
-        ; top-middle:
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L                       ; (move to sprite tile byte)
-        ld      A,      SPRITE_CARD_12X2; this one has a fixed sprite tile
-        ld      [HL-],  A
-        ld      A,      C               ; position this sprite next
-        add     A,      8               ;  to the previous one
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
-        ;-----------------------------------------------------------------------
-        ; top-right: suit
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L
-        ld      A,      [DE]            ; retrieve our original card value
-        swap    A                       ; move the suit to the bottom nybble
-        and     %00000011               ; mask out the other bits
-        rlca                            ; x2 tile index due to 8x16 sprites
-        add     SPRITE_CARD_12X3        ; offset the tile with the suit
-        ld      [HL-],  A
-        ld      A,      C               ; position this sprite next
-        add     A,      16              ;  to the previous one
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
-        ; move to the next row
-        add     A,      8
-        ld      B,      A
+@loop:  call    sprites.cardToSprites_Top
 
-        ;-----------------------------------------------------------------------
         ; read a card value from the pool; if this is the
         ; zero terminator, we've reached the end of the pile
         ;
@@ -771,61 +765,16 @@ pickPile:
         ld      A,      [DE]
         and     A,      A               ; (set flags!)
         jr      nz,     @loop           ; keep looping until last card
+        ;-----------------------------------------------------------------------
 
         ; bottom half of last card:
-        ;=======================================================================
-        ; since sprites are 8x16, the last card is two sprites high;
-        ; move down another 8px to make it 16px below the top half
-+       ld      A,      B
-        add     A,      8
-        ld      B,      A
-        ;-----------------------------------------------------------------------
-        ; bottom-left: suit
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L
-        ld      A,      [temp]          ; retrieve the last card value
-        swap    A                       ; move the suit to the bottom nybble
-        and     %00000011               ; mask out the other bits
-        rlca                            ; x2 tile index due to 8x16 sprites
-        add     SPRITE_CARD_34X1        ; offset the tile with the suit
-        ld      [HL-],  A
-        ld      A,      C
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
-        ;-----------------------------------------------------------------------
-        ; bottom-middle:
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L                       ; (move to sprite tile byte)
-        ld      A,      SPRITE_CARD_34X2; this one has a fixed sprite tile
-        ld      [HL-],  A
-        ld      A,      C               ; position this sprite next
-        add     A,      8               ; to the previous one
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
-        ;-----------------------------------------------------------------------
-        ; bottom-right corner: ordinal
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L                       ; (move to sprite tile byte)
-        ld      A,      [temp]          ; retrieve the last card value
-        and     %00001111               ; trim out the other bits of card value
-        rlca                            ; x2 tile index due to 8x16 sprites
-        add     SPRITE_CARD_34X3-2      ; offset the tile with the ordinal
-        ld      [HL-],  A               ; set the sprite's tile
-        ld      A,      C               ; position this sprite next
-        add     A,      16              ; to the previous one
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
+        dec     DE                      ; rewind before the zero-terminator
+        ld      A,      [DE]            ; re-read last card value
+        call    sprites.cardToSprites_Bottom
 
-        ;-----------------------------------------------------------------------
         ; because the card being pointed to was removed, we need to move the
         ; cursor (and all the cards now in the cursor's hand) to the card above
-        ;
+        ;-----------------------------------------------------------------------
         call    getPointPile            ; get the old pile / card index
         and     A,      A               ; (set flags!)
         jr      z,      +               ; is the pile empty?
@@ -849,23 +798,17 @@ pickPile:
 
 dropPile:
 ;===============================================================================
-; drop the cards in the cursor's hand onto the current pile:
+; drop the cards in the cursor's hand onto the specified pile:
 ;
+; in:   L       index (`INDEX_*`) of the pile to drop the cards on
 ;-------------------------------------------------------------------------------
-        ; TODO: disallow pointing to the inner cards
-        ;       of a pile when cursor is holding cards
-        ;
-        ; remove the cards shown in the cursor's hand!
-        call    clearSprites
-
-        ; retrieve current pile being pointed at
-        ; into E, as it's the destination
-        ld      HL,     pile_point
-        ld      E,      [HL]
+        push    HL                      ; preserve destination pile index
+        call    clearSprites            ; remove cards in cursor's hand!
+        pop     DE                      ; retrieve destination pile into E
 
         ; move the pile of cards in the cursor's hand
-        ; on to the top of the pile being pointed at
-        ld      L,      INDEX_CURSOR
+        ; on to the top of the destination pile
+        ld      L,      INDEX_CURSOR    ; source pile index, the cursor
         xor     A                       ; A = 0, move all cards in hand
         call    piles.move
 
@@ -883,3 +826,18 @@ dropPile:
         ; compare the display buffers and queue
         ; the changes to be made during vblank
         jp      tilemap.update
+
+
+useCard:
+;===============================================================================
+; changes the cursor to a card, for example, when making auto-moves:
+;
+; the cursor's pointer (hand) will disappear and be replaced with the
+; given card, which will appear in the new position without animation
+;
+; in:   A       a card value to replace the cursor with
+;       B       new cursor position Y, in pixels
+;       C       new cursor position X, in pixels
+;-------------------------------------------------------------------------------
+        ; clear any cards held by the cursor
+        ;;call    sprites.clearCards

@@ -692,7 +692,7 @@ move:
 ; out:  L       destination pile index
 ;       A       destination pile updated last card index
 ;       BC, DE  (clobbered)
-;       H       (clobbered) -- you should select a field before using HL!
+;       H       (clobbered) -- select a field before using HL!
 ;-------------------------------------------------------------------------------
         ; because we are removing all cards from the index down in
         ; the source pile, the number of cards simply becomes the index

@@ -76,7 +76,7 @@ init:
         ld      L,      INDEX_DEPOT1    ; (skip `INDEX_HAND`)
         call    piles.allocate
         call    piles.allocate          ; depot 2, 3 & 4 all follow in order,
-        call    piles.allocate          ; so we don't need to set HL & BC again
+        call    piles.allocate          ; so we don't need to set L & BC again
         call    piles.allocate
 
         ;-----------------------------------------------------------------------
@@ -110,9 +110,119 @@ init:
         call    tilemap.refresh
         rst     rst_screenOn
 
+        ; everything ready, set this as the current running game
+        ld      HL,     game_id
+        ld      [HL],   GAME_ACESUP
+
         ; move the cursor to the bottom card in the first depot pile
         ld      L,      INDEX_DEPOT1
         jp      cursor.pointToPile
+
+
+tapCard:
+;===============================================================================
+; in:   L       index (`INDEX_*`) of pile pointed at
+;       A       index of card pointed at in that pile
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+        ; which pile was tapped?
+        ;
+        ; for Aces Up we happen to know that the only column
+        ; piles are the depots and those are our main concern
+        ld      H,      FIELD_TYPE
+        bit     BIT_SQUARE,     [HL]
+        jr      nz,     tapCard_deck
+
+tapCard_depot:
+;===============================================================================
+; in:   L       index (`INDEX_*`) of pile pointed at
+;       A       index of card pointed at in that pile
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+        ; tapped on a depot -- only the top-most
+        ; card is enabled so auto-play that card:
+        ;
+        ; we need to compare our card with the
+        ; other depots so put its value aside:
+        rst     piles.rst_cardAddr      ; get addr (DE) of the card index (A)
+        ld      A,      [DE]            ; get value of last card
+        and     MASK_VALUE              ; isolate suit+rank bits
+        ld      B,      A               ; B = tapped card value
+
+        ; check the depots:
+        ;-----------------------------------------------------------------------
+        ; is our card lower than any other card of the same suit on top of
+        ; the other depots? we don't make an effort to avoid checking the
+        ; same depot as our card as it won't be considered lower
+        ;
+        ; since only Aces Up uses this type of validation (so far), we know
+        ; we don't need to check the validation-type of every other pile;
+        ; just the first four depots are relevant
+        ;
+        ; note that once a valid match has been found (c+),
+        ; we skip checking the other depots (`call nc, ...`)
+        ;
+        ld      L,      INDEX_DEPOT1
+        call            @cp
+        ld      L,      INDEX_DEPOT2
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT3
+        call    nc,     @cp
+        ld      L,      INDEX_DEPOT4
+        call    nc,     @cp
+
+        ; if carry is set, the tapped card is the same suit
+        ; and lower in rank than another card on the tableau
+        
+        ; TODO: replace the cursor with a copy of the card, in the same
+        ; place as the tapped card, and remove the card from the pile
+
+        ret
+
+        ;-----------------------------------------------------------------------
+        ; compare cards:
+        ;
+        ; given the Pile to compare *against*, fetch the top card
+        ; of *that* pile. we have to preserve DE whilst doing this
+        ;
+@cp:    call    piles.getLastCard       ; addr of last card in search depot
+
+        ; compare suits:
+        ;
+        ; we compare suits using XOR so that carry is
+        ; unaffected. if the suits match, zero is set
+        ;
+        ld      A,      [DE]            ; read the last card in the pile
+        xor     B                       ; combine with the tapped card
+        and     MASK_SUIT               ; mask out irrelevant bits
+        ret     nz                      ; exit (c-) if they don't match
+
+        ; compare ranks:
+        ;
+        ; unfortunately we have our registers back-to-front so that,
+        ; if were were to put the original rank in C, we'd be looking
+        ; for the higher value, not the lower one. do some register
+        ; juggling to get the comparison the right way around...
+        ;
+        ld      A,      [DE]            ; read the last depot card
+        sub     2                       ; wrap A low to A high!
+        and     MASK_RANK               ; (isolate the rank)
+        ld      C,      A               ; swap sides
+
+        ld      A,      B               ; get our original card again
+        sub     2                       ; wrap A low to A high!
+        and     MASK_RANK               ; (isolate the rank)
+        cp      C                       ; if depot card is higher,
+        ret                             ; return carry!
+
+
+tapCard_deck:
+;===============================================================================
+; in:   L       index (`INDEX_*`) of pile pointed at
+;       A       index of card pointed at in that pile
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+        ret
 
 
 validatePile:
