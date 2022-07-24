@@ -381,6 +381,10 @@ rst_lastCardAddr:                                                       ;$28
 ; to know if the pile is empty, or call `rst_pileCount`
 ;
 ; in:   L       pile index (`INDEX_*`)
+; out:  A       index of the last card in the pile
+;       DE      address in the pile's pool of the last card in the pile
+;       L       (preserved)
+;       H       (clobbered) -- select a field before using HL!
 ;-------------------------------------------------------------------------------
         ld      H,      FIELD_COUNT     ; select the count field
         ld      A,      [HL]            ; card count for the pile
@@ -395,13 +399,19 @@ rst_cardAddr:                                                           ;$30
 ;
 ; in:   L       pile index (`INDEX_*`)
 ;       A       index, 0-based, of the card in the pile
+;
+; out:  DE      address in the pile's pool for the given card index
+;       L, A    (preserved)
+;       H       (clobbered) -- select a field before using HL!
 ;-------------------------------------------------------------------------------
-        rst     rst_poolAddr
+        rst     rst_poolAddr            ; get pile's base pool address
+        ld      H,      A               ; (preserve card index)
         add     E                       ; add card index to pool-addr, lo-byte
-        ld      E,      A
-        jr      nc,     +
-        inc     D
-+       ret
+        ld      E,      A               ; update output lo-byte
+        ld      A,      H               ; (restore original card index)
+        ret     nc                      ; if E didn't overflow, exit
+        inc     D                       ; ripple carry to output hi-byte
+        ret
 ;###############################################################################
 .ENDS
 
@@ -459,7 +469,7 @@ clear:
 
         ; when the piles are cleared,
         ; the cursor's pile must be reallocated
-        jp      cursor.init
+        jp      tableau.init
 
 
 allocateDeck:
@@ -647,10 +657,12 @@ addCard:
 
 getLastCard:
 ;===============================================================================
-; gets the address of the last (top-most) card in a pile:
+; gets the value (and address) of the last (top-most) card in a pile:
 ;
 ; in:   L       pile index (`INDEX_*`)
-; out:  DE      pool address of the last card in the pile
+; out:  A       value of the last card in the pile
+;       DE      pool address of the last card in the pile,
+;               NOT the base pool address!
 ;       L       (preserved)
 ;       H       (clobbered) -- select a field before using HL!
 ;-------------------------------------------------------------------------------
@@ -671,12 +683,54 @@ getPos:
 ;       C       column number of the pile on-screen
 ;               (note that these two disregard scroll position!)
 ;       DE, A   (preserved)
-;       H       (clobbered)
+;       H       (clobbered) -- select a field before using HL!
 ;-------------------------------------------------------------------------------
         ld      H,      FIELD_ROW       ; select `row` field
         ld      B,      [HL]            ; current pile (L) screen row
         ld      H,      FIELD_COL       ; select `col` field
         ld      C,      [HL]            ; current pile (L) screen col
+        ret
+
+
+getPosCard:
+;===============================================================================
+; retrieve the row & column co-ordinates (on the tile-map) of a card in a pile:
+;
+; in:   L       index (`INDEX_*`) of the pile
+;       A       card index (0-based)
+;
+; out:  B       row number of the card on the tile-map
+;       C       column number of the card on the tile-map
+;       A       (preserved) -- in case you want to read the card value
+;       H       (clobbered) -- select a field before using HL!
+;-------------------------------------------------------------------------------
+        call    getPos                  ; start with the row/col of the pile
+        and     A,      A               ; if the card index is zero, the
+        ret     z                       ;  pile position is already correct
+
+        ; check the type of pile, which will determine which
+        ; direction the cards in the pile spread, if at all
+        ;
+        ld      H,      FIELD_TYPE
+        bit     BIT_SQUARE,     [HL]    ; if the pile is square (no spread)
+        ret     nz                      ;  then no row/col adjustment needed
+        bit     BIT_HORZ,       [HL]    ; horizontal spread?
+        jr      nz,     @horz
+
+        ; vertical spread:
+        ;-----------------------------------------------------------------------
+@vert:  ld      H,      A               ; (preserve card index)
+        add     A,      B
+        ld      B,      A
+        ld      A,      H               ; (restore card index)
+        ret
+
+        ; horizontal spread:
+        ;-----------------------------------------------------------------------
+@horz:  ld      H,      A               ; (preserve card index)
+        add     A,      C
+        ld      C,      A
+        ld      A,      H               ; (restore card index)
         ret
 
 

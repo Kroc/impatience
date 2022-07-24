@@ -507,7 +507,7 @@ update:
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         xor     A                       ; (set A to 0)
-        ldh     [<queue_ready], A       ; disable tile updates during vblank
+        ldh     [<update_tiles],A       ; disable tile updates during vblank
         ld      HL,     back_buffer
         ld      DE,     front_buffer
         ld      BC,     tile_queue
@@ -561,7 +561,7 @@ update:
 
         ; queue is ready, allow tile updates from vblank
         dec     A                       ; (set A to $FF)
-        ldh     [<queue_ready], A
+        ldh     [<update_tiles],A
         ret
 
         ; queue the tile update:

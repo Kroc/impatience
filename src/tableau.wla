@@ -12,6 +12,50 @@
 .DEF    TABLEAU_HEIGHT  TILEMAP_HEIGHT
 
 
+.RAMSECTION "Cursor"    RETURNORG
+        ;-----------------------------------------------------------------------
+        ; the index of the Pile struct that the cursor is pointing to;
+        ; e.g. deck / depot
+        pile_point      BYTE
+        ; the number of the card in the pile the cursor is pointing at.
+        ; note that this is 0-based and not 1-based like the pile size!
+        card_point      BYTE
+        ;-----------------------------------------------------------------------
+        ; when the cursor picks up a pile of cards, they are removed from
+        ; the original pile and have to be stored elsewhere, so this pool
+        ; exists specifically for the cards in the cursor's hand. the storage
+        ; pool is not used so that the cursor's pool has a fixed address
+        ; that makes it easier to work with
+        ;
+        ; TODO: is 13 cards enough? what's the largest pile
+        ;       (note sprites limit us to 12 cards!)
+        hand_cards      DSB 13+1         ; +1 for zero-terminator!
+.ENDS
+
+; the pile used to hold cards in the cursor's hand needs a template;
+; force this template to use the fixed pool address!
+.REDEF  __pool_addr             tableau.hand_cards
+
+        ; label,                type, max-cards,
+        ; row,                  col,
+        ; pile-left,            pile-right,
+        ; pile-up,              pile-down
+piles.Define \
+        pile_template,          TYPE_COLUMN | TYPE_HORZ, 13, \
+        TILEMAP_HEIGHT-4,       TABLEAU_LEFT + 1, \
+        0,                      0, \
+        0,                      0
+
+
+init:
+;===============================================================================
+        ; configure the pile for holding cards in the cursor hand
+        ;-----------------------------------------------------------------------
+        ld      BC,     pile_template   ; the ROM template to copy from
+        ld      L,      INDEX_CURSOR    ; which pile to allocate
+        jp      piles.allocate
+
+
 clearTiles:
 ;===============================================================================
 ; clears the tableau area, i.e. where cards are played:
@@ -23,9 +67,8 @@ clearTiles:
         ; (number of tiles to skip to next row)
         ld      DE,     TILEMAP_WIDTH - SCREEN_WIDTH
 
-        ;-----------------------------------------------------------------------
         ld      C,      TABLEAU_HEIGHT
-@row:
+@row:   ;-----------------------------------------------------------------------
 .REPEAT TABLEAU_WIDTH
         ld      [HL+],  A       ; set cell to empty background tile
 .ENDR
@@ -37,6 +80,28 @@ clearTiles:
         jr      nz, @row
 
         ret
+
+
+clearCursorCards:
+;===============================================================================
+; removes the cards from the cursor hand / pile:
+;
+; WARNING: the cards should be "dropped" on to another pile
+; before calling this otherwise they will be permenantly lost!
+;
+; out:  DE      (preserved) -- required for `pickPile`
+;       BC      (preserved)
+;       A, HL   (clobbered)
+;-------------------------------------------------------------------------------
+        ; set the size of the cursor's pile to zero
+        xor     A                       ; (set A to zero)
+        ld      HL,     piles.count+INDEX_CURSOR
+        ld      [HL],   A
+
+        ; zero out the list of cards in the private cursor pool
+        ld      HL,     hand_cards
+        call    fill@x{_sizeof_hand_cards}
+        jp      cursor.clearSprites
 
 
 refresh:
@@ -500,6 +565,167 @@ drawCardEdgeLeft:
         inc     H                       ; if so, bump the address hi-byte
 +       ld      L,      A
         ret
+
+
+doAction:
+;===============================================================================
+; button pressed; pick up a pile / drop held cards
+; or auto-play, according to context:
+;
+;-------------------------------------------------------------------------------
+        ld      HL,     game_id         ; ID of game currently running
+        ld      C,      [HL]            ; (we will need to reuse HL & A)
+
+        ; retrieve the pile being pointed at (L)
+        ; and the card-index (A) in that pile
+        call    cursor.getPointPile
+
+        ; which game is currently running?
+        dec     C                       ; was it `1`?
+        jp      z,      acesup.tapCard
+
+        ;-----------------------------------------------------------------------
+        ld      A,      [cursor.mode]   ; get cursor mode
+        and     A,      A               ; (set flags!)
+
+        ; retrieve current pile index (L) and the card index (A)
+        ; being pointed at -- note this routine will not change the flags!
+        call    cursor.getPointPile
+
+        ; if the cursor is free (not holding any cards),
+        ; attempt to pick up the pile being pointed at
+        jp      z,      pickPile
+        ; the cursor is holding cards, try dropping them
+        jp      dropPile
+
+
+pickPile:
+;===============================================================================
+; pick up a pile:
+;
+; this will pick up all the cards in the specified pile,
+; from the specified index, down to the top of the pile
+;
+; in:   L       index (`INDEX_*`) of the source pile
+;       A       index of the card in the pile to start from (0-based)
+;-------------------------------------------------------------------------------
+        ld      C,      A               ; put aside card index for later
+
+        ; is the pile empty?
+        rst     piles.rst_pileCount     ; (get pile card count, set flags)
+        jp      z,      @err            ; if pile is empty, exit
+
+        ; move cards to cursor's pile:
+        ;-----------------------------------------------------------------------
+        ; move all the cards in the source pile, from
+        ; the index card down, to the cursor's pile:
+        ld      E,      INDEX_CURSOR    ; destination pile
+        ld      A,      C               ; card index to start from
+        call    piles.move
+
+        ; after the move, the destination pile's index is returned in L.
+        ; get the destination pile's pool address in DE, which is where
+        ; we want to start creating sprites from
+        rst     piles.rst_poolAddr
+
+        ; initialise sprites:
+        ;-----------------------------------------------------------------------
+        ld      A,      MODE_HOLD       ; change the cursor to the holding hand
+        call    cursor.setMode
+
+        ; set our starting X/Y position for building card sprites:
+        ld      A,      [cursor.ypos]
+        ld      B,      A               ; B will be the Y-position (px)
+        ld      A,      [cursor.xpos]
+        add     A,      8               ; add 8 to X to fit in the cursor hand
+        ld      C,      A               ; C will be the X-position (px)
+
+        ; because all sprites are in 8x16 mode, we will need to overlap
+        ; sprites where cards stack in a pile and due to sprite-priority,
+        ; we have to assign sprites from the top of memory, downards
+        ; (literally writing the sprite attributes backwards)
+        ld      HL,     sprites.attrs.40.attr
+
+        ; convert cards to sprites:
+        ld      A,      [DE]            ; seed loop with first card value
+        ;-----------------------------------------------------------------------
+        ; create sprites for the top half of each card:
+        ; (only the last card has a bottom half)
+@loop:  call    sprites.cardToSprites_Top
+
+        ; read a card value from the pool; if this is the
+        ; zero terminator, we've reached the end of the pile
+        ;
+        inc     DE                      ; move to next card
+        ld      A,      [DE]
+        and     A,      A               ; (set flags!)
+        jr      nz,     @loop           ; keep looping until last card
+        ;-----------------------------------------------------------------------
+
+        ; bottom half of last card:
+        dec     DE                      ; rewind before the zero-terminator
+        ld      A,      [DE]            ; re-read last card value
+        call    sprites.cardToSprites_Bottom
+
+        ; set the update flag to upload the sprite
+        ; changes to VRAM during the next v-blank
+        ld      HL,     update_sprites
+        set     0,      [HL]
+
+        ; because the card being pointed to was removed, we need to move the
+        ; cursor (and all the cards now in the cursor's hand) to the card above
+        ;-----------------------------------------------------------------------
+        call    cursor.getPointPile     ; get the old pile / card index
+        and     A,      A               ; (set flags!)
+        jr      z,      +               ; is the pile empty?
+        dec     A                       ; if not, move to previous card
++       call    cursor.pointToCard      ; tell the cursor to move
+
+        ; redraw the entire tableau; this may seem overkill but the removal
+        ; of one card may affect the validation of other piles which would
+        ; also need redrawing
+        call    refresh
+
+        ; compare the display buffers and queue
+        ; the changes to be made during vblank
+        jp      tilemap.update
+
+        ; cannot pick this pile:
+        ;=======================================================================
+        ; TODO: we should implement a sound / cursor shake
+@err:   ret
+
+
+dropPile:
+;===============================================================================
+; drop the cards in the cursor's hand onto the specified pile:
+;
+; in:   L       index (`INDEX_*`) of the pile to drop the cards on
+;-------------------------------------------------------------------------------
+        push    HL                      ; preserve destination pile index
+        call    cursor.clearSprites     ; remove cards in cursor's hand!
+        pop     DE                      ; retrieve destination pile into E
+
+        ; move the pile of cards in the cursor's hand
+        ; on to the top of the destination pile
+        ld      L,      INDEX_CURSOR    ; source pile index, the cursor
+        xor     A                       ; A = 0, move all cards in hand
+        call    piles.move
+
+        ; with the pile changed, the cursor needs
+        ; to be moved again to the top of the pile
+        rst     piles.rst_pileCount
+        jr      z,      +
+        dec     A
++       call    cursor.pointToCard
+
+        ; redraw the entire tableau; this may seem overkill but the removal
+        ; of one card may affect the validation of other piles which would
+        ; also need redrawing
+        call    refresh
+        ; compare the display buffers and queue
+        ; the changes to be made during vblank
+        jp      tilemap.update
 
 
 moveCard:

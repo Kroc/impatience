@@ -75,6 +75,7 @@ init:
         ;-----------------------------------------------------------------------
         call    sprites.init
         call    tilemap.init
+        call    tableau.init
 
         call    acesup.init
         ;;call    fortunes.init
@@ -128,7 +129,7 @@ handleControls:
 +       bit     BUTTON_A,       A
         jr      z,      +
 
-        jp      cursor.doAction
+        jp      tableau.doAction
 
         ; TODO: B button? (undo?)
 

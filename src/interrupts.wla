@@ -27,7 +27,10 @@
 
 .RAMSECTION "QReady"    SLOT "HRAM"     RETURNORG
         ; a flag to indicate that tiles are waiting to be processed
-        queue_ready     BYTE
+        update_tiles    BYTE
+        ; a flag to mark when sprite changes are ready to be uploaded,
+        ; to avoid a partial-change when vblank interrupts work
+        update_sprites  BYTE
 .ENDS
 
 ; these are the *logical* button constants for the game, not the ones used by
@@ -150,9 +153,9 @@ irq_vblank:                                                                ;=34
 
         ; any tile updates?
         ;=======================================================================
-        ldh     A,      [<queue_ready]                                  ;+12=94
+        ldh     A,      [<update_tiles]                                 ;+12=94
         and     A,      A               ; (set flags!)                  ;+4 =98
-        jp      z,      @skip                                           ;+8 =106
+        jr      z,      @skip                                           ;+8 =106
 
         ; backup current stack pointer: we don't use HL during the
         ; tile-writing so we don't need to write the old SP to RAM!
@@ -172,14 +175,22 @@ irq_vblank:                                                                ;=34
 
         ; mark the queue as done (don't process the same tile-queue twice)
         ; note that A is already zero by nature of the loop exit condition!
-        ldh     [<queue_ready], A
+        ldh     [<update_tiles],        A
 
         ; DMA the sprite attributes from work RAM into OAM:
         ;=======================================================================
+        ; any sprite updates?
+@skip:  ld      HL,     update_sprites
+        bit     0,      [HL]
+        ;;jr      z,      @cursor
+        ; clear the sprite update flag
+        ; we do this now because A happens to be zero!
+        ld      [HL],   A
+
         ; the DMA register only accepts 8-bits, which will
         ; be the hi-byte of the address to copy from
-@skip:  ld      A,      >sprites.attrs
-        
+        ld      A,      >sprites.attrs
+
         ; whilst the DMA is occuring the CPU can only access HRAM,
         ; therefore we must initialise the DMA and wait via a routine
         ; running from HRAM. the routine has been copied into HRAM during
@@ -197,7 +208,7 @@ irq_vblank:                                                                ;=34
         ; * * * end of time-critical code * * *
         ;
         ; move the cursor one frame towards its destination
-        call    cursor.update
+@cursor call    cursor.update
 
         ; read the joypad:
         ;=======================================================================
@@ -245,13 +256,13 @@ irq_vblank:                                                                ;=34
         swap    A                       ; buttons go in the hi-nybble
         or      A,      [HL]            ; combine with the lo-nybble,
         ld      [HL],   A               ; and write back
-        
+
         ;-----------------------------------------------------------------------
         ; no more work to be done,
         ; disable v-blank interrupts
         ;;ld	HL,	IRQ_ENABLE
         ;;res	0,	[HL]
-        
+
         pop     HL
         pop     BC
         pop     AF
@@ -337,7 +348,7 @@ clearQueue:
         ; ready flag must be cleared first so that VRAM tile updates
         ; do not occur whilst we are erasing the tile queue!
         xor     A                       ; (set A to zero)
-        ldh     [<queue_ready], A
+        ldh     [<update_tiles],A
         ; erase the queue
         ld      HL,     tile_queue
         ; because the number of bytes to clear is fixed,
