@@ -75,7 +75,6 @@ init:
         ;-----------------------------------------------------------------------
         call    sprites.init
         call    tilemap.init
-        call    tableau.init
 
         call    acesup.init
         ;;call    fortunes.init
@@ -105,25 +104,25 @@ handleControls:
         bit     BUTTON_DOWN,    A
         jr      z,      +
 
-        jp      cursor.moveDown
+        jp      tableau.cursorDown
 
         ; cursor up?
 +       bit     BUTTON_UP,      A
         jr      z,      +
 
-        jp      cursor.moveUp
+        jp      tableau.cursorUp
 
         ; cursor left?
 +       bit     BUTTON_LEFT,    A
         jr      z,      +
 
-        jp      cursor.moveLeft
+        jp      tableau.cursorLeft
 
         ; cursor right?
 +       bit     BUTTON_RIGHT,   A
         jr      z,      +
 
-        jp      cursor.moveRight
+        jp      tableau.cursorRight
 
         ; A button?
 +       bit     BUTTON_A,       A

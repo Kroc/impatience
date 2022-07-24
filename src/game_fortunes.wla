@@ -140,6 +140,9 @@ init:
         ; and the storage pool of all cards on the table
         ;
         call    piles.clear
+        ; when the piles are cleared,
+        ; the cursor's pile must be reallocated
+        call    tableau.allocateCursorPile
 
         ld      BC,     fortunes_deck
         call    piles.allocateDeck      ; allocate the deck,
@@ -229,7 +232,7 @@ init:
 
         ; move the cursor to the card in the first depot pile
         ld      L,      INDEX_DEPOT1
-        jp      cursor.pointToPile
+        jp      tableau.pointToPile
 
 
 validatePile:

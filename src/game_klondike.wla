@@ -111,6 +111,9 @@ init:
         ; and the storage pool of all cards on the table
         ;
         call    piles.clear
+        ; when the piles are cleared,
+        ; the cursor's pile must be reallocated
+        call    tableau.allocateCursorPile
 
         ; allocate the deck
         ld      BC,     klondike_deck
@@ -231,7 +234,7 @@ init:
         ld      [HL],   GAME_KLONDIKE
 
         ld      L,      INDEX_DECK
-        jp      cursor.pointToPile
+        jp      tableau.pointToPile
 
 
 checkPile:

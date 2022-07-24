@@ -465,11 +465,7 @@ clear:
         ; (this must be zeroed because card lists must be zero-terminated)
         ld      HL,     SECTIONSTART_piles.Storage
         ld      BC,     SECTIONEND_piles.Storage-SECTIONSTART_piles.Storage
-        call    zero
-
-        ; when the piles are cleared,
-        ; the cursor's pile must be reallocated
-        jp      tableau.init
+        jp      zero
 
 
 allocateDeck:
