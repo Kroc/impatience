@@ -20,6 +20,8 @@
         ypos            BYTE            ; current cursor Y-position (px)
         ;-----------------------------------------------------------------------
         mode            BYTE            ; to control different cursor behaviour
+        ;-----------------------------------------------------------------------
+        card            BYTE            ; card value whilst building sprites
 .ENDS
 
 
@@ -265,7 +267,7 @@ moveToScrXY:
         ret
 
 
-asCard:
+setCard:
 ;===============================================================================
 ; changes the cursor to a card, for example, when making auto-moves:
 ;
@@ -273,10 +275,12 @@ asCard:
 ; given card, which will appear in the new position without animation
 ;
 ; in:   A       a card value to replace the cursor with
-;       B       new cursor position Y
-;       C       new cursor position X
+;       B       new cursor position row (in tiles, not px!)
+;       C       new cursor position col (in tiles, not px!)
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
+        push    AF                      ; preserve card value for now
+
         call    clearCards              ; clear any cards held by the cursor
         ld      A,      MODE_CARD       ; change the cursor mode, so that
         call    setMode                 ;  the cursor's sprite disappears
@@ -293,7 +297,8 @@ asCard:
         ; (literally writing the sprite attributes backwards)
         ld      HL,     sprites.attrs.40.attr
 
-        ; create sprites for the top card:
+        ; create sprites for the card:
+        pop     AF
         call    cursor.cardToSprites_Top
         call    cursor.cardToSprites_Bottom
 
@@ -307,9 +312,27 @@ cardToSprites_Top:
 ; create sprites for the top half of the card:
 ; NOTE: does NOT set the sprite update flag
 ;
-; out:  DE      (preserved)
+; in:   A       value of card to render as sprites
+;       HL      this must be set to the last byte of the Sprite in the local
+;               sprite attribute table to begin building from, i.e. `attr`+
+;               (sprite no. * 4) + 3, because sprites are written to the
+;               local sprite attribute table in reverse order; both for
+;               simplicity and to ensure correct sprite-priority
+;       B       screen Y-position (px) to begin building the sprites
+;       C       screen X-position (px) to begin building the sprites
+;
+; out:  HL      the address in the local sprite attr table will have been
+;               decremented according to the number of sprites created, so
+;               this routine can be called again, or `cardToSprites_Bottom`
+;               for the bottom half of the card
+;       B       even though the card sprites are 16px high, the Y-position
+;               will only be incremeneted by 8 to allow for overlapping cards;
+;               `cardToSprites_Bottom` will correct for this automatically
+;       C       (preserved) -- the x-pos can be reused for the bottom-half
+;       A       (preserved) -- card value is passed out for reuse
+;       DE      (preserved)
 ;-------------------------------------------------------------------------------
-        ld      A,      [DE]            ; retrieve the card value
+        ld      [card], A               ; backup card value
         ;-----------------------------------------------------------------------
         ; top-left corner: ordinal
         ;-----------------------------------------------------------------------
@@ -340,7 +363,7 @@ cardToSprites_Top:
         ;-----------------------------------------------------------------------
         ld      [HL],   %00000000       ; set sprite display attribute
         dec     L
-        ld      A,      [DE]            ; retrieve the card value
+        ld      A,      [card]          ; retrieve the card value
         swap    A                       ; move the suit to the bottom nybble
         and     MASK_SUIT >> 4          ; mask out the other bits
         rlca                            ; x2 tile index due to 8x16 sprites
@@ -351,10 +374,10 @@ cardToSprites_Top:
         ld      [HL-],  A               ; write sprite X-position
         ld      A,      B
         ld      [HL-],  A               ; write sprite Y-position
-        ; move to the next row
-        add     A,      8
+        ;-----------------------------------------------------------------------
+        add     A,      8               ; move to the next row
         ld      B,      A
-
+        ld      A,      [card]          ; return original card value
         ret
 
 
@@ -362,8 +385,24 @@ cardToSprites_Bottom:
 ;===============================================================================
 ; create sprites for the bottom half of a card:
 ; NOTE: does NOT set the sprite update flag
+;
+; in:   A       value of card to be rendered as sprites
+;       HL      this must be set to the last byte of the Sprite in the local
+;               sprite attribute table to begin building from, i.e. `attr`+
+;               (sprite no. * 4) + 3, because sprites are written to the
+;               local sprite attribute table in reverse order; both for
+;               simplicity and to ensure correct sprite-priority
+;       B       screen Y-position (px) to begin building the sprites
+;       C       screen X-position (px) to begin building the sprites
+;
+; out:  HL      the address in the local sprite attr table will have been
+;               decremented according to the number of sprites created
+;       B       the Y-position is incremeneted by 8 incidentally
+;               (even though the sprites created are 16px high)
+;       C, DE   (preserved)
+;       A       (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      A,      [DE]            ; retrieve the card value
+        ld      [card], A               ; backup card value
         ;-----------------------------------------------------------------------
         ; bottom-left: suit
         ;-----------------------------------------------------------------------
@@ -397,7 +436,7 @@ cardToSprites_Bottom:
         ;-----------------------------------------------------------------------
         ld      [HL],   %00000000       ; set sprite display attribute
         dec     L                       ; (move to sprite tile byte)
-        ld      A,      [DE]            ; retrieve the card value
+        ld      A,      [card]          ; retrieve the card value
         and     MASK_RANK               ; trim out the other bits of card value
         rlca                            ; x2 tile index due to 8x16 sprites
         add     SPRITE_CARD_34X3-2      ; offset the tile with the ordinal
@@ -407,5 +446,4 @@ cardToSprites_Bottom:
         ld      [HL-],  A               ; write sprite X-position
         ld      A,      B
         ld      [HL-],  A               ; write sprite Y-position
-
         ret

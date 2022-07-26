@@ -185,6 +185,12 @@ tilePosToScrXY:
 
 update:
 ;===============================================================================
+; marks the local sprite attribute table as 'dirty',
+; causing it to be DMA'd to the PPU during v-blank:
+;
+; out:  BC/DE/HL(preserved)
+;       A       (clobbered)
+;-------------------------------------------------------------------------------
         ldh     A,      [<update_sprites]
         set     0,      A
         ldh     [<update_sprites],      A

@@ -53,7 +53,7 @@ piles.Define \
 
 init:
 ;===============================================================================
-        rst     rst_waitVBlank
+        call    waitVBlank
         
         ; temp: set scroll offset to move menu off-screen
         ld      A,      MENU_WIDTH * 8
@@ -109,9 +109,9 @@ init:
 
         ;-----------------------------------------------------------------------
         call    tableau.refresh
-        rst     rst_screenOff
+        call    screenOff
         call    tilemap.refresh
-        rst     rst_screenOn
+        call    screenOn
 
         ; everything ready, set this as the current running game
         ld      HL,     game_id
@@ -186,11 +186,8 @@ tapCard_depot:
         ; place as the tapped card, and remove the card from the pile
 
         pop     HL                      ; retrieve the source pile again
-        rst     piles.rst_lastCardAddr  ; get index / addr of the last card
-        call    piles.getPosCard        ; get screen position of the card
-        ld      A,      [DE]            ; read the card value
-        call    cursor.asCard           ; convert it to sprites
-
+        ld      E,      INDEX_DISCARD
+        call    tableau.moveCard
         ret
 
         ;-----------------------------------------------------------------------

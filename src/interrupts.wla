@@ -52,80 +52,6 @@
         joy_state               BYTE
 .ENDS
 
-.SECTION "z80_rst_00"   SIZE 8          RETURNORG
-;###############################################################################
-
-rst_waitVBlank:                                                         ;$00
-;===============================================================================
-; NOTE: this routine *must* be exactly 8-bytes -- no more, no less
-;       -- due to the fall-through to the next routine                  ;bytes:
-;-------------------------------------------------------------------------------
-        ld      A,      [IRQ_ENABLE]                                    ;+3=3
-        or      A,      IE.vblank                                       ;+2=5
-        ld      [IRQ_ENABLE],   A                                       ;+3=8
-
-;###############################################################################
-.ENDS
-
-.SECTION "z80_rst_08"   SIZE 8          RETURNORG
-;###############################################################################
-
-rst_haltVBlank:                                                         ;$08
-;===============================================================================
-        ;                                                               ; bytes:
-        ; stop the CPU until an interrupt occurs!
-        ; (this will save battery life)
-        ; TODO: do we need a NOP after HALT?
--       halt                                                            ;+1=1
-        ; read the IRQ flags register at $FF0F:
-        ; (using HRAM instruction saves 1 byte over `ld A, [IRQ_FLAGS]`,
-        ;  this is required to fit within the max. 8-bytes we have here!)
-        ldh     A,      [<IRQ_FLAGS]                                    ;+2=3
-        ; was it a v-blank interrupt? (bit 0)
-        bit     0,      A                                               ;+2=5
-        ; if not, wait again...
-        jr      nz,     -                                               ;+2=7
-
-        ; we are now in v-blank!
-        ret                                                             ;+1=8
-
-;###############################################################################
-.ENDS
-
-.SECTION "z80_rst_10"   SIZE 8          RETURNORG
-;###############################################################################
-
-rst_screenOn:                                                           ;$10
-;===============================================================================
-; turn the LCD on
-;-------------------------------------------------------------------------------
-        ; (using HRAM instruction saves 1 byte over `ld A, [LCDC]`,
-        ldh     A,      [<LCDC]
-        set     7,      A
-        ldh     [<LCDC],A
-        ret
-
-;###############################################################################
-.ENDS
-
-.SECTION "z80_rst_18"   SIZE 8          RETURNORG
-;###############################################################################
-
-rst_screenOff:                                                          ;$18
-;===============================================================================
-; turn the LCD off. we must only do this during v-blank or risk damaging
-; real hardware! therefore, we wait for v-blank to occur first:
-;
-;-------------------------------------------------------------------------------
-        rst     rst_waitVBlank
-        ldh     A,      [<LCDC]
-        res     7,      A
-        ldh     [<LCDC],A
-        ret
-
-;###############################################################################
-.ENDS
-
 ; overwrite the GameBoy v-blank interrupt entry-point:
 ; this area only provides 8 bytes free before the next IRQ ($48),
 ; so we only have room to jump to a bigger routine
@@ -274,6 +200,53 @@ irq_vblank:                                                                ;=34
 .ORGA   $150
 
 
+waitVBlank:
+;===============================================================================
+        ld      A,      [IRQ_ENABLE]
+        or      A,      IE.vblank
+        ld      [IRQ_ENABLE],   A
+
+haltVBlank:
+;===============================================================================
+        ; stop the CPU until an interrupt occurs!
+        ; (this will save battery life)
+-       halt
+        ; some documentation says that a hardware bug
+        ; can cause the instruction after HALT to be missed
+        nop
+        ; read the IRQ flags register at $FF0F:
+        ; (using HRAM instruction saves 1 byte over `ld A, [IRQ_FLAGS]`,
+        ;  this is required to fit within the max. 8-bytes we have here!)
+        ldh     A,      [<IRQ_FLAGS]
+        bit     0,      A               ; was it a v-blank interrupt? (bit 0)
+        jr      nz,     -               ; if not, wait again...
+
+        ret                             ; we are now in v-blank!
+
+
+screenOn:
+;===============================================================================
+; turn the LCD on:
+;-------------------------------------------------------------------------------
+        ; (using HRAM instruction saves 1 byte over `ld A, [LCDC]`,
+        ldh     A,      [<LCDC]
+        set     7,      A
+        ldh     [<LCDC],A
+        ret
+
+
+screenOff:
+;===============================================================================
+; turn the LCD off. we must only do this during v-blank or risk damaging
+; real hardware! therefore, we wait for v-blank to occur first:
+;-------------------------------------------------------------------------------
+        call    waitVBlank
+        ldh     A,      [<LCDC]
+        res     7,      A
+        ldh     [<LCDC],A
+        ret
+
+
 init_interrupts:
 ;===============================================================================
         ; clear the interrupt registers:
@@ -327,13 +300,13 @@ getButton:
         ;
         ; stop the processor; the vblank will awaken it again, where upon
         ; the screen will be updated and the buttons will be read
--       rst     rst_waitVBlank
+-       call    waitVBlank
         ld      A,      [joy_state]
         and     A,      A               ; set flags!
         jr      nz,     -               ; spin for button pressed
 
         ; wait for a new button press:
--       rst     rst_waitVBlank
+-       call    waitVBlank
         ld      A,      [joy_state]
         and     A,      A               ; set flags!
         jr      z,     -                ; spin for no button pressed

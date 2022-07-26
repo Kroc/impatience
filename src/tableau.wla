@@ -104,6 +104,21 @@ clearCursorCards:
         jp      cursor.clearCards
 
 
+update:
+;===============================================================================
+; queue changes to the tableau to be drawn during v-blank:
+; (i.e. a partial-redraw)
+;
+;-------------------------------------------------------------------------------
+        ; redraw the entire tableau; this may seem overkill but the removal
+        ; of one card may affect the validation of other piles which would
+        ; also need redrawing
+        call    refresh
+        ; compare the display buffers and queue
+        ; the changes to be made during vblank
+        jp      tilemap.update
+
+
 refresh:
 ;===============================================================================
 ; redraw the tableau:
@@ -1011,7 +1026,8 @@ pickPile:
         ;-----------------------------------------------------------------------
         ; create sprites for the top half of each card:
         ; (only the last card has a bottom half)
-@loop:  call    cursor.cardToSprites_Top
+@loop:  ld      A,      [DE]
+        call    cursor.cardToSprites_Top
 
         ; read a card value from the pool; if this is the
         ; zero terminator, we've reached the end of the pile
@@ -1024,6 +1040,7 @@ pickPile:
 
         ; bottom half of last card:
         dec     DE                      ; rewind before the zero-terminator
+        ld      A,      [DE]
         call    cursor.cardToSprites_Bottom
 
         ; set the update flag to upload the sprite
@@ -1038,15 +1055,7 @@ pickPile:
         jr      z,      +               ; is the pile empty?
         dec     A                       ; if not, move to previous card
 +       call    pointToCard             ; tell the cursor to move
-
-        ; redraw the entire tableau; this may seem overkill but the removal
-        ; of one card may affect the validation of other piles which would
-        ; also need redrawing
-        call    refresh
-
-        ; compare the display buffers and queue
-        ; the changes to be made during vblank
-        jp      tilemap.update
+        jp      update                  ; update the screen
 
         ; cannot pick this pile:
         ;=======================================================================
@@ -1072,18 +1081,9 @@ dropPile:
 
         ; with the pile changed, the cursor needs
         ; to be moved again to the top of the pile
-        rst     piles.rst_pileCount
-        jr      z,      +
-        dec     A
-+       call    pointToCard
-
-        ; redraw the entire tableau; this may seem overkill but the removal
-        ; of one card may affect the validation of other piles which would
-        ; also need redrawing
-        call    refresh
-        ; compare the display buffers and queue
-        ; the changes to be made during vblank
-        jp      tilemap.update
+        rst     piles.rst_lastCardIndex
+        call    pointToCard
+        jp      update                  ; update the screen
 
 
 moveCard:
@@ -1091,5 +1091,30 @@ moveCard:
 ; visually moves a card from one pile to another:
 ; the move takes multiple frames to complete
 ;
+; WARNING: will not check for an empty pile!
+; verify source pile is not empty before calling!
+;
+; in:   L       source pile index (`INDEX_*`)
+;       E       destination pile index
 ;-------------------------------------------------------------------------------
+        ; put aside destination until we've handled the source pile first
+        push    DE
+
+        ; pick up source card:
+        ;-----------------------------------------------------------------------
+        rst     piles.rst_lastCardAddr  ; get index / addr of the last card
+        call    piles.getPosCard        ; get screen position of the card
+        call    piles.popCard           ; remove top card from the pile
+        call    cursor.setCard          ; convert it to sprites
+        call    update                  ; redraw the tableau on screen
+
+        ; set move destination
+        ;-----------------------------------------------------------------------
+        pop     HL                      ; retrieve our destination pile into L
+        rst     piles.rst_pileCount
+        call    piles.getPosCard
+
+        call    sprites.tilePosToScrXY
+        call    cursor.moveToScrXY
+
         ret

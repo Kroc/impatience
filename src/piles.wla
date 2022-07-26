@@ -347,15 +347,47 @@
 .ENDM
 
 
+.SECTION "RSTPileCount" SIZE 8  RETURNORG
+;###############################################################################
+rst_pileCount:                                                          ;$08
+;===============================================================================
+; get the number of cards in a pile:
+;
+; in:   L       pile index (`INDEX_*`)
+; out:  z       zero flag is set accordingly
+;       H       (clobbered) -- field will be changed to `count`
+;-------------------------------------------------------------------------------
+        ld      H,      FIELD_COUNT     ; select the count field
+        ld      A,      [HL]            ; card count for the pile
+        and     A,      A               ; set flags!
+        ret
+;###############################################################################
+.ENDS
+
+.SECTION "RSTLastIndex" SIZE 8  RETURNORG
+;###############################################################################
+rst_lastCardIndex:                                                       ;$18
+;===============================================================================
+; get the index of the last card in a pile:
+;
+; out:  A       index of the last card in the pile
+;       z       zero flag is set if index is zero
+;-------------------------------------------------------------------------------
+        ld      H,      FIELD_COUNT     ; select the count field
+        ld      A,      [HL]            ; card count for the pile
+        and     A,      A               ; (set flags!)
+        ret     z                       ; empty piles return 0, not $FF!
+        dec     A                       ; change count to 0-based
+        ret
+;###############################################################################
+.ENDS
+
 .SECTION "RSTPoolAddr"  SIZE 8  RETURNORG
 ;###############################################################################
-rst_poolAddr:                                                           ;$20
+rst_poolAddr:                                                           ;$28
 ;===============================================================================
 ; given a pile index, returns the address in the
 ; card pool where the pile's cards are stored:
-;
-; this is a common action, so we use an
-; RST routine for speed and compactness
 ;
 ; in:   L,      pile index (`INDEX_*`)
 ; out:  DE      pool address of the pile, where cards are stored
@@ -372,7 +404,7 @@ rst_poolAddr:                                                           ;$20
 
 .SECTION "RSTCardAddr"  SIZE 16 RETURNORG
 ;###############################################################################
-rst_lastCardAddr:                                                       ;$28
+rst_lastCardAddr:                                                       ;$30
 ;===============================================================================
 ; get the address of the last card in a pile:
 ;
@@ -393,7 +425,7 @@ rst_lastCardAddr:                                                       ;$28
         dec     A                       ; change count to 0-based
 +       nop                             ; (MUST be 8-bytes!)
 
-rst_cardAddr:                                                           ;$30
+rst_cardAddr:                                                           ;$38
 ;===============================================================================
 ; gets the address of a specific card in a pile:
 ;
@@ -411,23 +443,6 @@ rst_cardAddr:                                                           ;$30
         ld      A,      H               ; (restore original card index)
         ret     nc                      ; if E didn't overflow, exit
         inc     D                       ; ripple carry to output hi-byte
-        ret
-;###############################################################################
-.ENDS
-
-.SECTION "RSTPileCount" SIZE 8  RETURNORG
-;###############################################################################
-rst_pileCount:                                                          ;$38
-;===============================================================================
-; get the number of cards in a pile:
-;
-; in:   L       pile index (`INDEX_*`)
-; out:  z       zero flag is set accordingly
-;       H       (clobbered) -- field will be changed to `count`
-;-------------------------------------------------------------------------------
-        ld      H,      FIELD_COUNT     ; select the count field
-        ld      A,      [HL]            ; card count for the pile
-        and     A,      A               ; set flags!
         ret
 ;###############################################################################
 .ENDS
@@ -648,6 +663,33 @@ addCard:
         ld      [DE],   A               ; write card to pool
         ld      H,      FIELD_COUNT     ; change field (not preserved)
         inc     [HL]                    ; increase number of cards in pile
+        ret
+
+
+popCard:
+;===============================================================================
+; removes the top-most card of a pile, returning its value:
+;
+; in:   L       pile index (`INDEX_*`) to pop last card from
+; out:  A       card value, 0 if the pile was empty
+;       z       the zero flag is set to allow immediate zero-check
+;       L       (preserved)
+;       H       (clobbered) -- select a field before using HL!
+;-------------------------------------------------------------------------------
+        rst     rst_lastCardAddr        ; get index / addr of the last card
+        ld      A,      [DE]            ; read card-value
+        and     A,      A               ; (set flags)
+        ret     z                       ; if the pile is empty, exit now
+
+        ld      H,      FIELD_COUNT     ; select `count` field
+        dec     [HL]                    ; decrement count for pile (L)
+
+        ld      H,      A               ; keep value whilst we reuse A
+        xor     A                       ; (set A to zero)
+        ld      [DE],   A               ; remove card from pile
+
+        ld      A,      H               ; restore card value
+        and     A,      A               ; (set flags!)
         ret
 
 

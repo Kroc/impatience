@@ -262,8 +262,7 @@ init:
         ld      A,      TILE_PALETTE
         ldh     [<BGP], A
 
-        rst     rst_screenOn
-        ret
+        jp      screenOn
 
 
 copyMainTileset:
