@@ -103,6 +103,29 @@ setMode:
         ret
 
 
+setPos:
+;===============================================================================
+; manually positions the cursor, no animation:
+;
+; NOTE: does not set the sprite update flag!
+;
+; in:   B       screen Y-position, in px
+;       C       screen X-position, in px
+; out:  B, C    (preserved)
+;       A       (clobbered)
+;-------------------------------------------------------------------------------
+        ld      A,                      B
+        ld      [ypos],                 A
+        ld      [sprites.attrs.1.y],    A
+        ld      [sprites.attrs.2.y],    A
+        ld      A,                      C
+        ld      [xpos],                 A
+        ld      [sprites.attrs.1.x],    A
+        add     A,                      8
+        ld      [sprites.attrs.2.x],    A
+        ret
+
+
 clearCards:
 ;===============================================================================
 ; remove the card sprites held by the cursor,
@@ -290,6 +313,11 @@ setCard:
         ; the sprite version of a card has a border we need to account for
         inc     B                       ; adjust 1px for top-border
         inc     C                       ; adjust 1px for left-border
+
+        ; place the current cursor in this position so that the destination
+        ; check will be based upon the card-position, not the old position
+        ; of the hand sprite
+        call    setPos
 
         ; because all sprites are in 8x16 mode, we will need to overlap
         ; sprites where cards stack in a pile and due to sprite-priority,
