@@ -3,6 +3,16 @@
 ;
 .BANK 0
 
+;;.RAMSECTION "HRAM"      SLOT "HRAM"     RETURNORG
+;;        ;---------------------------------------------------------------------
+;;        IRQ_LCDC        BYTE            ; shadow LCD control register
+;;        IRQ_SCY         BYTE            ; shadow scroll-Y register
+;;        IRQ_SCX         BYTE            ; shadow scroll-X register
+;;        IRQ_BGP         BYTE            ; shadow background-palette register
+;;        IRQ_OBP0        BYTE            ; shadow object-palette 0 register
+;;        IRQ_OBP1        BYTE            ; shadow object-palette 1 register
+;;.ENDS
+
 ; a few bytes in HRAM need to be reserved to hold a wait loop
 .RAMSECTION "DoDMA"     SLOT "HRAM"     RETURNORG
         doDMA           DSB 5
@@ -108,7 +118,8 @@ irq_vblank:                                                                ;=34
         ; any sprite updates?
 @skip:  ld      HL,     update_sprites
         bit     0,      [HL]
-        ;;jr      z,      @cursor
+        jr      z,      @cursor
+
         ; clear the sprite update flag
         ; we do this now because A happens to be zero!
         ld      [HL],   A
@@ -214,13 +225,11 @@ haltVBlank:
         ; some documentation says that a hardware bug
         ; can cause the instruction after HALT to be missed
         nop
-        ; read the IRQ flags register at $FF0F:
-        ; (using HRAM instruction saves 1 byte over `ld A, [IRQ_FLAGS]`,
-        ;  this is required to fit within the max. 8-bytes we have here!)
-        ldh     A,      [<IRQ_FLAGS]
+
+        ldh     A,      [<IRQ_FLAGS]    ; read the IRQ flags register at $FF0F
         bit     0,      A               ; was it a v-blank interrupt? (bit 0)
         jr      nz,     -               ; if not, wait again...
-
+        ;-----------------------------------------------------------------------
         ret                             ; we are now in v-blank!
 
 
@@ -317,6 +326,8 @@ getButton:
 clearQueue:
 ;===============================================================================
 ; empty the tile-update queue, used to defer VRAM changes to vblank:
+;
+; out:  A, HL   (clobbered)
 ;-------------------------------------------------------------------------------
         ; ready flag must be cleared first so that VRAM tile updates
         ; do not occur whilst we are erasing the tile queue!

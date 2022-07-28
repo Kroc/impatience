@@ -54,6 +54,7 @@ init:
         res     7,      [HL]            ; (this is why we load HL with LCDC)
 
         ; clear VRAM:
+        ;-----------------------------------------------------------------------
         ld      HL,     VRAM
         ld      BC,     8192
         call    zero

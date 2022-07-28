@@ -18,6 +18,7 @@
         xpos            BYTE            ; current cursor X-position (px)
         dest_y          BYTE            ; new Y-position to move cursor to
         ypos            BYTE            ; current cursor Y-position (px)
+        moving          BYTE            ; flag to indicate cursor is moving
         ;-----------------------------------------------------------------------
         mode            BYTE            ; to control different cursor behaviour
         ;-----------------------------------------------------------------------
@@ -202,6 +203,7 @@ update:
 
         ; any movement at all?
         or      C                       ; combine X-speed (C) & Y-speed (A)
+        ld      [moving],       A       ; 0 - stopped, !0 = moving
         ret     z                       ; if zero, no movement to be done
 
         ; move card sprites:
@@ -277,15 +279,27 @@ moveToScrXY:
 ; in:   B       Y position to move the cursor to
 ;       C       X position to move the cursor to
 ;
-; out:  A/BC/DE (preserved)
-;       HL      (clobbered)
+; out:  BC      (preserved)
+;       HL, DE  (preserved)
+;       A       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; update the destination cursor position
-        ld      HL,     dest_x
-        ld      [HL],   C               ; set destination X-position
-        inc     L
-        inc     L
-        ld      [HL],   B               ; set distination Y-position
+        ld      A,              B
+        ld      [dest_y],       A       ; set cursor destination Y-position
+        ld      A,              C
+        ld      [dest_x],       A       ; set cursor destination X-position
+        ret
+
+
+wait:
+;===============================================================================
+; wait for the cursor to finish moving:
+;-------------------------------------------------------------------------------
+-       halt                            ; stop the CPU until an interrupt,
+        nop                             ; typically v-blank, occurs
+
+        ld      A,      [moving]        ; check cursor moving flag
+        and     A,      A               ; set CPU flags!
+        jr      nz,     -               ; any non-zero value means moving
 
         ret
 
@@ -327,15 +341,15 @@ setCard:
 
         ; create sprites for the card:
         pop     AF
-        call    cursor.cardToSprites_Top
-        call    cursor.cardToSprites_Bottom
+        call    cursor.createCard_Top
+        call    cursor.createCard_Bottom
 
         ; set the update flag to upload the sprite
         ; changes to VRAM during the next v-blank
         jp      sprites.update
 
 
-cardToSprites_Top:
+createCard_Top:
 ;===============================================================================
 ; create sprites for the top half of the card:
 ; NOTE: does NOT set the sprite update flag
@@ -409,7 +423,7 @@ cardToSprites_Top:
         ret
 
 
-cardToSprites_Bottom:
+createCard_Bottom:
 ;===============================================================================
 ; create sprites for the bottom half of a card:
 ; NOTE: does NOT set the sprite update flag

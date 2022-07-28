@@ -811,10 +811,13 @@ pointToCard:
 ;===============================================================================
 ; move the cursor to a specific card in a pile:
 ;
-; in:   HL      address of the Pile structure
+; in:   L       index (`INDEX_*`) of the pile
 ;       A       index of the card in the pile, 0-based!
 ;
-; out:  *       (clobbered)
+; out:  L       (preserved)
+;       H       (clobbered) -- select a field before using HL!
+;       A       (clobbered)
+;       BC, DE  (clobbered)
 ;-------------------------------------------------------------------------------
         ; update the record of which pile/card is currently being pointed to.
         ; if a pile has multiple cards, then pushing up/down will go through
@@ -824,16 +827,18 @@ pointToCard:
         ld      [card_point],   A
         ; (also put in a register for later comparison)
         ld      E,              A
+
+        ; get pile (L) card-index (A) row (B) & col (C)
+        ; TODO: use getPosCard to handle the offset for us
+        call    piles.getPos
+
         ; save the index of the pile to point to:
         ld      A,              L
         ld      [pile_point],   A
 
-        ; get pile (L) row (B) & col (C)
-        call    piles.getPos
-
         ; is the pile empty?
         rst     piles.rst_pileCount     ; get pile count (A), set flags
-        jr      z,      @empty          ; -> draw an empty pile space
+        jr      z,      @empty          ; -> an empty pile space
         ld      D,      A               ; also remember count for later
 
         ; for types of piles that have no spread (e.g. decks / foundations),
@@ -959,7 +964,7 @@ doAction:
 
         ; which game is currently running?
         dec     C                       ; was it `1`?
-        jp      z,      acesup.tapCard
+        ;;jp      z,      acesup.tapCard
 
         ;-----------------------------------------------------------------------
         ld      A,      [cursor.mode]   ; get cursor mode
@@ -971,46 +976,56 @@ doAction:
 
         ; if the cursor is free (not holding any cards),
         ; attempt to pick up the pile being pointed at
-        jp      z,      pickPile
+        jr      z,      @pick
         ; the cursor is holding cards, try dropping them
         jp      dropPile
+
+        ;=======================================================================
+@pick:  call    pickPile
+
+        ; because the card being pointed to has been removed, we need to move
+        ; the cursor (and all the cards in the cursor's hand) to the card above
+        ;
+        call    getPointPile
+        jp      pointToPile
 
 
 pickPile:
 ;===============================================================================
 ; pick up a pile:
 ;
-; this will pick up all the cards in the specified pile,
-; from the specified index, down to the top of the pile
+; this will pick up all the cards in the specified pile, from the specified
+; index, down to the top of the pile. the cards will be removed from the pile,
+; converted into sprites, and placed in the cursor's pile
+;
+; WARNING: this routine will not move the cursor after the cards have been
+;          removed from the pile, meaning the cursor will be pointing to an
+;          invalid index!
 ;
 ; in:   L       index (`INDEX_*`) of the source pile
 ;       A       index of the card in the pile to start from (0-based)
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      C,      A               ; put aside card index for later
+        ; get the address (DE) of the card index (A) we're starting with
+        ; (we have to do this before we clobber A)
+        rst     piles.rst_cardAddr
 
-        ; is the pile empty?
-        rst     piles.rst_pileCount     ; (get pile card count, set flags)
+        ; if we read the card value we can tell if the pile is empty
+        ; (using `rst_pileCount` would clobber H & A)
+        ;
+        ld      H,      A               ; put aside card index
+        ld      A,      [DE]            ; read card value (A)
+        and     A,      A               ; (set flags!)
         jp      z,      @err            ; if pile is empty, exit
+        push    HL                      ; preserve pile (L) & card index (H)
 
-        ; move cards to cursor's pile:
-        ;-----------------------------------------------------------------------
-        ; move all the cards in the source pile, from
-        ; the index card down, to the cursor's pile:
-        ld      E,      INDEX_CURSOR    ; destination pile
-        ld      A,      C               ; card index to start from
-        call    piles.move
-
-        ; after the move, the destination pile's index is returned in L.
-        ; get the destination pile's pool address in DE, which is where
-        ; we want to start creating sprites from
-        rst     piles.rst_poolAddr
-
-        ; initialise sprites:
-        ;-----------------------------------------------------------------------
+        ; build card sprites:
+        ;=======================================================================
         ld      A,      MODE_HOLD       ; change the cursor to the holding hand
         call    cursor.setMode
 
-        ; set our starting X/Y position for building card sprites:
+        ; set our starting X/Y position
+        ; for building card sprites:
         ld      A,      [cursor.ypos]
         ld      B,      A               ; B will be the Y-position (px)
         ld      A,      [cursor.xpos]
@@ -1021,40 +1036,39 @@ pickPile:
         ; sprites where cards stack in a pile and due to sprite-priority,
         ; we have to assign sprites from the top of memory, downards
         ; (literally writing the sprite attributes backwards)
-        ld      HL,     sprites.attrs.40.attr
-
-        ;-----------------------------------------------------------------------
-        ; create sprites for the top half of each card:
-        ; (only the last card has a bottom half)
-@loop:  ld      A,      [DE]
-        call    cursor.cardToSprites_Top
-
-        ; read a card value from the pool; if this is the
-        ; zero terminator, we've reached the end of the pile
         ;
+        ld      HL,     sprites.attrs.40 + (_sizeof_Sprite-1)
+        ;-----------------------------------------------------------------------
+@loop:  ld      A,      [DE]            ; read a card value from the pool
+
+        ; create sprites for the top half of each card
+        ; (only the last card has a bottom half)
+        call    cursor.createCard_Top
+
+        ; check for the zero terminator:
         inc     DE                      ; move to next card
-        ld      A,      [DE]
+        ld      A,      [DE]            ; read card value (or zero)
         and     A,      A               ; (set flags!)
         jr      nz,     @loop           ; keep looping until last card
         ;-----------------------------------------------------------------------
-
         ; bottom half of last card:
         dec     DE                      ; rewind before the zero-terminator
-        ld      A,      [DE]
-        call    cursor.cardToSprites_Bottom
+        ld      A,      [DE]            ; re-read the last card value
+        call    cursor.createCard_Bottom
 
-        ; set the update flag to upload the sprite
-        ; changes to VRAM during the next v-blank
-        call    sprites.update
+        ; move cards to cursor's pile:
+        ;=======================================================================
+        ; move all the cards in the source pile, from
+        ; the index card down, to the cursor's pile:
+        ;
+        pop     HL                      ; pop source pile (L) & card-index (H)
+        ld      A,      H               ; card index to start from
+        ld      E,      INDEX_CURSOR    ; destination pile
+        call    piles.move
 
-        ; because the card being pointed to was removed, we need to move the
-        ; cursor (and all the cards now in the cursor's hand) to the card above
+        ; move complete, refresh screen
         ;-----------------------------------------------------------------------
-        call    getPointPile            ; get the old pile / card index
-        and     A,      A               ; (set flags!)
-        jr      z,      +               ; is the pile empty?
-        dec     A                       ; if not, move to previous card
-+       call    pointToCard             ; tell the cursor to move
+        call    sprites.update          ; update the sprites
         jp      update                  ; update the screen
 
         ; cannot pick this pile:
@@ -1116,5 +1130,6 @@ moveCard:
 
         call    sprites.tilePosToScrXY
         call    cursor.moveToScrXY
+        call    cursor.wait
 
         ret

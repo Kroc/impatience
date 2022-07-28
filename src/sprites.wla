@@ -150,6 +150,7 @@ tilePosToScrXY:
 ;
 ; out:  B       Y-position on screen (in pixels)
 ;       C       X-position on screen (in pixels)
+;       HL, DE  (preserved)
 ;       A       (clobbered)
 ;-------------------------------------------------------------------------------
         ; multiply row by 8:

@@ -140,88 +140,88 @@ init:
         ; hand:
         ld      L,      INDEX_HAND
         ld      A,      CARD_5 | SUIT_DIAMOND
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_6 | SUIT_CLUB
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_7 | SUIT_DIAMOND
-        call    piles.addCard
+        call    piles.pushCard
         ; foundations:
         ld      L,      INDEX_FOUNDATION1
         ld      A,      CARD_A | SUIT_CLUB
-        call    piles.addCard
+        call    piles.pushCard
         ld      L,      INDEX_FOUNDATION2
         ld      A,      CARD_A | SUIT_SPADE
-        call    piles.addCard
+        call    piles.pushCard
         ld      L,      INDEX_FOUNDATION3
         ld      A,      CARD_A | SUIT_HEART
-        call    piles.addCard
+        call    piles.pushCard
         ld      L,      INDEX_FOUNDATION4
         ld      A,      CARD_A | SUIT_DIAMOND
-        call    piles.addCard
+        call    piles.pushCard
         ; depots:
         ld      L,      INDEX_DEPOT1
         ld      A,      CARD_5 | SUIT_HEART
-        call    piles.addCard
+        call    piles.pushCard
         ld      L,      INDEX_DEPOT2
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_8 | SUIT_CLUB
-        call    piles.addCard
+        call    piles.pushCard
         ld      L,      INDEX_DEPOT3
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_7 | SUIT_HEART
-        call    piles.addCard
+        call    piles.pushCard
         ld      L,      INDEX_DEPOT4
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_2 | SUIT_CLUB
-        call    piles.addCard
+        call    piles.pushCard
         ld      L,      INDEX_DEPOT5
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_9 | SUIT_DIAMOND
-        call    piles.addCard
+        call    piles.pushCard
         ld      L,      INDEX_DEPOT6
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_X | SUIT_SPADE
-        call    piles.addCard
+        call    piles.pushCard
         ld      L,      INDEX_DEPOT7
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_A | SUIT_SPADE | CARD_BACK
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_4 | SUIT_SPADE
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_3 | SUIT_DIAMOND
-        call    piles.addCard
+        call    piles.pushCard
 
         ;-----------------------------------------------------------------------
         call    tableau.refresh

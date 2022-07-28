@@ -640,9 +640,9 @@ allocate:
         ret
 
 
-addCard:
+pushCard:
 ;===============================================================================
-; add a card to a pile:
+; add a card to the top of a pile:
 ;
 ; NOTE: does not check pile capcity! it is expected that this
 ; has been validated before attempting to add a card to a pile

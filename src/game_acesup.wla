@@ -85,27 +85,27 @@ init:
         ;-----------------------------------------------------------------------
         ld      L,      INDEX_DEPOT1
         ld      A,      CARD_J | SUIT_CLUB
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_3 | SUIT_SPADE
-        call    piles.addCard
+        call    piles.pushCard
 
         ld      L,      INDEX_DEPOT2
         ld      A,      CARD_X | SUIT_HEART
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_4 | SUIT_SPADE
-        call    piles.addCard
+        call    piles.pushCard
 
         ld      L,      INDEX_DEPOT3
         ld      A,      CARD_2 | SUIT_SPADE
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_6 | SUIT_CLUB
-        call    piles.addCard
+        call    piles.pushCard
 
         ld      L,      INDEX_DEPOT4
         ld      A,      CARD_A | SUIT_SPADE
-        call    piles.addCard
+        call    piles.pushCard
         ld      A,      CARD_3 | SUIT_DIAMOND
-        call    piles.addCard
+        call    piles.pushCard
 
         ;-----------------------------------------------------------------------
         call    tableau.refresh
@@ -181,10 +181,8 @@ tapCard_depot:
 
         ; if carry is set, the tapped card is the same suit
         ; and lower in rank than another card on the tableau
-        
-        ; TODO: replace the cursor with a copy of the card, in the same
-        ; place as the tapped card, and remove the card from the pile
-
+        ;
+        ; TODO:
         pop     HL                      ; retrieve the source pile again
         ld      E,      INDEX_DISCARD
         call    tableau.moveCard
