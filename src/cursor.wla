@@ -6,9 +6,8 @@
 .DEF    CURSOR_START_X  80
 .DEF    CURSOR_START_Y  72
 
-.DEF    MODE_FREE       0               ; cursor is free to move
-.DEF    MODE_HOLD       1               ; cursor is holding cards
-.DEF    MODE_CARD       2               ; moving card, no cursor
+.DEF    MODE_USER       0               ; cursor is under user control
+.DEF    MODE_AUTO       1               ; cursor is under game control
 
 ; (musn't cross an 8-bit boundary for a micro-optimisation)
 ;
@@ -60,47 +59,26 @@ init:
         jp      sprites.update
 
 
-setMode:
+setModeUser:
 ;===============================================================================
-; change the cursor behaviour mode:
-;
-; out:  BC      (preserved)
-;       A       (clobbered)
-;-------------------------------------------------------------------------------
-        ld      [mode], A
-        and     A,      A
-        jr      z,      @free
-        dec     A
-        jr      z,      @hold
-        dec     A
-        jr      z,      @card
-
-        ret
-
-        ; set the cursor to free-mode:
-        ;-----------------------------------------------------------------------
         ; reset the hand sprite to the default cursor
-@free:  ld      A,      SPRITE_HAND_LHS
+        ld      A,      SPRITE_HAND_LHS
         ld      [sprites.attrs.1.tile], A
         ld      A,      SPRITE_HAND_RHS
         ld      [sprites.attrs.2.tile], A
+        xor     A
+        ld      [mode], A
         ret
 
-        ; set the cursor to hold-mode:
-        ;-----------------------------------------------------------------------
-        ; change the cursor to the holding hand
-@hold:  ld      A,      SPRITE_HOLD_LHS
-        ld      [sprites.attrs.1.tile], A
-        ld      A,      SPRITE_HOLD_RHS
-        ld      [sprites.attrs.2.tile], A
-        ret
 
-        ; set the cursor to card-mode:
-        ;-----------------------------------------------------------------------
-        ; hide the cursor, only the card will be visible
-@card:  xor     A                       ; set A to 0 = SPRITE_NONE
+setModeAuto:
+;===============================================================================
+        ; hide the cursor, only the card(s) will be visible
+        xor     A                       ; set A to 0 = SPRITE_NONE
         ld      [sprites.attrs.1.tile], A
         ld      [sprites.attrs.2.tile], A
+        inc     A
+        ld      [mode], A
         ret
 
 
@@ -113,7 +91,7 @@ setPos:
 ; in:   B       screen Y-position, in px
 ;       C       screen X-position, in px
 ; out:  B, C    (preserved)
-;       A       (clobbered)
+;       AF      (clobbered)
 ;-------------------------------------------------------------------------------
         ld      A,                      B
         ld      [ypos],                 A
@@ -129,11 +107,12 @@ setPos:
 
 clearCards:
 ;===============================================================================
-; remove the card sprites held by the cursor,
-; leaving the cursor itself:
+; remove the card sprites held by the cursor, leaving the cursor itself:
+;
+; NOTE: sprite-update flag IS set by this routine
 ;
 ; out:  BC, DE  (preserved)
-;       A, HL   (clobbered)
+;       AF, HL  (clobbered)
 ;-------------------------------------------------------------------------------
         ; address of the third sprite in the local sprite table;
         ; the first two sprites are the hand cursor
@@ -145,10 +124,6 @@ clearCards:
         ;
         xor     A                       ; (set A to zero)
         call    fill@x{38*_sizeof_Sprite}
-
-        ; reset the hand sprite to the default cursor
-        ld      A,      MODE_FREE
-        call    setMode
 
         ; set the update flag to upload the sprite
         ; changes to VRAM during the next v-blank
@@ -203,7 +178,7 @@ update:
 
         ; any movement at all?
         or      C                       ; combine X-speed (C) & Y-speed (A)
-        ld      [moving],       A       ; 0 - stopped, !0 = moving
+        ld      [moving],       A       ; 0 = stopped, !0 = moving
         ret     z                       ; if zero, no movement to be done
 
         ; move card sprites:
@@ -254,7 +229,8 @@ moveToTile:
 ; in:   B       row position to move the cursor to
 ;       C       column position to move the cursor to
 ;
-; out:  *       (clobbered)
+; out:  HL, DE  (preserved)
+;       AF, BC  (clobbered)
 ;-------------------------------------------------------------------------------
         ; convert the tile row/col to screen-space pixels
         call    sprites.tilePosToScrXY
@@ -295,7 +271,7 @@ wait:
 ; wait for the cursor to finish moving:
 ;-------------------------------------------------------------------------------
 -       halt                            ; stop the CPU until an interrupt,
-        nop                             ; typically v-blank, occurs
+        nop                             ;  typically v-blank, occurs
 
         ld      A,      [moving]        ; check cursor moving flag
         and     A,      A               ; set CPU flags!
@@ -317,10 +293,12 @@ setCard:
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         push    AF                      ; preserve card value for now
-
-        call    clearCards              ; clear any cards held by the cursor
-        ld      A,      MODE_CARD       ; change the cursor mode, so that
-        call    setMode                 ;  the cursor's sprite disappears
+        
+        ; clear any cards held by the cursor
+        call    clearCards
+        ; change the cursor mode, so that
+        ;  the cursor's sprite disappears
+        call    setModeAuto
 
         ; convert the X/Y tile positions into X/Y screen pixels
         call    sprites.tilePosToScrXY

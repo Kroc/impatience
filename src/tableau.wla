@@ -32,6 +32,26 @@
         hand_cards      DSB 13+1         ; +1 for zero-terminator!
 .ENDS
 
+.SECTION "RSTPointPile" SIZE 8  RETURNORG
+;###############################################################################
+rst_getPointPile:                                                       ;$30
+;===============================================================================
+; returns the index of the Pile struct the cursor is pointing to:
+;
+; out:  L       index of the pile the cursor is pointing at
+;       A       card index being pointed to, 0-based
+;       BC, DE  (preserved)
+;       H       (clobbered) -- select a field before using HL!
+;-------------------------------------------------------------------------------
+        ; retrieve index of pile being pointed at
+        ld      HL,     pile_point
+        ld      L,      [HL]
+        ; retrieve card number being pointed to
+        ld      A,      [card_point]
+        ret
+;###############################################################################
+.ENDS
+
 ; the pile used to hold cards in the cursor's hand needs a template;
 ; force this template to use the fixed pool address!
 .REDEF  __pool_addr             tableau.hand_cards
@@ -582,23 +602,6 @@ drawCardEdgeLeft:
         ret
 
 
-getPointPile:
-;===============================================================================
-; returns the index of the Pile struct the cursor is pointing to:
-;
-; out:  L       index of the pile the cursor is pointing at
-;       A       card index being pointed to, 0-based
-;       BC, DE  (preserved)
-;       H       (clobbered) -- select a field before using HL!
-;-------------------------------------------------------------------------------
-        ; retrieve index of pile being pointed at
-        ld      HL,     pile_point
-        ld      L,      [HL]
-        ; retrieve card number being pointed to
-        ld      A,      [card_point]
-        ret
-
-
 cursorLeft:
 ;===============================================================================
 ; move the cursor left:
@@ -607,7 +610,7 @@ cursorLeft:
 ;-------------------------------------------------------------------------------
         ; retrieve current pile index (L),
         ; and the card index being pointed at (A)
-        call    getPointPile
+        rst     rst_getPointPile
 
         ld      H,      FIELD_TYPE      ; check pile type to see
         bit     BIT_HORZ,       [HL]    ;  is this is a horizontal pile?
@@ -644,7 +647,7 @@ cursorRight:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        call    getPointPile            ; get pile (L) and card (A) index
+        rst     rst_getPointPile        ; get pile (L) and card (A) index
         ld      C,      A               ; put aside card index
         rst     piles.rst_pileCount     ; get the card-count of the pile
         jr      z,      @pile           ; move cursor if this pile is emepty
@@ -696,7 +699,7 @@ cursorUp:
 ;-------------------------------------------------------------------------------
         ; retrieve current pile index (L),
         ; and the card index being pointed at (A)
-        call    getPointPile
+        rst     rst_getPointPile
 
         ; for types of piles that have no spread (e.g. decks / foundations),
         ; there are no cards to step through, just move to the next pile
@@ -740,7 +743,7 @@ cursorDown:
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        call    getPointPile            ; retrieve current pile index
+        rst     rst_getPointPile        ; retrieve current pile index
         ld      C,      A               ; card index pointed at (0-based)
 
         ; for types of piles that have no spread (e.g. decks / foundations),
@@ -819,18 +822,11 @@ pointToCard:
 ;       A       (clobbered)
 ;       BC, DE  (clobbered)
 ;-------------------------------------------------------------------------------
-        ; update the record of which pile/card is currently being pointed to.
-        ; if a pile has multiple cards, then pushing up/down will go through
-        ; the cards before leaving the pile
-        ;
-        ; save the card index to point to: (0-based)
-        ld      [card_point],   A
-        ; (also put in a register for later comparison)
-        ld      E,              A
+        ld      [card_point],   A       ; save card index to point to: (0-based)
+        ld      E,              A       ; (also keep later comparison)
 
-        ; get pile (L) card-index (A) row (B) & col (C)
-        ; TODO: use getPosCard to handle the offset for us
-        call    piles.getPos
+        ; get pile (L) card-index (A), row (B) & col (C)
+        call    piles.getPosCard
 
         ; save the index of the pile to point to:
         ld      A,              L
@@ -853,15 +849,9 @@ pointToCard:
 
         ; vertical spread:
         ;=======================================================================
-        ; add the card index (A) to the row number (B),
-        ; as each card in a pile adds another tile's height
-        ;
-@vert:  ld      A,      E               ; index of card pointed at
-        add     A,      B               ; add the tilemap row of the pile
-        ld      B,      A
         ; point to the horizontal middle of the card; want to point to
         ; the space between the suit / number so as not to obscure either
-        inc     C
+@vert:  inc     C
 
         ; for a spread, the cursor will be positioned
         ; differently for the top card, vs the spread
@@ -903,13 +893,8 @@ pointToCard:
         ;=======================================================================
         ; horizontal spread:
         ;
-        ; add the card index (E) to the column number (C),
-        ; as each card in a pile adds another tile's width
-@horz:  ld      A,      C
-        add     A,      E
-        ld      C,      A
         ; point to the 2nd row, below the suit/ordinal
-        inc     B
+@horz:  inc     B
 
         ; for a horizontal spread, the cursor will be positioned
         ; differently for the top card, vs the other cards
@@ -941,11 +926,8 @@ pointToCard:
         ;
         ; for empty piles, we want to point to the centre of the space
         ;
-@empty: inc     C                       ; move right one col, to the middle
-        inc     B                       ; move down one row, to the middle
-
-        ; fall through to the move routine below!
-        ;
+@empty: inc     C                       ; adjust right one col, to the middle
+        inc     B                       ; adjust down one row, to the middle
         jp      cursor.moveToTile
 
 
@@ -960,33 +942,29 @@ doAction:
 
         ; retrieve the pile being pointed at (L)
         ; and the card-index (A) in that pile
-        call    getPointPile
+        rst     rst_getPointPile
 
         ; which game is currently running?
         dec     C                       ; was it `1`?
-        ;;jp      z,      acesup.tapCard
+        jp      z,      acesup.tapCard
 
         ;-----------------------------------------------------------------------
-        ld      A,      [cursor.mode]   ; get cursor mode
-        and     A,      A               ; (set flags!)
+        ; is the cursor already holding any cards?
+        ;
+        ; get the card-count of the cursor's pile
+        ld      L,      INDEX_CURSOR
+        rst     piles.rst_pileCount
 
         ; retrieve current pile index (L) and the card index (A)
         ; being pointed at -- note this routine will not change the flags!
-        call    getPointPile
+        rst     rst_getPointPile
 
-        ; if the cursor is free (not holding any cards),
-        ; attempt to pick up the pile being pointed at
-        jr      z,      @pick
-        ; the cursor is holding cards, try dropping them
-        jp      dropPile
+        call    nz,     dropPile        ; if cursor is holding cards, drop them
+        call    z,      pickPile        ; pick up cards
 
-        ;=======================================================================
-@pick:  call    pickPile
-
-        ; because the card being pointed to has been removed, we need to move
-        ; the cursor (and all the cards in the cursor's hand) to the card above
-        ;
-        call    getPointPile
+        ; with the pile changed, the cursor needs
+        ; to be moved again to the top of the pile
+        rst     rst_getPointPile
         jp      pointToPile
 
 
@@ -1021,8 +999,33 @@ pickPile:
 
         ; build card sprites:
         ;=======================================================================
-        ld      A,      MODE_HOLD       ; change the cursor to the holding hand
-        call    cursor.setMode
+        ld      A,      [cursor.mode]   ; check current cursor mode
+        and     A,      A               
+        jr      z,      @user           ; user-mode?
+
+        ; auto-mode:
+        ;-----------------------------------------------------------------------
+@auto:  ld      A,      H
+        call    piles.getPosCard        ; get screen position of the card
+        
+        ; convert the X/Y tile positions into X/Y screen pixels
+        call    sprites.tilePosToScrXY
+        ; the sprite version of a card has a border we need to account for
+        inc     B                       ; adjust 1px for top-border
+        inc     C                       ; adjust 1px for left-border
+
+        ; place the current cursor in this position so that the destination
+        ; check will be based upon the card-position, not the old position
+        ; of the hand sprite
+        call    cursor.setPos
+        jr      @build
+
+        ; user-mode:
+        ;-----------------------------------------------------------------------
+@user:  ld      A,      SPRITE_HOLD_LHS
+        ld      [sprites.attrs.1.tile], A
+        ld      A,      SPRITE_HOLD_RHS
+        ld      [sprites.attrs.2.tile], A
 
         ; set our starting X/Y position
         ; for building card sprites:
@@ -1037,7 +1040,7 @@ pickPile:
         ; we have to assign sprites from the top of memory, downards
         ; (literally writing the sprite attributes backwards)
         ;
-        ld      HL,     sprites.attrs.40 + (_sizeof_Sprite-1)
+@build: ld      HL,     sprites.attrs.40 + (_sizeof_Sprite-1)
         ;-----------------------------------------------------------------------
 @loop:  ld      A,      [DE]            ; read a card value from the pool
 
@@ -1085,7 +1088,11 @@ dropPile:
 ;-------------------------------------------------------------------------------
         push    HL                      ; preserve destination pile index
         call    cursor.clearCards       ; remove cards in cursor's hand!
-        pop     DE                      ; retrieve destination pile into E
+        ld      A,      [cursor.mode]
+        and     A,      A
+        jr      nz,     +
+        call    cursor.setModeAuto
++       pop     DE                      ; retrieve destination pile into E
 
         ; move the pile of cards in the cursor's hand
         ; on to the top of the destination pile
@@ -1093,17 +1100,14 @@ dropPile:
         xor     A                       ; A = 0, move all cards in hand
         call    piles.move
 
-        ; with the pile changed, the cursor needs
-        ; to be moved again to the top of the pile
-        rst     piles.rst_lastCardIndex
-        call    pointToCard
+        call    sprites.update
         jp      update                  ; update the screen
 
 
-moveCard:
+movePile:
 ;===============================================================================
-; visually moves a card from one pile to another:
-; the move takes multiple frames to complete
+; visually moves a pile of cards from one pile to another,
+; the move takes multiple frames to complete:
 ;
 ; WARNING: will not check for an empty pile!
 ; verify source pile is not empty before calling!
@@ -1116,11 +1120,10 @@ moveCard:
 
         ; pick up source card:
         ;-----------------------------------------------------------------------
+        call    cursor.setModeAuto
+
         rst     piles.rst_lastCardAddr  ; get index / addr of the last card
-        call    piles.getPosCard        ; get screen position of the card
-        call    piles.popCard           ; remove top card from the pile
-        call    cursor.setCard          ; convert it to sprites
-        call    update                  ; redraw the tableau on screen
+        call    pickPile
 
         ; set move destination
         ;-----------------------------------------------------------------------
@@ -1132,4 +1135,11 @@ moveCard:
         call    cursor.moveToScrXY
         call    cursor.wait
 
+        ; drop cards on pile:
+        ;-----------------------------------------------------------------------
+        call    dropPile
+
+        call    cursor.setModeUser
+
+        ;;call    pointToPile
         ret

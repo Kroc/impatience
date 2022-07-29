@@ -366,7 +366,7 @@ rst_pileCount:                                                          ;$08
 
 .SECTION "RSTLastIndex" SIZE 8  RETURNORG
 ;###############################################################################
-rst_lastCardIndex:                                                       ;$18
+rst_lastCardIndex:                                                       ;$10
 ;===============================================================================
 ; get the index of the last card in a pile:
 ;
@@ -384,7 +384,7 @@ rst_lastCardIndex:                                                       ;$18
 
 .SECTION "RSTPoolAddr"  SIZE 8  RETURNORG
 ;###############################################################################
-rst_poolAddr:                                                           ;$28
+rst_poolAddr:                                                           ;$18
 ;===============================================================================
 ; given a pile index, returns the address in the
 ; card pool where the pile's cards are stored:
@@ -404,7 +404,7 @@ rst_poolAddr:                                                           ;$28
 
 .SECTION "RSTCardAddr"  SIZE 16 RETURNORG
 ;###############################################################################
-rst_lastCardAddr:                                                       ;$30
+rst_lastCardAddr:                                                       ;$20
 ;===============================================================================
 ; get the address of the last card in a pile:
 ;
@@ -425,7 +425,7 @@ rst_lastCardAddr:                                                       ;$30
         dec     A                       ; change count to 0-based
 +       nop                             ; (MUST be 8-bytes!)
 
-rst_cardAddr:                                                           ;$38
+rst_cardAddr:                                                           ;$28
 ;===============================================================================
 ; gets the address of a specific card in a pile:
 ;
@@ -739,6 +739,7 @@ getPosCard:
 ;
 ; out:  B       row number of the card on the tile-map
 ;       C       column number of the card on the tile-map
+;       L       (preserved)
 ;       A       (preserved) -- in case you want to read the card value
 ;       H       (clobbered) -- select a field before using HL!
 ;-------------------------------------------------------------------------------
