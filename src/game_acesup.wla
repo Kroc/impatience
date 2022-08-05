@@ -186,7 +186,7 @@ tapCard_depot:
         ; TODO:
         pop     HL                      ; retrieve the source pile again
         ld      A,      H               ; card index was put in H
-        ld      E,      INDEX_DISCARD
+        ld      E,      INDEX_DISCARD   ; set destination pile
         call    tableau.movePile
 
         ; TODO: move the cursor to the new position

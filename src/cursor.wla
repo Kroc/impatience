@@ -20,8 +20,6 @@
         moving          BYTE            ; flag to indicate cursor is moving
         ;-----------------------------------------------------------------------
         mode            BYTE            ; to control different cursor behaviour
-        ;-----------------------------------------------------------------------
-        card            BYTE            ; card value whilst building sprites
 .ENDS
 
 
@@ -61,6 +59,9 @@ init:
 
 setModeUser:
 ;===============================================================================
+; out:  AF      (preserved)
+;-------------------------------------------------------------------------------
+        push    AF
         ; reset the hand sprite to the default cursor
         ld      A,      SPRITE_HAND_LHS
         ld      [sprites.attrs.1.tile], A
@@ -68,37 +69,44 @@ setModeUser:
         ld      [sprites.attrs.2.tile], A
         xor     A
         ld      [mode], A
+        pop     AF
         ret
 
 
 setModeAuto:
 ;===============================================================================
+; out:  AF      (preserved)
+;-------------------------------------------------------------------------------
+        push    AF
         ; hide the cursor, only the card(s) will be visible
         xor     A                       ; set A to 0 = SPRITE_NONE
         ld      [sprites.attrs.1.tile], A
         ld      [sprites.attrs.2.tile], A
         inc     A
         ld      [mode], A
+        pop     AF
         ret
 
 
 setPos:
 ;===============================================================================
 ; manually positions the cursor, no animation:
-;
 ; NOTE: does not set the sprite update flag!
 ;
 ; in:   B       screen Y-position, in px
 ;       C       screen X-position, in px
 ; out:  B, C    (preserved)
+;       HL, DE  (preserved)
 ;       AF      (clobbered)
 ;-------------------------------------------------------------------------------
         ld      A,                      B
         ld      [ypos],                 A
+        ld      [dest_y],               A
         ld      [sprites.attrs.1.y],    A
         ld      [sprites.attrs.2.y],    A
         ld      A,                      C
         ld      [xpos],                 A
+        ld      [dest_x],               A
         ld      [sprites.attrs.1.x],    A
         add     A,                      8
         ld      [sprites.attrs.2.x],    A
@@ -108,8 +116,7 @@ setPos:
 clearCards:
 ;===============================================================================
 ; remove the card sprites held by the cursor, leaving the cursor itself:
-;
-; NOTE: sprite-update flag IS set by this routine
+; NOTE: sprite-update flag *IS* set by this routine
 ;
 ; out:  BC, DE  (preserved)
 ;       AF, HL  (clobbered)
@@ -280,7 +287,7 @@ wait:
         ret
 
 
-setCard:
+;;setCard:
 ;===============================================================================
 ; changes the cursor to a card, for example, when making auto-moves:
 ;
@@ -292,178 +299,37 @@ setCard:
 ;       C       new cursor position col (in tiles, not px!)
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        push    AF                      ; preserve card value for now
-        
-        ; clear any cards held by the cursor
-        call    clearCards
-        ; change the cursor mode, so that
-        ;  the cursor's sprite disappears
-        call    setModeAuto
-
-        ; convert the X/Y tile positions into X/Y screen pixels
-        call    sprites.tilePosToScrXY
-        ; the sprite version of a card has a border we need to account for
-        inc     B                       ; adjust 1px for top-border
-        inc     C                       ; adjust 1px for left-border
-
-        ; place the current cursor in this position so that the destination
-        ; check will be based upon the card-position, not the old position
-        ; of the hand sprite
-        call    setPos
-
-        ; because all sprites are in 8x16 mode, we will need to overlap
-        ; sprites where cards stack in a pile and due to sprite-priority,
-        ; we have to assign sprites from the top of memory, downards
-        ; (literally writing the sprite attributes backwards)
-        ld      HL,     sprites.attrs.40.attr
-
-        ; create sprites for the card:
-        pop     AF
-        call    cursor.createCard_Top
-        call    cursor.createCard_Bottom
-
-        ; set the update flag to upload the sprite
-        ; changes to VRAM during the next v-blank
-        jp      sprites.update
-
-
-createCard_Top:
-;===============================================================================
-; create sprites for the top half of the card:
-; NOTE: does NOT set the sprite update flag
-;
-; in:   A       value of card to render as sprites
-;       HL      this must be set to the last byte of the Sprite in the local
-;               sprite attribute table to begin building from, i.e. `attr`+
-;               (sprite no. * 4) + 3, because sprites are written to the
-;               local sprite attribute table in reverse order; both for
-;               simplicity and to ensure correct sprite-priority
-;       B       screen Y-position (px) to begin building the sprites
-;       C       screen X-position (px) to begin building the sprites
-;
-; out:  HL      the address in the local sprite attr table will have been
-;               decremented according to the number of sprites created, so
-;               this routine can be called again, or `cardToSprites_Bottom`
-;               for the bottom half of the card
-;       B       even though the card sprites are 16px high, the Y-position
-;               will only be incremeneted by 8 to allow for overlapping cards;
-;               `cardToSprites_Bottom` will correct for this automatically
-;       C       (preserved) -- the x-pos can be reused for the bottom-half
-;       A       (preserved) -- card value is passed out for reuse
-;       DE      (preserved)
-;-------------------------------------------------------------------------------
-        ld      [card], A               ; backup card value
-        ;-----------------------------------------------------------------------
-        ; top-left corner: ordinal
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L                       ; (move to sprite tile byte)
-        and     MASK_RANK               ; trim out the other bits of card value
-        rlca                            ; x2 tile index due to 8x16 sprites
-        add     SPRITE_CARD_12X1-2      ; offset the tile with the ordinal
-        ld      [HL-],  A               ; set the sprite's tile
-        ld      A,      C
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
-        ;-----------------------------------------------------------------------
-        ; top-middle:
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L                       ; (move to sprite tile byte)
-        ld      A,      SPRITE_CARD_12X2; this one has a fixed sprite tile
-        ld      [HL-],  A
-        ld      A,      C               ; position this sprite
-        add     A,      8               ;  next to the previous one
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
-        ;-----------------------------------------------------------------------
-        ; top-right: suit
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L
-        ld      A,      [card]          ; retrieve the card value
-        swap    A                       ; move the suit to the bottom nybble
-        and     MASK_SUIT >> 4          ; mask out the other bits
-        rlca                            ; x2 tile index due to 8x16 sprites
-        add     SPRITE_CARD_12X3        ; offset the tile with the suit
-        ld      [HL-],  A
-        ld      A,      C               ; position this sprite
-        add     A,      16              ;  next to the previous one
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
-        ;-----------------------------------------------------------------------
-        add     A,      8               ; move to the next row
-        ld      B,      A
-        ld      A,      [card]          ; return original card value
-        ret
-
-
-createCard_Bottom:
-;===============================================================================
-; create sprites for the bottom half of a card:
-; NOTE: does NOT set the sprite update flag
-;
-; in:   A       value of card to be rendered as sprites
-;       HL      this must be set to the last byte of the Sprite in the local
-;               sprite attribute table to begin building from, i.e. `attr`+
-;               (sprite no. * 4) + 3, because sprites are written to the
-;               local sprite attribute table in reverse order; both for
-;               simplicity and to ensure correct sprite-priority
-;       B       screen Y-position (px) to begin building the sprites
-;       C       screen X-position (px) to begin building the sprites
-;
-; out:  HL      the address in the local sprite attr table will have been
-;               decremented according to the number of sprites created
-;       B       the Y-position is incremeneted by 8 incidentally
-;               (even though the sprites created are 16px high)
-;       C, DE   (preserved)
-;       A       (clobbered)
-;-------------------------------------------------------------------------------
-        ld      [card], A               ; backup card value
-        ;-----------------------------------------------------------------------
-        ; bottom-left: suit
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L
-        swap    A                       ; move the suit to the bottom nybble
-        and     MASK_SUIT >> 4          ; mask out the other bits
-        rlca                            ; x2 tile index due to 8x16 sprites
-        add     SPRITE_CARD_34X1        ; offset the tile with the suit
-        ld      [HL-],  A
-        ld      A,      C
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B               ; since sprites are 8x16,
-        add     A,      8               ;  move down another 8px so that
-        ld      B,      A               ;  we are 16px below the top-half
-        ld      [HL-],  A               ; write sprite Y-position
-        ;-----------------------------------------------------------------------
-        ; bottom-middle:
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L                       ; (move to sprite tile byte)
-        ld      A,      SPRITE_CARD_34X2; this one has a fixed sprite tile
-        ld      [HL-],  A
-        ld      A,      C               ; position this sprite
-        add     A,      8               ;  next to the previous one
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
-        ;-----------------------------------------------------------------------
-        ; bottom-right corner: ordinal
-        ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L                       ; (move to sprite tile byte)
-        ld      A,      [card]          ; retrieve the card value
-        and     MASK_RANK               ; trim out the other bits of card value
-        rlca                            ; x2 tile index due to 8x16 sprites
-        add     SPRITE_CARD_34X3-2      ; offset the tile with the ordinal
-        ld      [HL-],  A               ; set the sprite's tile
-        ld      A,      C               ; position this sprite
-        add     A,      16              ;  next to the previous one
-        ld      [HL-],  A               ; write sprite X-position
-        ld      A,      B
-        ld      [HL-],  A               ; write sprite Y-position
-        ret
+;;        push    AF                      ; preserve card value for now
+;;        
+;;        ; change the cursor mode, so that
+;;        ; the cursor's sprite disappears
+;;        call    setModeAuto
+;;        ; clear any cards held by the cursor
+;;        ; (doesn't touch the cursor)
+;;        call    clearCards
+;;
+;;        ; convert the X/Y tile positions into X/Y screen pixels
+;;        call    sprites.tilePosToScrXY
+;;        ; the sprite version of a card has a border we need to account for
+;;        inc     B                       ; adjust 1px for top-border
+;;        inc     C                       ; adjust 1px for left-border
+;;
+;;        ; place the current cursor in this position so that the destination
+;;        ; check will be based upon the card-position, not the old position
+;;        ; of the hand sprite
+;;        call    setPos
+;;
+;;        ; because all sprites are in 8x16 mode, we will need to overlap
+;;        ; sprites where cards stack in a pile and due to sprite-priority,
+;;        ; we have to assign sprites from the top of memory, downards
+;;        ; (literally writing the sprite attributes backwards)
+;;        ld      HL,     sprites.attrs.40.attr
+;;
+;;        ; create sprites for the card:
+;;        pop     AF
+;;        call    cursor.createCard_Top
+;;        call    cursor.createCard_Bottom
+;;
+;;        ; set the update flag to upload the sprite
+;;        ; changes to VRAM during the next v-blank
+;;        jp      sprites.update

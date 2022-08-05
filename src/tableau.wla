@@ -32,26 +32,6 @@
         hand_cards      DSB 13+1         ; +1 for zero-terminator!
 .ENDS
 
-.SECTION "RSTPointPile" SIZE 8  RETURNORG
-;###############################################################################
-rst_getPointPile:                                                       ;$30
-;===============================================================================
-; returns the index of the Pile struct the cursor is pointing to:
-;
-; out:  L       index of the pile the cursor is pointing at
-;       A       card index being pointed to, 0-based
-;       BC, DE  (preserved)
-;       H       (clobbered) -- select a field before using HL!
-;-------------------------------------------------------------------------------
-        ; retrieve index of pile being pointed at
-        ld      HL,     pile_point
-        ld      L,      [HL]
-        ; retrieve card number being pointed to
-        ld      A,      [card_point]
-        ret
-;###############################################################################
-.ENDS
-
 ; the pile used to hold cards in the cursor's hand needs a template;
 ; force this template to use the fixed pool address!
 .REDEF  __pool_addr             tableau.hand_cards
@@ -647,6 +627,27 @@ getCardPos:
         ret
 
 
+.SECTION "RSTPointPile" SIZE 8  RETURNORG
+;###############################################################################
+rst_getPointPile:                                                       ;$30
+;===============================================================================
+; returns the index of the Pile struct the cursor is pointing to:
+;
+; out:  L       index of the pile the cursor is pointing at
+;       A       card index being pointed to, 0-based
+;       BC, DE  (preserved)
+;       H       (clobbered) -- select a field before using HL!
+;-------------------------------------------------------------------------------
+        ; retrieve index of pile being pointed at
+        ld      HL,     pile_point
+        ld      L,      [HL]
+        ; retrieve card number being pointed to
+        ld      A,      [card_point]
+        ret
+;###############################################################################
+.ENDS
+
+
 cursorLeft:
 ;===============================================================================
 ; move the cursor left:
@@ -870,6 +871,8 @@ pointToCard:
         ld      [card_point],   A       ; save card index to point to: (0-based)
         ld      E,              A       ; (also keep later comparison)
 
+        ; calculate the exact X/Y position in pixels to move the cursor to,
+        ; accounting for the specific card in the pile and the cursor mode
         call    cursorPosForCard
 
         ; save the index of the pile to point to:
@@ -877,6 +880,37 @@ pointToCard:
         ld      [pile_point],   A
 
         jp      cursor.moveToScrXY
+
+
+setPointPile:
+;===============================================================================
+; sets which pile the cursor is pointing to (but doesn't move the cursor)
+;
+; in:   L       index (`INDEX_*`) of the pile
+; out:  A       index of the last card in the pile
+;       L       (preserved)
+;       H       (clobbered) -- select a field before using HL!
+;-------------------------------------------------------------------------------
+        rst     piles.rst_lastCardIndex ; index of the last card in the pile
+
+        ; fall through to below, using
+        ; the last card index
+        ;
+
+setPointCard:
+;===============================================================================
+; in:   L       index (`INDEX_*`) of the pile
+;       A       index of the card in the pile
+;
+; out:  A, L    (preserved)
+;       H       (clobbered) -- select a field before using HL!
+;-------------------------------------------------------------------------------
+        ld      [card_point],   A
+        ld      H,              A       ; preserve card-index,
+        ld      A,              L       ;  whilst we do the pile index
+        ld      [pile_point],   A
+        ld      A,              H       ; restore card-index
+        ret
 
 
 cursorPosForCard:
@@ -899,8 +933,21 @@ cursorPosForCard:
         ld      E,      A               ; save card-index for later comparison
         call    getCardPos              ; get the card's position in tiles
 
+        ld      A,      [cursor.mode]   ; check the cursor mode;
+        and     A,      A
+        jr      z,      @user
+
+        ;=======================================================================
+        ; convert the X/Y tile positions into X/Y screen pixels
+@auto:  call    sprites.tilePosToScrXY
+        ; the sprite version of a card has a border we need to account for
+        inc     B                       ; adjust 1px for top-border
+        inc     C                       ; adjust 1px for left-border
+        ret
+
+        ;=======================================================================
         ; is the pile empty?
-        rst     piles.rst_pileCount     ; get pile count (A), set flags
+@user:  rst     piles.rst_pileCount     ; get pile count (A), set flags
         jr      z,      @empty          ; -> an empty pile space
         ld      D,      A               ; also remember count for later
 
@@ -1090,7 +1137,8 @@ pickPile:
         ;-----------------------------------------------------------------------
 @auto:  ld      A,      H
         call    getCardPos              ; get screen position of the card
-        
+                                        ; (NOTE: A & L preserved)
+
         ; convert the X/Y tile positions into X/Y screen pixels
         call    sprites.tilePosToScrXY
         ; the sprite version of a card has a border we need to account for
@@ -1125,22 +1173,23 @@ pickPile:
         ;
 @build: ld      HL,     sprites.attrs.40 + (_sizeof_Sprite-1)
         ;-----------------------------------------------------------------------
-@loop:  ld      A,      [DE]            ; read a card value from the pool
+-       ld      A,      [DE]            ; read a card value from the pool
 
         ; create sprites for the top half of each card
         ; (only the last card has a bottom half)
-        call    cursor.createCard_Top
+        call    sprites.createCard_Top
 
         ; check for the zero terminator:
         inc     DE                      ; move to next card
         ld      A,      [DE]            ; read card value (or zero)
         and     A,      A               ; (set flags!)
-        jr      nz,     @loop           ; keep looping until last card
+        jr      nz,     -               ; keep looping until last card
         ;-----------------------------------------------------------------------
+        
         ; bottom half of last card:
         dec     DE                      ; rewind before the zero-terminator
         ld      A,      [DE]            ; re-read the last card value
-        call    cursor.createCard_Bottom
+        call    sprites.createCard_Bottom
 
         ; move cards to cursor's pile:
         ;=======================================================================
@@ -1173,8 +1222,8 @@ dropPile:
         call    cursor.clearCards       ; remove cards in cursor's hand!
         ld      A,      [cursor.mode]
         and     A,      A
-        jr      nz,     +
-        call    cursor.setModeAuto
+        jr      z,      +
+        call    cursor.setModeUser
 +       pop     DE                      ; retrieve destination pile into E
 
         ; move the pile of cards in the cursor's hand
@@ -1192,37 +1241,60 @@ movePile:
 ; visually moves a pile of cards from one pile to another,
 ; the move takes multiple frames to complete:
 ;
+; (use `piles.move` to move cards around in memory)
+;
 ; WARNING: will not check for an empty pile!
 ; verify source pile is not empty before calling!
 ;
 ; in:   L       source pile index (`INDEX_*`)
+;       A       card-index to take cards from, to the end of the pile
 ;       E       destination pile index
 ;-------------------------------------------------------------------------------
+        ; after picking up the cards we won't have access to the source pile
+        ; so push a backup on to the stack for after the move
+        push    HL
         ; put aside destination until we've handled the source pile first
         push    DE
 
-        ; pick up source card:
+        ; pick up source cards:
         ;-----------------------------------------------------------------------
-        call    cursor.setModeAuto
+        ; put cursor into auto-mode so that
+        ;
+        ; 1. the cursor's hand is hidden
+        ; 2. card sprites will be built directly over the card(s) being moved
+        ; 3. the move-destination (in px) will align to the pile
+        ;
+        call    cursor.setModeAuto      ; (note: preserves A)
+        call    pickPile                ; pick up the card(s) in the pile
+                                        ; (NOTE: all registers clobbered!)
 
-        rst     piles.rst_lastCardAddr  ; get index / addr of the last card
-        call    pickPile
-
-        ; set move destination
+        ; move to destination:
         ;-----------------------------------------------------------------------
+        ; we need to move the pile of cards to the top of the destination
+        ; pile, but not *covering* the last card, it has to be in the next
+        ; card position down
         pop     HL                      ; retrieve our destination pile into L
-        rst     piles.rst_pileCount
-        call    getCardPos
-
-        call    sprites.tilePosToScrXY
-        call    cursor.moveToScrXY
-        call    cursor.wait
+        rst     piles.rst_pileCount     ; get next index: 0, or last-card+1
+        call    cursorPosForCard        ; get the exact position in px
+        call    cursor.moveToScrXY      ; set the cursor destination
+        call    cursor.wait             ; wait for cursor to finish moving
 
         ; drop cards on pile:
         ;-----------------------------------------------------------------------
-        call    dropPile
+        call    dropPile                ; put the cards down on the dest. pile
+                                        ; (NOTE: all registers clobbered!)
+        pop     HL                      ; retrieve our source pile again
 
+        ; because the cursor was positioned manually, we must update the
+        ; variable for which pile/card the cursor is pointing at
+        call    setPointPile
+
+        ; the automatic move is complete,
+        ; switch back to user-controlled cursor
         call    cursor.setModeUser
-
-        ;;call    pointToPile
-        ret
+        ; get the cursor position for the user-controlled cursor
+        call    cursorPosForCard
+        ; manually set the cursor position to avoid movement
+        call    cursor.setPos
+        ; set the flag to update the sprite table during v-blank
+        jp      sprites.update

@@ -9,6 +9,8 @@
 .RAMSECTION "Attrs"     ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
         attrs           INSTANCEOF Sprite 40            ; (160 bytes)
+        ;-----------------------------------------------------------------------
+        card            BYTE            ; card value whilst building sprites
 .ENDS
 
 .SECTION "TilesSprites" ALIGN 16        RETURNORG
@@ -181,6 +183,148 @@ tilePosToScrXY:
         add     A,      8               ; account for off-screen sprite space
         ld      C,      A               ; return value back in C
 
+        ret
+
+
+createCard_Top:
+;===============================================================================
+; create sprites for the top half of a card:
+; NOTE: does NOT set the sprite update flag!
+;
+; in:   A       value of card to render as sprites
+;       HL      this must be set to the last byte of the Sprite in the local
+;               sprite attribute table to begin building from, i.e. `attr`+
+;               (sprite no. * 4) + 3, because sprites are written to the
+;               local sprite attribute table in reverse order; both for
+;               simplicity and to ensure correct sprite-priority
+;       B       screen Y-position (px) to begin building the sprites
+;       C       screen X-position (px) to begin building the sprites
+;
+; out:  HL      the address in the local sprite attr table will have been
+;               decremented according to the number of sprites created, so
+;               this routine can be called again, or `cardToSprites_Bottom`
+;               for the bottom half of the card
+;       B       even though the card sprites are 16px high, the Y-position
+;               will only be incremeneted by 8 to allow for overlapping cards;
+;               `cardToSprites_Bottom` will correct for this automatically
+;       C       (preserved) -- the x-pos can be reused for the bottom-half
+;       A       (preserved) -- card value is passed out for reuse
+;       DE      (preserved)
+;-------------------------------------------------------------------------------
+        ld      [card], A               ; backup card value
+        ;-----------------------------------------------------------------------
+        ; top-left corner: ordinal
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L                       ; (move to sprite tile byte)
+        and     MASK_RANK               ; trim out the other bits of card value
+        rlca                            ; x2 tile index due to 8x16 sprites
+        add     SPRITE_CARD_12X1-2      ; offset the tile with the ordinal
+        ld      [HL-],  A               ; set the sprite's tile
+        ld      A,      C
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
+        ;-----------------------------------------------------------------------
+        ; top-middle:
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L                       ; (move to sprite tile byte)
+        ld      A,      SPRITE_CARD_12X2; this one has a fixed sprite tile
+        ld      [HL-],  A
+        ld      A,      C               ; position this sprite
+        add     A,      8               ;  next to the previous one
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
+        ;-----------------------------------------------------------------------
+        ; top-right: suit
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L
+        ld      A,      [card]          ; retrieve the card value
+        swap    A                       ; move the suit to the bottom nybble
+        and     MASK_SUIT >> 4          ; mask out the other bits
+        rlca                            ; x2 tile index due to 8x16 sprites
+        add     SPRITE_CARD_12X3        ; offset the tile with the suit
+        ld      [HL-],  A
+        ld      A,      C               ; position this sprite
+        add     A,      16              ;  next to the previous one
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
+        ;-----------------------------------------------------------------------
+        add     A,      8               ; move to the next row
+        ld      B,      A
+        ld      A,      [card]          ; return original card value
+        ret
+
+
+createCard_Bottom:
+;===============================================================================
+; create sprites for the bottom half of a card:
+; NOTE: does NOT set the sprite update flag
+;
+; in:   A       value of card to be rendered as sprites
+;       HL      this must be set to the last byte of the Sprite in the local
+;               sprite attribute table to begin building from, i.e. `attr`+
+;               (sprite no. * 4) + 3, because sprites are written to the
+;               local sprite attribute table in reverse order; both for
+;               simplicity and to ensure correct sprite-priority
+;       B       screen Y-position (px) to begin building the sprites
+;       C       screen X-position (px) to begin building the sprites
+;
+; out:  HL      the address in the local sprite attr table will have been
+;               decremented according to the number of sprites created
+;       B       the Y-position is incremeneted by 8 incidentally
+;               (even though the sprites created are 16px high)
+;       C, DE   (preserved)
+;       A       (clobbered)
+;-------------------------------------------------------------------------------
+        ld      [card], A               ; backup card value
+        ;-----------------------------------------------------------------------
+        ; bottom-left: suit
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L
+        swap    A                       ; move the suit to the bottom nybble
+        and     MASK_SUIT >> 4          ; mask out the other bits
+        rlca                            ; x2 tile index due to 8x16 sprites
+        add     SPRITE_CARD_34X1        ; offset the tile with the suit
+        ld      [HL-],  A
+        ld      A,      C
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B               ; since sprites are 8x16,
+        add     A,      8               ;  move down another 8px so that
+        ld      B,      A               ;  we are 16px below the top-half
+        ld      [HL-],  A               ; write sprite Y-position
+        ;-----------------------------------------------------------------------
+        ; bottom-middle:
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L                       ; (move to sprite tile byte)
+        ld      A,      SPRITE_CARD_34X2; this one has a fixed sprite tile
+        ld      [HL-],  A
+        ld      A,      C               ; position this sprite
+        add     A,      8               ;  next to the previous one
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
+        ;-----------------------------------------------------------------------
+        ; bottom-right corner: ordinal
+        ;-----------------------------------------------------------------------
+        ld      [HL],   %00000000       ; set sprite display attribute
+        dec     L                       ; (move to sprite tile byte)
+        ld      A,      [card]          ; retrieve the card value
+        and     MASK_RANK               ; trim out the other bits of card value
+        rlca                            ; x2 tile index due to 8x16 sprites
+        add     SPRITE_CARD_34X3-2      ; offset the tile with the ordinal
+        ld      [HL-],  A               ; set the sprite's tile
+        ld      A,      C               ; position this sprite
+        add     A,      16              ;  next to the previous one
+        ld      [HL-],  A               ; write sprite X-position
+        ld      A,      B
+        ld      [HL-],  A               ; write sprite Y-position
         ret
 
 
