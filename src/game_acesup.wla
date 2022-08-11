@@ -180,18 +180,16 @@ tapCard_depot:
         ld      L,      INDEX_DEPOT4
         call    nc,     @cp
 
+        ; TODO: if there is no match, do some kind of "not valid" animation
+        pop     HL                      ; retrieve the source pile again
+        ret     nc
+
         ; if carry is set, the tapped card is the same suit
         ; and lower in rank than another card on the tableau
         ;
-        ; TODO:
-        pop     HL                      ; retrieve the source pile again
         ld      A,      H               ; card index was put in H
         ld      E,      INDEX_DISCARD   ; set destination pile
-        call    tableau.movePile
-
-        ; TODO: move the cursor to the new position
-
-        ret
+        jp      tableau.movePile
 
         ;-----------------------------------------------------------------------
         ; compare cards:
@@ -201,12 +199,19 @@ tapCard_depot:
         ;
 @cp:    call    piles.getLastCard       ; addr of last card in search depot
 
+        ; if the pile is empty, we can't compare;
+        ; (top card is zero; this because index 0 is
+        ; the same for zero cards or 1 card in the pile)
+        ;
+        ld      A,      [DE]            ; read the last card in the pile
+        and     A,      A               ; (set flags)
+        ret     z                       ; return no-carry for empty pile
+
         ; compare suits:
         ;
         ; we compare suits using XOR so that carry is
         ; unaffected. if the suits match, zero is set
         ;
-        ld      A,      [DE]            ; read the last card in the pile
         xor     B                       ; combine with the tapped card
         and     MASK_SUIT               ; mask out irrelevant bits
         ret     nz                      ; exit (c-) if they don't match
