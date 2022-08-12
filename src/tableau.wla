@@ -1220,10 +1220,14 @@ dropPile:
 ;-------------------------------------------------------------------------------
         push    HL                      ; preserve destination pile index
         call    cursor.clearCards       ; remove cards in cursor's hand!
+
+        ; for user-mode, restore the hand sprite to the no-cards default
+        ; TODO: clean this up
         ld      A,      [cursor.mode]
         and     A,      A
         jr      z,      +
         call    cursor.setModeUser
+
 +       pop     DE                      ; retrieve destination pile into E
 
         ; move the pile of cards in the cursor's hand
@@ -1235,6 +1239,13 @@ dropPile:
         call    sprites.update
         jp      update                  ; update the screen
 
+
+moveTopCard:
+;===============================================================================
+; in:   L       source pile index (`INDEX_*`)
+;       E       destination pile index
+;-------------------------------------------------------------------------------
+        rst     piles.rst_lastCardIndex
 
 movePile:
 ;===============================================================================
@@ -1297,4 +1308,8 @@ movePile:
         ; manually set the cursor position to avoid movement
         call    cursor.setPos
         ; set the flag to update the sprite table during v-blank
-        jp      sprites.update
+        call    sprites.update
+        ; wait for the vblank to occur so that all changes to the tilemap
+        ; and sprites are rendered before continuing as the caller might
+        ; start making more tilemap changes
+        jp      waitVBlank

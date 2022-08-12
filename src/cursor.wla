@@ -162,7 +162,6 @@ update:
         sub     A,      [HL]            ; subtract destination-X from current-X
         jr      z,      +               ; if equal, no horizontal movement
         sra     A                       ; limit the maximum speed
-        sra     A                       ; by dividing the distance by 4
         jr      nz,     +               ; if dividing reduced it to zero,
         inc     A                       ; move by at least 1 pixel
 +       ld      C,      A               ; remember this "x-speed"
@@ -178,7 +177,6 @@ update:
         sub     A,      [HL]            ; subtract destination-Y from current-Y
         jr      z,      +               ; if equal, no vertical movement
         sra     A                       ; limit the maximum speed
-        sra     A                       ; by dividing the distance by 4
         jr      nz,     +               ; if dividing reduced it to zero,
         inc     A                       ; move by at least 1 pixel
 +       ld      B,      A               ; remember "y-speed"

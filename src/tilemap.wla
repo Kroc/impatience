@@ -600,5 +600,10 @@ update:
         ld      [BC],   A               ; write tile to draw
         inc     C
 
+        bit     7,      C
+        ret     z
+
+        ld      B,B
+
         ; TODO: is the queue full?
         ret

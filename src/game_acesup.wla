@@ -85,27 +85,27 @@ init:
         ;-----------------------------------------------------------------------
         ld      L,      INDEX_DEPOT1
         ld      A,      CARD_J | SUIT_CLUB
-        call    piles.pushCard
+        ;;call    piles.pushCard
         ld      A,      CARD_3 | SUIT_SPADE
-        call    piles.pushCard
+        ;;call    piles.pushCard
 
         ld      L,      INDEX_DEPOT2
         ld      A,      CARD_X | SUIT_HEART
-        call    piles.pushCard
+        ;;call    piles.pushCard
         ld      A,      CARD_4 | SUIT_SPADE
-        call    piles.pushCard
+        ;;call    piles.pushCard
 
         ld      L,      INDEX_DEPOT3
         ld      A,      CARD_2 | SUIT_SPADE
-        call    piles.pushCard
+        ;;call    piles.pushCard
         ld      A,      CARD_6 | SUIT_CLUB
-        call    piles.pushCard
+        ;;call    piles.pushCard
 
         ld      L,      INDEX_DEPOT4
         ld      A,      CARD_A | SUIT_SPADE
-        call    piles.pushCard
+        ;;call    piles.pushCard
         ld      A,      CARD_3 | SUIT_DIAMOND
-        call    piles.pushCard
+        ;;call    piles.pushCard
 
         ;-----------------------------------------------------------------------
         call    tableau.refresh
@@ -241,6 +241,42 @@ tapCard_deck:
 ;       A       index of card pointed at in that pile
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
+        ; move four cards from the deck to each pile:
+        ;-----------------------------------------------------------------------
+        ; flip the top card of the deck over before moving it
+        ld      H,      INDEX_DECK
+        call    piles.getLastCard       ; TODO: deck becomes empty
+        and     ~CARD_BACK
+        ret     z
+        ld      [DE],   A
+
+        ld      E,      INDEX_DEPOT1
+        call    tableau.moveTopCard
+
+        ld      H,      INDEX_DECK
+        call    piles.getLastCard
+        and     ~CARD_BACK
+        ld      [DE],   A
+
+        ld      E,      INDEX_DEPOT2
+        call    tableau.moveTopCard
+
+        ld      H,      INDEX_DECK
+        call    piles.getLastCard
+        and     ~CARD_BACK
+        ld      [DE],   A
+
+        ld      E,      INDEX_DEPOT3
+        call    tableau.moveTopCard
+
+        ld      H,      INDEX_DECK
+        call    piles.getLastCard
+        and     ~CARD_BACK
+        ld      [DE],   A
+
+        ld      E,      INDEX_DEPOT4
+        call    tableau.moveTopCard
+
         ret
 
 
