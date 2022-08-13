@@ -152,7 +152,7 @@ tapCard_depot:
         ; we need to compare our card with the
         ; other depots so put its value aside:
         rst     piles.rst_cardAddr      ; get addr (DE) of the card index (A)
-        ld      H,      A               ; presere index (for moving cards)
+        ld      H,      A               ; preserve index (for moving cards)
         ld      A,      [DE]            ; get value of the card
         and     MASK_VALUE              ; isolate suit+rank bits
         ld      B,      A               ; B = tapped card value

@@ -593,8 +593,8 @@ getCardPos:
 ;
 ; out:  B       row number of the card on the tile-map
 ;       C       column number of the card on the tile-map
-;       L       (preserved)
 ;       A       (preserved) -- in case you want to read the card value
+;       L, DE   (preserved)
 ;       H       (clobbered) -- select a field before using HL!
 ;-------------------------------------------------------------------------------
         call    piles.getPos            ; start with the row/col of the pile
@@ -618,8 +618,8 @@ getCardPos:
         ld      A,      H               ; (restore card index)
         ret
 
-        ; horizontal spread:
         ;-----------------------------------------------------------------------
+        ; horizontal spread:
 @horz:  ld      H,      A               ; (preserve card index)
         add     A,      C
         ld      C,      A
@@ -958,7 +958,7 @@ cursorPosForCard:
         dec     B
         dec     B
         dec     B
-
+        ;-----------------------------------------------------------------------
 +       ld      A,      E               ; restore card-index
         ret
 
@@ -1012,8 +1012,9 @@ cursorPosForCard:
         ld      A,      E               ; restore card-index
         ret
 
-        ; within the spread:
         ;-----------------------------------------------------------------------
+        ; within the spread:
+        ;
         ; translate the tile row (B)  & col (C)
         ; into the X & Y position in pixels
 +       call    sprites.tilePosToScrXY
@@ -1181,7 +1182,9 @@ pickPile:
         ; auto-mode:
         ;-----------------------------------------------------------------------
 @auto:  ld      A,      H               ; get screen position of the card
+        push    DE
         call    cursorPosForCard        ; (NOTE: A & L preserved)
+        pop     DE
 
         ; place the current cursor in this position so that the destination
         ; check will be based upon the card-position, not the old position
