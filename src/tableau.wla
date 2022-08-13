@@ -869,7 +869,6 @@ pointToCard:
 ;       BC, DE  (clobbered)
 ;-------------------------------------------------------------------------------
         ld      [card_point],   A       ; save card index to point to: (0-based)
-        ld      E,              A       ; (also keep later comparison)
 
         ; calculate the exact X/Y position in pixels to move the cursor to,
         ; accounting for the specific card in the pile and the cursor mode
@@ -1217,6 +1216,13 @@ pickPile:
         ;-----------------------------------------------------------------------
 -       ld      A,      [DE]            ; read a card value from the pool
 
+        ; ensure the card is face-up! this is so that dealing from the deck
+        ; will always flip the cards face-up. the updated card has to be
+        ; written back to the pile so that the change reflects both in
+        ; the sprite building and when `piles.move` is called later
+        and     ~CARD_BACK
+        ld      [DE],   A
+
         ; create sprites for the top half of each card
         ; (only the last card has a bottom half)
         call    sprites.createCard_Top
@@ -1227,7 +1233,7 @@ pickPile:
         and     A,      A               ; (set flags!)
         jr      nz,     -               ; keep looping until last card
         ;-----------------------------------------------------------------------
-        
+
         ; bottom half of last card:
         dec     DE                      ; rewind before the zero-terminator
         ld      A,      [DE]            ; re-read the last card value
@@ -1278,6 +1284,20 @@ dropPile:
         jp      update                  ; update the screen
 
 
+dealCard:
+;===============================================================================
+; draw a card from the deck (flipping it face-up)
+; and move it to the top of a pile:
+;
+; in:   E       destination pile index
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+        ld      L,      INDEX_DECK
+
+        ; with the source pile implied,
+        ; fall-through to move one card
+        ;
+
 moveTopCard:
 ;===============================================================================
 ; visually moves the top card of a pile from one pile to another;
@@ -1285,6 +1305,7 @@ moveTopCard:
 ;
 ; in:   L       source pile index (`INDEX_*`)
 ;       E       destination pile index
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         rst     piles.rst_lastCardIndex
 
@@ -1305,6 +1326,7 @@ movePile:
 ; in:   L       source pile index (`INDEX_*`)
 ;       A       card-index to take cards from, to the end of the pile
 ;       E       destination pile index
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         ; after picking up the cards we won't have access to the source pile
         ; so push a backup on to the stack for after the move

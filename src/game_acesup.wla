@@ -152,11 +152,10 @@ tapCard_depot:
         ; we need to compare our card with the
         ; other depots so put its value aside:
         rst     piles.rst_cardAddr      ; get addr (DE) of the card index (A)
-        ld      H,      A               ; preserve index (for moving cards)
         ld      A,      [DE]            ; get value of the card
         and     MASK_VALUE              ; isolate suit+rank bits
         ld      B,      A               ; B = tapped card value
-        push    HL                      ; preserve pile (L) & card index (H)
+        push    HL                      ; preserve pile (L)
 
         ; check the depots:
         ;-----------------------------------------------------------------------
@@ -187,9 +186,8 @@ tapCard_depot:
         ; if carry is set, the tapped card is the same suit
         ; and lower in rank than another card on the tableau
         ;
-        ld      A,      H               ; card index was put in H
         ld      E,      INDEX_DISCARD   ; set destination pile
-        jp      tableau.movePile
+        jp      tableau.moveTopCard
 
         ;-----------------------------------------------------------------------
         ; compare cards:
@@ -242,42 +240,14 @@ tapCard_deck:
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         ; move four cards from the deck to each pile:
-        ;-----------------------------------------------------------------------
-        ; flip the top card of the deck over before moving it
-        ld      H,      INDEX_DECK
-        call    piles.getLastCard       ; TODO: deck becomes empty
-        and     ~CARD_BACK
-        ret     z
-        ld      [DE],   A
-
         ld      E,      INDEX_DEPOT1
-        call    tableau.moveTopCard
-
-        ld      H,      INDEX_DECK
-        call    piles.getLastCard
-        and     ~CARD_BACK
-        ld      [DE],   A
-
+        call    tableau.dealCard
         ld      E,      INDEX_DEPOT2
-        call    tableau.moveTopCard
-
-        ld      H,      INDEX_DECK
-        call    piles.getLastCard
-        and     ~CARD_BACK
-        ld      [DE],   A
-
+        call    tableau.dealCard
         ld      E,      INDEX_DEPOT3
-        call    tableau.moveTopCard
-
-        ld      H,      INDEX_DECK
-        call    piles.getLastCard
-        and     ~CARD_BACK
-        ld      [DE],   A
-
+        call    tableau.dealCard
         ld      E,      INDEX_DEPOT4
-        call    tableau.moveTopCard
-
-        ret
+        jp      tableau.dealCard
 
 
 ;;validatePile:
