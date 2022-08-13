@@ -925,8 +925,7 @@ cursorPosForCard:
 ;       A       card index (0-based)
 ; out:  B       screen Y-position, in px, the cursor would point to
 ;       C       screen X-position, in px, the cursor would point to
-;       L       (preserved)
-;       A       (preserved)
+;       L, A    (preserved)
 ;       H       (clobbered) -- select another field before using HL!
 ;       DE      (clobbered)
 ;-------------------------------------------------------------------------------
@@ -938,14 +937,34 @@ cursorPosForCard:
         jr      z,      @user
 
         ;=======================================================================
+        ; cursor auto-mode:
+        ;
         ; convert the X/Y tile positions into X/Y screen pixels
 @auto:  call    sprites.tilePosToScrXY
         ; the sprite version of a card has a border we need to account for
         inc     B                       ; adjust 1px for top-border
         inc     C                       ; adjust 1px for left-border
+
+        ; the deck is slightly taller than a normal squared pile:
+        ; check if the pile index is that of the deck
+        ;
+        ld      A,      INDEX_DECK      ; pile index of the deck
+        cp      L                       ; compare with current pile index
+        jr      nz,     +               ; no match -> make sure A is restored
+
+        ; adjust the sprite card location to appear
+        ; over the top card of the deck
+        dec     B
+        dec     B
+        dec     B
+        dec     B
+
++       ld      A,      E               ; restore card-index
         ret
 
         ;=======================================================================
+        ; cursor user-mode:
+        ;
         ; is the pile empty?
 @user:  rst     piles.rst_pileCount     ; get pile count (A), set flags
         jr      z,      @empty          ; -> an empty pile space
@@ -955,7 +974,7 @@ cursorPosForCard:
         ; we point to the top of the pile without counting cards
         ld      H,      FIELD_TYPE
         bit     BIT_SQUARE,     [HL]
-        jr      nz,     @empty          ; TODO: the deck is slightly raised
+        jr      nz,     @square
 
         ; is this a horizontal or vertical spread of cards?
         bit     BIT_HORZ,       [HL]    ; check orientation bit
@@ -1036,6 +1055,32 @@ cursorPosForCard:
         ; over the card's rather than on the outside edge
         inc     B                       ; 1px down
         dec     C                       ; 1px left
+        ;-----------------------------------------------------------------------
+        ld      A,      E               ; restore card-index
+        ret
+
+        ;=======================================================================
+        ; empty pile:
+        ;
+        ; the deck is slightly taller than a normal squared pile:
+        ; check if the pile index is that of the deck
+        ;
+@square:ld      A,      INDEX_DECK      ; pile index of the deck
+        cp      L                       ; compare with current pile index
+        jr      nz,     @empty          ; no match -> treat like empty pile
+
+        inc     C                       ; adjust right one col, to the middle
+        inc     B                       ; adjust down one row, to the middle
+
+        ; convert the tile row/col to screen-space pixels
+        call    sprites.tilePosToScrXY
+
+        ; offset the cursor for the deck's extra thickness
+        dec     B
+        dec     B
+        dec     B
+        dec     C
+        dec     C
         ;-----------------------------------------------------------------------
         ld      A,      E               ; restore card-index
         ret
@@ -1135,15 +1180,8 @@ pickPile:
 
         ; auto-mode:
         ;-----------------------------------------------------------------------
-@auto:  ld      A,      H
-        call    getCardPos              ; get screen position of the card
-                                        ; (NOTE: A & L preserved)
-
-        ; convert the X/Y tile positions into X/Y screen pixels
-        call    sprites.tilePosToScrXY
-        ; the sprite version of a card has a border we need to account for
-        inc     B                       ; adjust 1px for top-border
-        inc     C                       ; adjust 1px for left-border
+@auto:  ld      A,      H               ; get screen position of the card
+        call    cursorPosForCard        ; (NOTE: A & L preserved)
 
         ; place the current cursor in this position so that the destination
         ; check will be based upon the card-position, not the old position
@@ -1153,6 +1191,7 @@ pickPile:
 
         ; user-mode:
         ;-----------------------------------------------------------------------
+        ; change to the cursor hand sprite for holding cards
 @user:  ld      A,      SPRITE_HOLD_LHS
         ld      [sprites.attrs.1.tile], A
         ld      A,      SPRITE_HOLD_RHS
@@ -1221,12 +1260,8 @@ dropPile:
         push    HL                      ; preserve destination pile index
         call    cursor.clearCards       ; remove cards in cursor's hand!
 
-        ; for user-mode, restore the hand sprite to the no-cards default
-        ; TODO: clean this up
-        ld      A,      [cursor.mode]
-        and     A,      A
-        jr      z,      +
-        call    cursor.setModeUser
+        ld      A,      [cursor.mode]   ; for user-mode, restore the hand
+        call    cursor.setMode          ;  sprite to the no-cards default
 
 +       pop     DE                      ; retrieve destination pile into E
 
@@ -1242,14 +1277,21 @@ dropPile:
 
 moveTopCard:
 ;===============================================================================
+; visually moves the top card of a pile from one pile to another;
+; the move takes multiple frames to complete:
+;
 ; in:   L       source pile index (`INDEX_*`)
 ;       E       destination pile index
 ;-------------------------------------------------------------------------------
         rst     piles.rst_lastCardIndex
 
+        ; with the index of the last card,
+        ; fall through to move the card
+        ;
+
 movePile:
 ;===============================================================================
-; visually moves a pile of cards from one pile to another,
+; visually moves a pile of cards from one pile to another;
 ; the move takes multiple frames to complete:
 ;
 ; (use `piles.move` to move cards around in memory)

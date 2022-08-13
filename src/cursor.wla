@@ -57,6 +57,19 @@ init:
         jp      sprites.update
 
 
+setMode:
+;===============================================================================
+; set the cursor mode manually:
+;
+; in:   A       cursor mode constant, `MODE_*`
+; out:  A       (preserved)
+;-------------------------------------------------------------------------------
+        and     A,      A               ; (set flags)
+        jr      nz,     setModeAuto     ; handle auto mode
+
+        ; fall through for user-mode
+        ;
+
 setModeUser:
 ;===============================================================================
 ; out:  AF      (preserved)
