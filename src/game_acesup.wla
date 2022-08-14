@@ -72,7 +72,7 @@ init:
         call    tableau.allocateCursorPile
 
         ld      BC,     acesup_deck
-        call    piles.allocateDeck      ; allocate the deck,
+        call    piles.allocateDeck      ; allocate & shuffle the deck,
         call    piles.allocate          ; and discard pile
 
         ; allocate the depots:
@@ -239,6 +239,10 @@ tapCard_deck:
 ;       A       index of card pointed at in that pile
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
+        ; is the deck empty?
+        rst     piles.rst_pileCount
+        ret     z
+
         ; move four cards from the deck to each pile:
         ld      E,      INDEX_DEPOT1
         call    tableau.dealCard

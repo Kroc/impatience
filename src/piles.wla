@@ -486,7 +486,7 @@ clear:
 allocateDeck:
 ;===============================================================================
 ; allocates the deck: (this is always 52 cards in size)
-; the deck is populated with cards, but not shuffled
+; the deck is populated with cards and automatically shuffled
 ;
 ; in:   BC      address to a Pile structure (in ROM) to copy from
 ;
@@ -513,9 +513,7 @@ allocateDeck:
         ; calling `addCard` 52 times would be needlessly slow,
         ; so we're going to manually write the pile size
         ;
-        ; C will be our suit counter;
-        ; 0=spades, 1=clubs, 2=hearts, 3=diamonds
-        ld      C,      0
+        ld      C,      0               ; C will be our suit counter, 0-3
 @next:  ld      B,      1               ; B = our ordinal counter, 1 to 13
 
 -       ld      A,      C               ; begin with the suit 0-3
@@ -535,7 +533,76 @@ allocateDeck:
         jr      z,      @next           ; no, do next suit
 
         ;-----------------------------------------------------------------------
+        call    shuffleDeck             ; shuffle cards in the deck
+        inc     L                       ; return the next pile index
         pop     BC                      ; return next ROM address
+        ret
+
+
+shuffleDeck:
+;===============================================================================
+; shuffles the cards in the deck:
+;
+; out:  L       =`INDEX_DECK`
+;-------------------------------------------------------------------------------
+        ld      L,      INDEX_DECK
+
+        ; fall through
+        ;
+
+shuffle:
+;===============================================================================
+; shuffles the order of cards in a pile:
+;
+; in:   L       index (`INDEX_*`) of pile to shuffle
+; out:  L       (preserved)
+;       A|BC|DE (clobbered)
+;       H       (clobbered) -- select a field before using HL!
+;-------------------------------------------------------------------------------
+        rst     rst_pileCount           ; number of cards in pile, 1-based
+        ret     z                       ; can't shuffle an empty pile!
+        ld      B,      A               ; count-down index for loop (1-based)
+        dec     A                       ; adjust to 0-based
+        ret     z                       ; can't shuffle 1 card!
+        ld      C,      A               ; pile count to be used (0-based)
+
+        ; walk through the pile and swap each card with
+        ; a randomly-chosen card elsewhere in the pile:
+        ;-----------------------------------------------------------------------
+@loop:  dec     B                       ; pre-decrement loop
+
+        ; get card from loop:
+        ld      A,      B               ; B is our loop index
+        rst     rst_cardAddr            ; get pool address for that card
+        ld      A,      [DE]            ; read the card value
+        push    DE                      ; remember the pool address
+        push    AF                      ; remember the value to swap later
+
+        ; choose a random place in the pile:
+        call    rnd                     ; get a random number 0-255
+        cp      C                       ; compare against card-count
+        jr      c,     +                ; within range -> shuffle
+
+        ; random number is out of range, fix it
+-       sub     C
+        cp      C
+        jr      nc,     -
+
+        ; swap the card values:
++       rst     rst_cardAddr            ; get pool address of random card
+        ld      A,      [DE]            ; read its value
+        ld      H,      A               ; put aside random card for the swap
+        pop     AF                      ; retrieve our loop card value
+        ld      [DE],   A               ; write loop card to random card
+        ld      A,      H               ; retrieve the random card value
+        pop     DE                      ; return to our loop card address
+        ld      [DE],   A               ; write random card to loop card
+
+        ; keep looping?
+        ld      A,      B
+        and     A,      A               ; (set flags)
+        jr      nz,     @loop
+        ;-----------------------------------------------------------------------
         ret
 
 

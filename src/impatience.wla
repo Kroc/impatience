@@ -23,6 +23,12 @@ init:
         xor     A                       ; (set A to zero)
         ldh     [<$ff26],       A       ; disable sound to save power!
 
+        ; seed randomizer
+        ld      A,      %10101010
+        ldh     [<seed+LO],     A
+        cpl     A
+        ldh     [<seed+HI],     A
+
         call    init_interrupts
 
         ; configure LCD:
@@ -218,6 +224,46 @@ fill:
 .ENDR   ret
 ;###############################################################################
 .ENDS
+
+
+.RAMSECTION "RNG"       SLOT "HRAM" BITWINDOW 8 RETURNORG
+        seed            WORD            ; random number seed
+.ENDS
+
+
+rnd:
+;===============================================================================
+; generate a random number in A:
+;
+; this was adapted directly from:
+; <retroprogramming.com/2017/07/xorshift-pseudorandom-numbers-in-z80.html>
+;
+; out:  A       random-number 0-255
+;       BC|DE|HL(preserved)
+;-------------------------------------------------------------------------------
+        push    HL
+
+        ldh     A,      [<seed+LO]
+        ld      L,      A
+        ldh     A,      [<seed+HI]
+        ld      H,      A
+        rra
+        ld      A,      L
+        rra
+        xor     H
+        ld      H,      A
+        ld      A,      L
+        rra
+        ld      A,      H
+        rra
+        xor     L
+        ldh     [<seed+LO],     A
+        xor     H
+        ldh     [<seed+HI],     A
+
+        pop     HL
+        ret
+
 
 ;===============================================================================
 .INC    "strings.wla"           ; string & text routines
