@@ -207,8 +207,8 @@ fill:
 ; used by `zero` to fast-fill 256 bytes at a time
 ;
 ; if the number of bytes needed to be written is constant, you can jump into
-; the exact position required, these are marked by `@f...` child-labels with
-; the appropriate number of bytes1-256, e.g. `call fill@x160`
+; the exact position required, these are marked by `@x...` child-labels with
+; the appropriate number of bytes 1-256, e.g. `call fill@x160`
 ;
 ; in:   HL      starting address
 ;       A       value to write

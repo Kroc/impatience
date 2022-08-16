@@ -550,9 +550,8 @@ update:
         bit     2,      H
         jr      nz,     @loop
 
-        ;-----------------------------------------------------------------------
         ; the last entry in the queue must be zero-terminated
-        ;
+        ;-----------------------------------------------------------------------
 @exit:  xor     A                       ; (set A to zero)
         dec     C                       ; move past tile,
         dec     C                       ; to cpu flags

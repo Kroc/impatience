@@ -1060,7 +1060,7 @@ cursorPosForCard:
         ret
 
         ;=======================================================================
-        ; empty pile:
+        ; square pile / deck:
         ;
         ; the deck is slightly taller than a normal squared pile:
         ; check if the pile index is that of the deck

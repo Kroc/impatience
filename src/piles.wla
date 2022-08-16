@@ -290,9 +290,9 @@
 ; an address in the pool. the end of each card list in the pool is
 ; zero-terminated to minimise the need for counting registers
 ;
-.RAMSECTION "Storage"   SIZE 1024       RETURNORG
+.RAMSECTION "Storage"   SIZE 512        RETURNORG
         ;-----------------------------------------------------------------------
-        storage         DSB 1024
+        storage         DSB 512
 .ENDS
 
 .DEF    __pool_addr     piles.storage
@@ -476,11 +476,11 @@ clear:
         ld      HL,     down
         call    fill@x{PILE_COUNT}
 
-        ; clear the card pool, this is 1KB
+        ; clear the card pool, this is 512B
         ; (this must be zeroed because card lists must be zero-terminated)
-        ld      HL,     SECTIONSTART_piles.Storage
-        ld      BC,     SECTIONEND_piles.Storage-SECTIONSTART_piles.Storage
-        jp      zero
+        ld      HL,     storage
+        call    fill                    ; clear first 256B
+        jp      fill                    ; clear second 256B
 
 
 allocateDeck:
@@ -510,7 +510,7 @@ allocateDeck:
 
         ; fill the deck with cards:
         ;-----------------------------------------------------------------------
-        ; calling `addCard` 52 times would be needlessly slow,
+        ; calling `pushCard` 52 times would be needlessly slow,
         ; so we're going to manually write the pile size
         ;
         ld      C,      0               ; C will be our suit counter, 0-3
@@ -919,11 +919,6 @@ checkPile:
         cp      RULE_EXPOSED
         jp      z,      checkPile_Exposed
 
-        ;;cp      RULE_ACESUP
-        ;;jp      z,      acesup.validatePile
-        ;;cp      RULE_FORTUNES
-        ;;jp      z,      fortunes.validatePile
-        
         cp      RULE_KLONDIKE
         jp      z,      klondike.checkPile
 
