@@ -72,8 +72,8 @@ init:
         call    tableau.allocateCursorPile
 
         ld      BC,     acesup_deck
-        call    piles.allocateDeck      ; allocate & shuffle the deck,
-        call    piles.allocate          ; and discard pile
+        call    piles.allocateDeck      ; allocate & shuffle the deck
+        call    piles.allocate          ; allocate discard pile
 
         ; allocate the depots:
         ld      L,      INDEX_DEPOT1    ; (skip `INDEX_HAND`)
@@ -179,17 +179,59 @@ tapCard_depot:
         ld      L,      INDEX_DEPOT4
         call    nc,     @cp
 
-        ; TODO: if there is no match, do some kind of "not valid" animation
-        pop     HL                      ; retrieve the source pile again
-        ret     nc
-
         ; if carry is set, the tapped card is the same suit
         ; and lower in rank than another card on the tableau
         ;
-        ld      E,      INDEX_DISCARD   ; set destination pile
-        jp      tableau.moveTopCard
+        pop     HL                      ; retrieve the source pile again
+        jp      c,      tableau.discardCard
 
-        ;-----------------------------------------------------------------------
+        ; if no card matched, it might still be possible to move the card
+        ; to an empty space; look for the next blank space, starting from
+        ; the current pile:
+        ;
+        ; since we need to set E to the destination pile whilst preserving our
+        ; source pile (L), we will access the pile data via DE instaed of HL
+@blank: ld      D,      FIELD_COUNT
+
+        ; we need to check the next three piles
+        ; but wrapping the number around 4 -> 1
+        ;
+        ld      C,      %00000011       ; (save a few bytes later)
+        ld      A,      L               ; start with the current pile
+        sub     INDEX_DEPOT1            ; subtract 1st depot's index so that
+        inc     A                       ;  the pile no. is 0-3, then add 1
+        and     C                       ; mod 4 (0->1->-2>3->0)
+        ld      H,      A               ; keep for the next iteration
+        ; pile + 1:
+        add     INDEX_DEPOT1            ; re-base against the pile indices
+        ld      E,      A               ; load this into E for the read
+        ld      A,      [DE]            ; read the pile count
+        and     A,      A               ; (set flags!)
+        jp      z,      tableau.moveTopCard
+        ; pile + 2:
+        ld      A,      H               ; retrieve that pile number
+        inc     A                       ; move to next pile number
+        and     C                       ; wrap-around!
+        ld      H,      A               ; keep for the next iteration
+        add     INDEX_DEPOT1            ; re-base against the pile indices
+        ld      E,      A               ; load this into E for the read
+        ld      A,      [DE]            ; read the pile count
+        and     A,      A               ; (set flags!)
+        jp      z,      tableau.moveTopCard
+        ; pile + 3:
+        ld      A,      H               ; retrieve that pile number
+        inc     A                       ; move to next pile number
+        and     C                       ; wrap-around!
+        add     INDEX_DEPOT1            ; re-base against the pile indices
+        ld      E,      A               ; load this into E for the read
+        ld      A,      [DE]            ; read the pile count
+        and     A,      A               ; (set flags!)
+        jp      z,      tableau.moveTopCard
+
+        ; TODO: if there is no match, do some kind of "not valid" animation
+        ret
+
+        ;=======================================================================
         ; compare cards:
         ;
         ; given the pile to compare *against*,

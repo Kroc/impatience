@@ -1284,6 +1284,17 @@ dropPile:
         jp      update                  ; update the screen
 
 
+discardCard:
+;===============================================================================
+; move a card from a pile to the discard pile:
+;
+; in:   L       source pile index (`INDEX_*`)
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+        ld      E,      INDEX_DISCARD
+        ; skip the next two bytes as a `ld BC, $xxxx`!
+        .BYTE   $01
+
 dealCard:
 ;===============================================================================
 ; draw a card from the deck (flipping it face-up)

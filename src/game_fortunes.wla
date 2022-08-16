@@ -145,8 +145,8 @@ init:
         call    tableau.allocateCursorPile
 
         ld      BC,     fortunes_deck
-        call    piles.allocateDeck      ; allocate the deck,
-        call    piles.allocate          ; and discard pile
+        call    piles.allocateDeck      ; allocate & shuffle the deck
+        call    piles.allocate          ; allocate discard pile
         ; allocate the foundations:
         ld      L,      INDEX_FOUNDATION1
         call    piles.allocate          ; foundation 1

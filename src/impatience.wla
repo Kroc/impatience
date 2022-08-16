@@ -7,7 +7,7 @@
 .INC    "interrupts.wla"
 
 .RAMSECTION "Global"
-        game_id         BYTE    ; index of current game being played
+        game_id         BYTE            ; index of current game being played
 .ENDS
 
 .ENUMID 0
@@ -22,14 +22,13 @@ init:
         ld      SP,     $dff0           ; locate the stack
         xor     A                       ; (set A to zero)
         ldh     [<$ff26],       A       ; disable sound to save power!
+        call    init_interrupts
 
-        ; seed randomizer
-        ld      A,      %10101010
-        ldh     [<seed+LO],     A
+        ; seed randomizer:
+        ld      A,      %10101010       ; it doesn't matter what the number is,
+        ldh     [<seed+LO],     A       ;  as long as it isn't zero
         cpl     A
         ldh     [<seed+HI],     A
-
-        call    init_interrupts
 
         ; configure LCD:
         ;-----------------------------------------------------------------------

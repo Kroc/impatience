@@ -115,7 +115,7 @@ init:
         ; the cursor's pile must be reallocated
         call    tableau.allocateCursorPile
 
-        ; allocate the deck
+        ; allocate & shuffle the deck
         ld      BC,     klondike_deck
         call    piles.allocateDeck
         ; allocate the hand (draw 1 / 3)
