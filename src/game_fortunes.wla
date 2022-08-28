@@ -136,10 +136,9 @@ init:
 
         ; setup the tableau layout for the game
         ;-----------------------------------------------------------------------
-        ; completely clear the table of cards, both the piles
-        ; and the storage pool of all cards on the table
-        ;
-        call    piles.clear
+        ; completely clear the table of cards, both the piles and the storage
+        ; pool of all cards on the table. this will also clear the undo buffer
+        call    tableau.init
         ; when the piles are cleared,
         ; the cursor's pile must be reallocated
         call    tableau.allocateCursorPile

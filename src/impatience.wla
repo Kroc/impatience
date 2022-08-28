@@ -12,9 +12,10 @@
 
 .ENUMID 0
 .ENUMID GAME_NONE
-.ENUMID GAME_ACESUP
-.ENUMID GAME_FORTUNES
-.ENUMID GAME_KLONDIKE
+.ENUMID GAME_ACESUP                     ; "Aces Up"
+.ENUMID GAME_FORTUNES                   ; "Fortune's Favour"
+.ENUMID GAME_KLONDIKE                   ; "Klondike"
+
 
 init:
 ;===============================================================================
@@ -27,7 +28,6 @@ init:
         ; seed randomizer:
         ld      A,      %10101010       ; it doesn't matter what the number is,
         ldh     [<seed+LO],     A       ;  as long as it isn't zero
-        cpl     A
         ldh     [<seed+HI],     A
 
         ; configure LCD:
@@ -106,39 +106,25 @@ handleControls:
 
         ; TODO: soft reset (A+B+SELECT+START)
 
-        ; cursor down?
-        bit     BUTTON_DOWN,    A
-        jr      z,      +
+        bit     BUTTON_DOWN,    A       ; cursor down?
+        jp      nz,     tableau.cursorDown
 
-        jp      tableau.cursorDown
+        bit     BUTTON_UP,      A       ; cursor up?
+        jp      nz,     tableau.cursorUp
 
-        ; cursor up?
-+       bit     BUTTON_UP,      A
-        jr      z,      +
+        bit     BUTTON_LEFT,    A       ; cursor left?
+        jp      nz,     tableau.cursorLeft
 
-        jp      tableau.cursorUp
+        bit     BUTTON_RIGHT,   A       ; cursor right?
+        jp      nz,     tableau.cursorRight
 
-        ; cursor left?
-+       bit     BUTTON_LEFT,    A
-        jr      z,      +
+        bit     BUTTON_A,       A       ; A button?
+        jp      nz,     tableau.doUndo
 
-        jp      tableau.cursorLeft
+        bit     BUTTON_B,       A       ; B button?
+        jp      nz,     tableau.doAction
 
-        ; cursor right?
-+       bit     BUTTON_RIGHT,   A
-        jr      z,      +
-
-        jp      tableau.cursorRight
-
-        ; A button?
-+       bit     BUTTON_A,       A
-        jr      z,      +
-
-        jp      tableau.doAction
-
-        ; TODO: B button? (undo?)
-
-+       ret
+        ret
 
 
 zero:
@@ -269,6 +255,7 @@ rnd:
 .INC    "tilemap.wla"           NAMESPACE "tilemap"
 .INC    "menu.wla"              NAMESPACE "menu"
 .INC    "piles.wla"             NAMESPACE "piles"
+.INC    "undo.wla"              NAMESPACE "undo"
 .INC    "tableau.wla"           NAMESPACE "tableau"
 .INC    "sprites.wla"           NAMESPACE "sprites"
 .INC    "cursor.wla"            NAMESPACE "cursor"

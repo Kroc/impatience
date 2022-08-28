@@ -41,16 +41,30 @@
         ; pile-left,            pile-right,
         ; pile-up,              pile-down
 piles.Define \
-        pile_template,          TYPE_COLUMN | TYPE_HORZ, 13, \
+        pile_template,          TYPE_ROW, 13, \
         TILEMAP_HEIGHT-4,       TABLEAU_LEFT + 1, \
         0,                      0, \
         0,                      0
 
 
+init:
+;===============================================================================
+; clear the tableau of cards and tiles:
+; NOTE: does *not* refresh the screen
+;-------------------------------------------------------------------------------
+        ; remove all piles and cards in memory
+        call    piles.clear
+        ; the undo data will no longer be valid,
+        ; so clear that too
+        call    undo.clear
+
+        ; next, clear the graphics
+        ;
+
 clearTiles:
 ;===============================================================================
 ; clears the tableau area, i.e. where cards are played:
-;
+; NOTE: does *not* refresh the screen
 ;-------------------------------------------------------------------------------
         ld      A,      TILE_TABLEAU_BG
         ; starting address of the tableau in the *front buffer*
@@ -1135,12 +1149,26 @@ doAction:
         rst     rst_getPointPile
 
         call    nz,     dropPile        ; if cursor is holding cards, drop them
-        call    z,      pickPile        ; pick up cards
+        call    z,      pickPile        ; otherwise, pick up cards
 
         ; with the pile changed, the cursor needs
         ; to be moved again to the top of the pile
         rst     rst_getPointPile
         jp      pointToPile
+
+
+doUndo:
+;===============================================================================
+; undoes the last move:
+;
+;-------------------------------------------------------------------------------
+        call    undo.pop                ; retrieve the last move
+        ret     c                       ; return if buffer empty
+
+        ; TODO: this will put the move back on the undo buffer
+        call    movePile
+
+        ret
 
 
 pickPile:
@@ -1171,6 +1199,9 @@ pickPile:
         and     A,      A               ; (set flags!)
         jp      z,      @err            ; if pile is empty, exit
         push    HL                      ; preserve pile (L) & card index (H)
+
+        ld      A,              L       ; to undo this move, the source pile
+        ld      [undo.tmp_dst], A       ;  becomes the destination
 
         ; build card sprites:
         ;=======================================================================
@@ -1265,7 +1296,23 @@ dropPile:
 ; drop the cards in the cursor's hand onto the specified pile:
 ;
 ; in:   L       index (`INDEX_*`) of the pile to drop the cards on
+; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
+        ; undo data:
+        ;-----------------------------------------------------------------------
+        ld      A,              L       ; to undo this move, the destination
+        ld      [undo.tmp_src], A       ;  pile becomes the source
+        ; since the cards will be dropped on to the destination pile,
+        ; the *current* top-card (+1) of the pile will be where we need
+        ; to take the cards from to reverse this action
+        rst     piles.rst_pileCount
+        ld      [undo.tmp_idx], A
+        ; `pickPile` will have set the undo destination pile, and `dropPile`
+        ; sets the rest, so we can now push to the undo buffer
+        call    undo.push
+
+        ; drop cards:
+        ;-----------------------------------------------------------------------
         push    HL                      ; preserve destination pile index
         call    cursor.clearCards       ; remove cards in cursor's hand!
 
@@ -1292,6 +1339,7 @@ discardCard:
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
         ld      E,      INDEX_DISCARD
+
         ; skip the next two bytes as a `ld BC, $xxxx`!
         .BYTE   $01
 

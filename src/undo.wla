@@ -1,0 +1,115 @@
+; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
+; creative commons attribution (cc-by) 4.0, see LICENSE.txt
+;
+; for brevity, the undo buffer doesn't store every card moved but instead
+; the source & destination pile indices and the starting card index; however
+; the move required to undo the change is stored instead of the actual action
+; taken -- therefore the undo buffer is a list of pile moves to do that reverse
+; the actions that were taken by the player!
+;
+.RAMSECTION "Undo"      RETURNORG
+        ;-----------------------------------------------------------------------
+        moves           BYTE            ; current undo level (number of moves)
+        
+        ; we only want to record the card movements between piles, not the
+        ; moves to/from the cursor's hand so we need somewhere to remember
+        ; the details after picking up cards until the cards have been dropped
+        tmp_src         BYTE
+        tmp_dst         BYTE
+        tmp_idx         BYTE
+.ENDS
+
+.RAMSECTION "UndoBuff"  ALIGN 256 RETURNORG
+        undo_src        DSB 256
+        undo_dst        DSB 256
+        undo_idx        DSB 256
+.ENDS
+
+
+init:
+;===============================================================================
+clear:
+;===============================================================================
+; clear the undo buffer:
+;-------------------------------------------------------------------------------
+        xor     A                       ; (set A to zero)
+        ld      [moves],        A       ; reset number of undo moves
+        ld      [tmp_src],      A
+        ld      [tmp_dst],      A
+        ld      [tmp_idx],      A
+
+        ld      HL,     SECTIONSTART_undo.UndoBuff
+        call    fill                    ; clear undo moves source piles
+        call    fill                    ; clear undo moves dest. piles
+        jp      fill                    ; clear undo moves card indices
+
+
+push:
+;===============================================================================
+; adds a move to the undo buffer:
+;
+; the undo data must already be set in the variables
+; `tmp_src`, `tmp_dst` & `tmp_idx`
+;
+; out:  HL      (preserved)
+;       A       (clobbered)
+;-------------------------------------------------------------------------------
+        push    HL
+
+        ld      HL,     moves           ; increment the undo moves counter
+        inc     [HL]
+
+        ; TODO: when the buffer fills we need to shift it down
+
+        ld      L,      [HL]
+        ld      H,      >undo_src
+
+        ld      A,      [tmp_src]
+        ld      [HL],   A
+        inc     H
+        ld      A,      [tmp_dst]
+        ld      [HL],   A
+        inc     H
+        ld      A,      [tmp_idx]
+        ld      [HL],   A
+
+        pop     HL
+        ret
+
+
+pop:
+;===============================================================================
+; pops a move from the undo buffer:
+;
+; this doesn't move any cards (see "tableau.wla" instead),
+; only returns the data and decrements the internal pointer
+;
+; out:  carry   clear = OK, set = buffer is empty
+;       L       source pile index
+;       E       destination pile index
+;       A       card index in source pile
+;       BC      (preserved)
+;       D, H    (clobbered)
+;-------------------------------------------------------------------------------
+        ; get the current position in the undo buffer (and decrement it)
+        ;-----------------------------------------------------------------------
+        ld      A,      [moves]         ; undo buffer move count
+        and     A,      A               ; check for zero; buffer empty?
+        scf                             ; (return carry set for error)
+        ret     z                       ; return with carry set
+        ld      L,      A               ; set index into the buffer
+
+        dec     A                       ; decremement the undo index
+        ld      [moves],A               ; write back to the variable
+
+        ; read the undo data:
+        ;-----------------------------------------------------------------------
+        ld      H,      >undo_dst
+        ld      E,      [HL]
+        ld      H,      >undo_idx
+        ld      A,      [HL]
+        ld      H,      >undo_src
+        ld      L,      [HL]
+
+        ccf                             ; flip carry bit,
+        ret                             ;  return clear = OK
