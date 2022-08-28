@@ -16,7 +16,8 @@
 .SECTION "TilesSprites" ALIGN 16        RETURNORG
 ;###############################################################################
 
-.DEF    SPRITE_PALLETE  %01001100
+.DEF    SPRITE_PALLETE1 %11001100       ; red suits
+.DEF    SPRITE_PALLETE2 %01001100       ; hand cursor, black suits
 
 tiles_sprites:
 ;-------------------------------------------------------------------------------
@@ -96,7 +97,8 @@ tiles_sprites:
 
 init:
 ;===============================================================================
-        ; copy the sprite tiles to VRAM:
+        ; load sprite tiles to VRAM:
+        ;-----------------------------------------------------------------------
         ld      HL,     tiles_sprites   ; set source address
         ld      DE,     VRAM_TILES1     ; set destination VRAM position
         ; number of tiles to copy, 0-based
@@ -111,9 +113,9 @@ init:
         ;-----------------------------------------------------------------------
         ; TODO: don't apply these until vblank?
         ;
-        ld      A,      SPRITE_PALLETE
+        ld      A,      SPRITE_PALLETE1
         ldh     [<OBP0], A
-        ld      A,      TILE_PALETTE
+        ld      A,      SPRITE_PALLETE2
         ldh     [<OBP1], A
 
         ld      HL,     LCDC
@@ -202,21 +204,29 @@ createCard_Top:
 ;
 ; out:  HL      the address in the local sprite attr table will have been
 ;               decremented according to the number of sprites created, so
-;               this routine can be called again, or `cardToSprites_Bottom`
+;               this routine can be called again, or `createCard_Bottom`
 ;               for the bottom half of the card
 ;       B       even though the card sprites are 16px high, the Y-position
 ;               will only be incremeneted by 8 to allow for overlapping cards;
-;               `cardToSprites_Bottom` will correct for this automatically
+;               `createCard_Bottom` will correct for this automatically
 ;       C       (preserved) -- the x-pos can be reused for the bottom-half
 ;       A       (preserved) -- card value is passed out for reuse
 ;       DE      (preserved)
 ;-------------------------------------------------------------------------------
-        ld      [card], A               ; backup card value
+        push    DE                      ; preserve DE
+        ld      E,      A               ; backup card value
+
+        ; NOTE: the bit in the card value that indicates suit colour directly
+        ;       lines up with the palette selection bit in the tile attribute!
+        and     MASK_COLOUR
+        ld      D,      A               ; keep this in D for re-use
+
         ;-----------------------------------------------------------------------
         ; top-left corner: ordinal
         ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
+        ld      [HL],   D               ; set sprite display attribute
         dec     L                       ; (move to sprite tile byte)
+        ld      A,      E               ; retrieve original card value
         and     MASK_RANK               ; trim out the other bits of card value
         rlca                            ; x2 tile index due to 8x16 sprites
         add     SPRITE_CARD_12X1-2      ; offset the tile with the ordinal
@@ -228,7 +238,7 @@ createCard_Top:
         ;-----------------------------------------------------------------------
         ; top-middle:
         ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
+        ld      [HL],   D               ; set sprite display attribute
         dec     L                       ; (move to sprite tile byte)
         ld      A,      SPRITE_CARD_12X2; this one has a fixed sprite tile
         ld      [HL-],  A
@@ -240,9 +250,9 @@ createCard_Top:
         ;-----------------------------------------------------------------------
         ; top-right: suit
         ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
+        ld      [HL],   D               ; set sprite display attribute
         dec     L
-        ld      A,      [card]          ; retrieve the card value
+        ld      A,      E               ; retrieve original card value
         swap    A                       ; move the suit to the bottom nybble
         and     MASK_SUIT >> 4          ; mask out the other bits
         rlca                            ; x2 tile index due to 8x16 sprites
@@ -255,8 +265,10 @@ createCard_Top:
         ld      [HL-],  A               ; write sprite Y-position
         ;-----------------------------------------------------------------------
         add     A,      8               ; move to the next row
-        ld      B,      A
-        ld      A,      [card]          ; return original card value
+        ld      B,      A               ; return updated Y-position
+        ld      A,      E               ; return original card value
+
+        pop     DE                      ; restore DE
         ret
 
 
@@ -281,12 +293,19 @@ createCard_Bottom:
 ;       C, DE   (preserved)
 ;       A       (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      [card], A               ; backup card value
+        push    DE                      ; preserve DE
+        ld      E,      A               ; backup card value
+
+        ; NOTE: the bit in the card value that indicates suit colour directly
+        ;       lines up with the palette selection bit in the tile attribute!
+        and     MASK_COLOUR
+        ld      D,      A               ; keep this in D for re-use
+
         ;-----------------------------------------------------------------------
         ; bottom-left: suit
         ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
-        dec     L
+        ld      [HL-],  A               ; set sprite display attribute
+        ld      A,      E               ; retrieve original card value
         swap    A                       ; move the suit to the bottom nybble
         and     MASK_SUIT >> 4          ; mask out the other bits
         rlca                            ; x2 tile index due to 8x16 sprites
@@ -301,7 +320,7 @@ createCard_Bottom:
         ;-----------------------------------------------------------------------
         ; bottom-middle:
         ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
+        ld      [HL],   D               ; set sprite display attribute
         dec     L                       ; (move to sprite tile byte)
         ld      A,      SPRITE_CARD_34X2; this one has a fixed sprite tile
         ld      [HL-],  A
@@ -313,9 +332,9 @@ createCard_Bottom:
         ;-----------------------------------------------------------------------
         ; bottom-right corner: ordinal
         ;-----------------------------------------------------------------------
-        ld      [HL],   %00000000       ; set sprite display attribute
+        ld      [HL],   D               ; set sprite display attribute
         dec     L                       ; (move to sprite tile byte)
-        ld      A,      [card]          ; retrieve the card value
+        ld      A,      E               ; retrieve the card value
         and     MASK_RANK               ; trim out the other bits of card value
         rlca                            ; x2 tile index due to 8x16 sprites
         add     SPRITE_CARD_34X3-2      ; offset the tile with the ordinal
@@ -325,6 +344,8 @@ createCard_Bottom:
         ld      [HL-],  A               ; write sprite X-position
         ld      A,      B
         ld      [HL-],  A               ; write sprite Y-position
+
+        pop     DE                      ; restore DE
         ret
 
 

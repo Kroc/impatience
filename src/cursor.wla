@@ -42,8 +42,8 @@ init:
         ld      [HL+],          A
         ld      A,      SPRITE_HAND_LHS ; tile-number
         ld      [HL+],  A
-        xor     A                       ; (set A to zero)
-        ld      [HL+],  A               ; display attribute
+        ld      [HL],   PAL_OBP1        ; display attribute
+        inc     L
 
         ld      A,      CURSOR_START_Y  ; starting Y-position
         ld      [HL+],  A
@@ -51,7 +51,7 @@ init:
         ld      [HL+],  A
         ld      A,      SPRITE_HAND_RHS ; tile-number
         ld      [HL+],  A
-        ld      [HL],   0               ; display attributes
+        ld      [HL],   PAL_OBP1        ; display attribute
 
         ; flag the sprite changes to be uploaded during vblank
         jp      sprites.update

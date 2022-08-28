@@ -102,6 +102,9 @@
         attr            BYTE
 .ENDST
 
+.DEF    PAL_OBP0        %00000000
+.DEF    PAL_OBP1        %00010000
+
 .RAMSECTION "OAM"       SLOT "OAM"              RETURNORG
         ;-----------------------------------------------------------------------
         OAM             INSTANCEOF Sprite 40
