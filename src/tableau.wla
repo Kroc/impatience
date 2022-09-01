@@ -1165,8 +1165,9 @@ doUndo:
         call    undo.pop                ; retrieve the last move
         ret     c                       ; return if buffer empty
 
-        ; TODO: this will put the move back on the undo buffer
+        call    undo.disable
         call    movePile
+        call    undo.enable
 
         ret
 

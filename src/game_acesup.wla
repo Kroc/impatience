@@ -54,7 +54,7 @@ piles.Define \
 init:
 ;===============================================================================
         call    waitVBlank
-        
+
         ; temp: set scroll offset to move menu off-screen
         ld      A,      MENU_WIDTH * 8
         ldh     [<SCX], A
@@ -91,9 +91,30 @@ init:
         ld      HL,     game_id
         ld      [HL],   GAME_ACESUP
 
-        ; move the cursor to the bottom card in the first depot pile
-        ld      L,      INDEX_DEPOT1
+        ; deal the first four cards automatically
+        ;
+        call    undo.disable            ; (these won't be undoable)
+        call    deal
+        call    undo.enable
+
+        ; move the cursor to the last pile
+        ld      L,      INDEX_DEPOT4
         jp      tableau.pointToPile
+
+
+deal:
+;===============================================================================
+; deals a card onto each pile:
+;
+;-------------------------------------------------------------------------------
+        ld      E,      INDEX_DEPOT1
+        call    tableau.dealCard
+        ld      E,      INDEX_DEPOT2
+        call    tableau.dealCard
+        ld      E,      INDEX_DEPOT3
+        call    tableau.dealCard
+        ld      E,      INDEX_DEPOT4
+        jp      tableau.dealCard
 
 
 tapCard:
@@ -259,15 +280,9 @@ tapCard_deck:
         rst     piles.rst_pileCount
         ret     z
 
-        ; move four cards from the deck to each pile:
-        ld      E,      INDEX_DEPOT1
-        call    tableau.dealCard
-        ld      E,      INDEX_DEPOT2
-        call    tableau.dealCard
-        ld      E,      INDEX_DEPOT3
-        call    tableau.dealCard
-        ld      E,      INDEX_DEPOT4
-        jp      tableau.dealCard
+        ; deal a card from the deck to each pile:
+        ; TODO: this should be undone as one action!
+        jp      deal
 
 
 ;;validatePile:

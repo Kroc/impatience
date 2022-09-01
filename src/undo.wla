@@ -10,13 +10,15 @@
 .RAMSECTION "Undo"      RETURNORG
         ;-----------------------------------------------------------------------
         moves           BYTE            ; current undo level (number of moves)
-        
+
         ; we only want to record the card movements between piles, not the
         ; moves to/from the cursor's hand so we need somewhere to remember
         ; the details after picking up cards until the cards have been dropped
         tmp_src         BYTE
         tmp_dst         BYTE
         tmp_idx         BYTE
+
+        disabled        BYTE            ; flag to ignore adding undo moves
 .ENDS
 
 .RAMSECTION "UndoBuff"  ALIGN 256 RETURNORG
@@ -37,11 +39,38 @@ clear:
         ld      [tmp_src],      A
         ld      [tmp_dst],      A
         ld      [tmp_idx],      A
+        ld      [disabled],     A       ; clear disabled flag
 
         ld      HL,     SECTIONSTART_undo.UndoBuff
         call    fill                    ; clear undo moves source piles
         call    fill                    ; clear undo moves dest. piles
         jp      fill                    ; clear undo moves card indices
+
+
+enable:
+;===============================================================================
+; enable pushing/popping moves to/from the undo buffer:
+;
+; out:  *       (preserved)
+;-------------------------------------------------------------------------------
+        push    AF
+        xor     A
+        ld      [disabled],     A
+        pop     AF
+        ret
+
+
+disable:
+;===============================================================================
+; surpress pushing/popping moves to/from the undo buffer:
+;
+; out:  *       (preserved)
+;-------------------------------------------------------------------------------
+        push    AF
+        ld      A,      $ff
+        ld      [disabled],     A
+        pop     AF
+        ret
 
 
 push:
@@ -52,9 +81,27 @@ push:
 ; `tmp_src`, `tmp_dst` & `tmp_idx`
 ;
 ; out:  HL      (preserved)
-;       A       (clobbered)
+;       BC, DE  (preserved)
+;       AF      (clobbered)
 ;-------------------------------------------------------------------------------
-        push    HL
+        ; if undo is surpressed, do nothing:
+        ;
+        ld      A,      [disabled]      ; check undo-disabled flag
+        and     A                       ; (set flags!)
+        ret     nz                      ; exit if flag is non-zero
+
+        ;-----------------------------------------------------------------------
+        push    HL                      ; preserve incoming HL
+
+        ; sanity check: ignore if source & destination are the same;
+        ; this can happen if you pick up cards from a pile and drop
+        ; them back on the same pile
+        ;
+        ld      A,      [tmp_src]       ; undo source pile
+        ld      L,      A
+        ld      A,      [tmp_dst]       ; undo destination pile
+        cp      L                       ; one and the same?
+        ret     z                       ; return early if same
 
         ld      HL,     moves           ; increment the undo moves counter
         inc     [HL]
@@ -73,7 +120,7 @@ push:
         ld      A,      [tmp_idx]
         ld      [HL],   A
 
-        pop     HL
+        pop     HL                      ; restore HL
         ret
 
 
@@ -91,6 +138,12 @@ pop:
 ;       BC      (preserved)
 ;       D, H    (clobbered)
 ;-------------------------------------------------------------------------------
+        ; if undo is surpressed, do nothing:
+        ;
+        ld      A,      [disabled]      ; check undo-disabled flag
+        and     A                       ; (set flags!)
+        ret     nz                      ; exit if flag is non-zero
+
         ; get the current position in the undo buffer (and decrement it)
         ;-----------------------------------------------------------------------
         ld      A,      [moves]         ; undo buffer move count
