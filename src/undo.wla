@@ -9,10 +9,8 @@
 ;
 .RAMSECTION "Undo"      RETURNORG
         ;-----------------------------------------------------------------------
-        moves           BYTE            ; current undo level (number of moves)
-
         ; we only want to record the card movements between piles, not the
-        ; moves to/from the cursor's hand so we need somewhere to remember
+        ; moves to/from the cursor's hand, so we need somewhere to remember
         ; the details after picking up cards until the cards have been dropped
         tmp_src         BYTE
         tmp_dst         BYTE
@@ -35,7 +33,6 @@ clear:
 ; clear the undo buffer:
 ;-------------------------------------------------------------------------------
         xor     A                       ; (set A to zero)
-        ld      [moves],        A       ; reset number of undo moves
         ld      [tmp_src],      A
         ld      [tmp_dst],      A
         ld      [tmp_idx],      A
@@ -54,8 +51,10 @@ enable:
 ; out:  *       (preserved)
 ;-------------------------------------------------------------------------------
         push    AF
-        xor     A
+
+        xor     A                       ; set A to zero
         ld      [disabled],     A
+
         pop     AF
         ret
 
@@ -67,8 +66,10 @@ disable:
 ; out:  *       (preserved)
 ;-------------------------------------------------------------------------------
         push    AF
-        ld      A,      $ff
+
+        ld      A,      %11111111
         ld      [disabled],     A
+
         pop     AF
         ret
 
@@ -80,9 +81,8 @@ push:
 ; the undo data must already be set in the variables
 ; `tmp_src`, `tmp_dst` & `tmp_idx`
 ;
-; out:  HL      (preserved)
-;       BC, DE  (preserved)
-;       AF      (clobbered)
+; out:  HL, DE  (preserved)
+;       A, BC   (clobbered)
 ;-------------------------------------------------------------------------------
         ; if undo is surpressed, do nothing:
         ;
@@ -95,28 +95,50 @@ push:
         ; them back on the same pile
         ;
         ld      A,      [tmp_src]       ; undo source pile
-        ld      L,      A
+        ld      C,      A
         ld      A,      [tmp_dst]       ; undo destination pile
-        cp      L                       ; one and the same?
+        cp      C                       ; one and the same?
         ret     z                       ; return early if same
 
-        ;----------------------------------------------------------------------
+        ; shift the whole buffer down:
+        ;-----------------------------------------------------------------------
         push    HL                      ; preserve incoming HL
-
-        ld      HL,     moves           ; increment the undo moves counter
-        inc     [HL]
-
-        ; TODO: when the buffer fills we need to shift it down
-
-        ld      L,      [HL]
-        ld      H,      >undo_src
-
+        
+        ; whilst we could copy each field, shifting the entire block of RAM
+        ; down has almost the same effect as even though the top-most entry
+        ; of some fields will be populated with the end of another field,
+        ; we'll be overwriting the top-most field anyway
+        ;
+        ; we'll be copying the 2nd to last byte to
+        ; the last byte, removing the bottom-most entry
+        ld      HL,     SECTIONEND_undo.UndoBuff-2
+        ; and then walking up the buffer towards the top, effectively moving
+        ; all entries down one byte and freeing up the top-most entry
+        ;
+        ld      C,      0               ; loop counter (256, underflows first)
+        jr      +                       ; do one less byte (top-most!)
+        ;-----------------------------------------------------------------------
+-       ld      A,      [HL+]           ; read 2nd-to-last byte & move to last
+        ld      [HL-],  A               ; write to last byte and move back
+        dec     HL                      ;  twice to make 2nd-to-last into last
++       ld      A,      [HL+]           ;
+        ld      [HL-],  A               ; (this is repeated three times
+        dec     HL                      ;  so that the counter only needs
+        ld      A,      [HL+]           ;  to be 8-bit)
+        ld      [HL-],  A               ;
+        dec     HL                      ;
+        dec     C                       ; decrement counter
+        jr      nz,     -               ; keep going until zero
+        ;-----------------------------------------------------------------------
+        ; add the move:
+        ;
+        ld      HL,     undo_src        ; switch to `undo_src` field, top entry
         ld      A,      [tmp_src]
         ld      [HL],   A
-        inc     H
+        inc     H                       ; switch to `undo_dst` field
         ld      A,      [tmp_dst]
         ld      [HL],   A
-        inc     H
+        inc     H                       ; switch to `undo_idx` field
         ld      A,      [tmp_idx]
         ld      [HL],   A
 
@@ -128,6 +150,7 @@ chain:
 ;===============================================================================
 ; links the previous undo move to the next one so that they undo together:
 ;
+; out:  AF      (clobbered)
 ;-------------------------------------------------------------------------------
         ; if undo is surpressed, do nothing:
         ;
@@ -138,15 +161,10 @@ chain:
         ; set the hi-bit on the undo move source index
         ; (indicates a chain of moves)
         ;-----------------------------------------------------------------------
-        push    HL
+        ld      A,      [undo_src]
+        set     7,      A
+        ld      [undo_src],     A
 
-        ld      HL,     moves
-        ld      L,      [HL]
-        ld      H,      >undo_src
-
-        set     7,      [HL]
-
-        pop     HL
         ret
 
 
@@ -159,9 +177,7 @@ isChained:
 ;-------------------------------------------------------------------------------
         push    HL
 
-        ld      HL,     moves
-        ld      L,      [HL]
-        ld      H,      >undo_src
+        ld      HL,     undo_src
         bit     7,      [HL]
 
         pop     HL
@@ -173,7 +189,7 @@ pop:
 ; pops a move from the undo buffer:
 ;
 ; this doesn't move any cards (see "tableau.wla" instead),
-; only returns the data and decrements the internal pointer
+; only returns the data and shifts the buffer up
 ;
 ; out:  carry   clear = OK, set = buffer is empty
 ;       L       source pile index
@@ -184,27 +200,24 @@ pop:
 ;       H       (clobbered)
 ;-------------------------------------------------------------------------------
         ; if undo is surpressed, do nothing:
+        ; (returns as if empty)
         ;
         ld      A,      [disabled]      ; check undo-disabled flag
-        and     A                       ; (set flags!)
-        ret     nz                      ; exit if flag is non-zero
+        sla     A                       ; shift bit 7 into carry and check zero
+        ret     nz                      ; exit carry set if flag was non-zero
 
         ld      D,      A               ; A is zero so clear chain flag now
 
-        ; get the current position in the undo buffer (and decrement it)
-        ;-----------------------------------------------------------------------
-        ld      A,      [moves]         ; undo buffer move count
-        and     A,      A               ; check for zero; buffer empty?
-        scf                             ; (return carry set for error)
-        ret     z                       ; return with carry set
-        ld      L,      A               ; set index into the buffer
-
-        dec     A                       ; decremement the undo index
-        ld      [moves],A               ; write back to the variable
+        ; is the buffer empty?
+        ;
+        ld      A,      [undo_src]      ; check undo source index
+        and     A,      A               ; (set flags; clears carry!)
+        scf                             ; return carry-set by default
+        ret     z                       ; return if source index = 0 (empty)
 
         ; read the undo data:
         ;-----------------------------------------------------------------------
-        ld      H,      >undo_dst
+        ld      HL,     undo_dst
         ld      E,      [HL]
         ld      H,      >undo_idx
         ld      A,      [HL]
@@ -212,10 +225,47 @@ pop:
         ld      L,      [HL]
 
         ; move the chain flag into D:
-        ;-----------------------------------------------------------------------
         sla     L                       ; take bit-7 from source index
         rr      D                       ; shift carry into D, clear carry
         rr      L                       ; fix source index
 
+        ; backup the result:
+        push    AF
+        push    DE
+        push    HL
+
+        ; shift the buffer up:
         ;-----------------------------------------------------------------------
-        ret                             ;  return carry clear = OK
+        ld      HL,     SECTIONSTART_undo.UndoBuff+1
+        ld      D,      0               ; loop counter, 256 (underflows first)
+        jr      +                       ; do one less byte (bottom-most!)
+        ;-----------------------------------------------------------------------
+-       ld      A,      [HL-]           ; read 2nd byte & move up to first
+        ld      [HL+],  A               ; write to 1st byte and move back
+        inc     HL                      ;  twice to make 2nd byte into first
++       ld      A,      [HL-]           ;
+        ld      [HL+],  A               ; (this is repeated three times
+        inc     HL                      ;  so that the counter only needs
+        ld      A,      [HL-]           ;  to be 8-bit)
+        ld      [HL+],  A               ;
+        inc     HL                      ;
+        dec     D                       ; decrement counter
+        jr      nz,     -               ; keep going until zero
+        ;-----------------------------------------------------------------------
+        ; clear the bottom-most entry:
+        ;
+        ; TODO: warning! this may leave an incomplete chain at the bottom
+        ;       of the undo buffer! we should remove all entries at the
+        ;       bottom that are chained together
+        ;
+        ld      HL,     SECTIONEND_undo.UndoBuff-1
+        ld      [HL],   0
+        dec     H
+        ld      [HL],   0
+        dec     H
+        ld      [HL],   0
+
+        pop     HL                      ; return source pile index 
+        pop     DE                      ; return dest. pile index & chain flag
+        pop     AF                      ; return card index
+        ret                             ; return carry clear = OK
