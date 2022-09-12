@@ -75,7 +75,7 @@ clearTiles:
         ld      C,      TABLEAU_HEIGHT
 @row:   ;-----------------------------------------------------------------------
 .REPEAT TABLEAU_WIDTH
-        ld      [HL+],  A       ; set cell to empty background tile
+        ld      [HL+],  A               ; set cell to empty background tile
 .ENDR
         ; we only clear 20 out of 32 columns (menu area is preserved),
         ; so move to the next row by skipping ahead over the menu
@@ -116,6 +116,46 @@ clearCursorCards:
         ld      HL,     hand_cards
         call    fill@x{_sizeof_hand_cards}
         jp      cursor.clearCards
+
+
+play:
+;===============================================================================
+-       call    handleControls
+        jr      -
+
+
+handleControls:
+;===============================================================================
+; handles controller input:
+;
+; being a separate routine, we can just return after processing a button press,
+; avoiding an additional jump outside of the switch block
+;-------------------------------------------------------------------------------
+        ; wait for a button press. this will halt the CPU
+        ; between vblanks until a new button is pressed
+        call    getButton
+
+        ; TODO: soft reset (A+B+SELECT+START)
+
+        bit     BUTTON_DOWN,    A       ; cursor down?
+        jp      nz,     cursorDown
+
+        bit     BUTTON_UP,      A       ; cursor up?
+        jp      nz,     cursorUp
+
+        bit     BUTTON_LEFT,    A       ; cursor left?
+        jp      nz,     cursorLeft
+
+        bit     BUTTON_RIGHT,   A       ; cursor right?
+        jp      nz,     cursorRight
+
+        bit     BUTTON_B,       A       ; B button?
+        jp      nz,     doAction
+
+        bit     BUTTON_A,       A       ; A button?
+        jp      nz,     doUndo
+
+        ret
 
 
 update:
@@ -1168,6 +1208,10 @@ doUndo:
         call    undo.disable
         call    movePile
         call    undo.enable
+
+        ; check if the next undo move is "chained"
+        call    undo.isChained
+        jr      nz,     doUndo
 
         ret
 

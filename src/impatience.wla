@@ -86,45 +86,7 @@ init:
         ;;call    fortunes.init
         ;;call    klondike.init
 
-        ; play loop:
-        ;=======================================================================
-@main:  call    handleControls
-
-        jr      @main
-
-
-handleControls:
-;===============================================================================
-; handles controller input:
-;
-; being a separate routine, we can just return after processing a button press,
-; avoiding an additional jump outside of the switch block
-;-------------------------------------------------------------------------------
-        ; wait for a button press. this will halt the CPU
-        ; between vblanks until a new button is pressed
-        call    getButton
-
-        ; TODO: soft reset (A+B+SELECT+START)
-
-        bit     BUTTON_DOWN,    A       ; cursor down?
-        jp      nz,     tableau.cursorDown
-
-        bit     BUTTON_UP,      A       ; cursor up?
-        jp      nz,     tableau.cursorUp
-
-        bit     BUTTON_LEFT,    A       ; cursor left?
-        jp      nz,     tableau.cursorLeft
-
-        bit     BUTTON_RIGHT,   A       ; cursor right?
-        jp      nz,     tableau.cursorRight
-
-        bit     BUTTON_A,       A       ; A button?
-        jp      nz,     tableau.doUndo
-
-        bit     BUTTON_B,       A       ; B button?
-        jp      nz,     tableau.doAction
-
-        ret
+        jp      tableau.play
 
 
 zero:

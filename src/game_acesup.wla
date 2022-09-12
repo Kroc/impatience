@@ -109,13 +109,15 @@ deal:
 ;-------------------------------------------------------------------------------
         ld      E,      INDEX_DEPOT1
         call    tableau.dealCard
+        call    undo.chain
         ld      E,      INDEX_DEPOT2
         call    tableau.dealCard
+        call    undo.chain
         ld      E,      INDEX_DEPOT3
         call    tableau.dealCard
+        call    undo.chain
         ld      E,      INDEX_DEPOT4
         jp      tableau.dealCard
-
 
 tapCard:
 ;===============================================================================

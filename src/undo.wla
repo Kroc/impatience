@@ -90,9 +90,6 @@ push:
         and     A                       ; (set flags!)
         ret     nz                      ; exit if flag is non-zero
 
-        ;-----------------------------------------------------------------------
-        push    HL                      ; preserve incoming HL
-
         ; sanity check: ignore if source & destination are the same;
         ; this can happen if you pick up cards from a pile and drop
         ; them back on the same pile
@@ -102,6 +99,9 @@ push:
         ld      A,      [tmp_dst]       ; undo destination pile
         cp      L                       ; one and the same?
         ret     z                       ; return early if same
+
+        ;----------------------------------------------------------------------
+        push    HL                      ; preserve incoming HL
 
         ld      HL,     moves           ; increment the undo moves counter
         inc     [HL]
@@ -124,6 +124,50 @@ push:
         ret
 
 
+chain:
+;===============================================================================
+; links the previous undo move to the next one so that they undo together:
+;
+;-------------------------------------------------------------------------------
+        ; if undo is surpressed, do nothing:
+        ;
+        ld      A,      [disabled]      ; check undo-disabled flag
+        and     A                       ; (set flags!)
+        ret     nz                      ; exit if flag is non-zero
+
+        ; set the hi-bit on the undo move source index
+        ; (indicates a chain of moves)
+        ;-----------------------------------------------------------------------
+        push    HL
+
+        ld      HL,     moves
+        ld      L,      [HL]
+        ld      H,      >undo_src
+
+        set     7,      [HL]
+
+        pop     HL
+        ret
+
+
+isChained:
+;===============================================================================
+; is the current move atop the undo buffer chained?
+;
+; out:  z       zero-flag is CLEAR (`nz`) if move is chained
+;       *       (preserved)
+;-------------------------------------------------------------------------------
+        push    HL
+
+        ld      HL,     moves
+        ld      L,      [HL]
+        ld      H,      >undo_src
+        bit     7,      [HL]
+
+        pop     HL
+        ret
+
+
 pop:
 ;===============================================================================
 ; pops a move from the undo buffer:
@@ -135,14 +179,17 @@ pop:
 ;       L       source pile index
 ;       E       destination pile index
 ;       A       card index in source pile
+;       D       bit 7 is set if this move is chained with the next
 ;       BC      (preserved)
-;       D, H    (clobbered)
+;       H       (clobbered)
 ;-------------------------------------------------------------------------------
         ; if undo is surpressed, do nothing:
         ;
         ld      A,      [disabled]      ; check undo-disabled flag
         and     A                       ; (set flags!)
         ret     nz                      ; exit if flag is non-zero
+
+        ld      D,      A               ; A is zero so clear chain flag now
 
         ; get the current position in the undo buffer (and decrement it)
         ;-----------------------------------------------------------------------
@@ -164,5 +211,11 @@ pop:
         ld      H,      >undo_src
         ld      L,      [HL]
 
-        ccf                             ; flip carry bit,
-        ret                             ;  return clear = OK
+        ; move the chain flag into D:
+        ;-----------------------------------------------------------------------
+        sla     L                       ; take bit-7 from source index
+        rr      D                       ; shift carry into D, clear carry
+        rr      L                       ; fix source index
+
+        ;-----------------------------------------------------------------------
+        ret                             ;  return carry clear = OK
