@@ -1205,13 +1205,12 @@ doUndo:
         call    undo.pop                ; retrieve the last move
         ret     c                       ; return if buffer empty
 
-        call    undo.disable
-        call    movePile
+        call    undo.disable            ; don't add the move back
+        call    movePileUndo            ;  to the undo buffer!
         call    undo.enable
 
-        ; check if the next undo move is "chained"
-        call    undo.isChained
-        jr      nz,     doUndo
+        call    undo.isChained          ; check if the next undo is "chained"
+        jr      nz,     doUndo          ; if so, also undo that
 
         ret
 
@@ -1436,7 +1435,7 @@ movePile:
         ; so push a backup on to the stack for after the move
         push    HL
         ; put aside destination until we've handled the source pile first
-        push    DE
+@undo:  push    DE
 
         ; pick up source cards:
         ;-----------------------------------------------------------------------
@@ -1484,3 +1483,20 @@ movePile:
         ; and sprites are rendered before continuing as the caller might
         ; start making more tilemap changes
         jp      waitVBlank
+
+
+movePileUndo
+;===============================================================================
+; moves cards between piles, but leaves the cursor
+; on the destination (rather than source) pile:
+;
+; this is used to move cards when undoing a move,
+; as you want the cursor to stay where it is
+;
+; in:   L       source pile index (`INDEX_*`)
+;       A       card-index to take cards from, to the end of the pile
+;       E       destination pile index
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+        push    DE                      ; push destination pile index
+        jr      movePile@undo           ; jump into routine, skipping source
