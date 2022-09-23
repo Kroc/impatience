@@ -765,7 +765,8 @@ getLastCard:
 ; gets the value (and address) of the last (top-most) card in a pile:
 ;
 ; in:   L       pile index (`INDEX_*`)
-; out:  A       value of the last card in the pile
+; out:  A       value of the last card in the pile, 0 = empty pile
+;       z       zero-flag is set according to the card, +z = empty pile
 ;       DE      pool address of the last card in the pile,
 ;               NOT the base pool address!
 ;       L       (preserved)

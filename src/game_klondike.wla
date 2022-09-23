@@ -229,7 +229,7 @@ init:
         call    screenOn
 
         ; everything ready, set this as the current running game
-        ld      HL,     game_id
+        ld      HL,     game.id
         ld      [HL],   GAME_KLONDIKE
 
         ld      L,      INDEX_DECK

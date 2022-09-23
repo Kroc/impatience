@@ -118,46 +118,6 @@ clearCursorCards:
         jp      cursor.clearCards
 
 
-play:
-;===============================================================================
--       call    handleControls
-        jr      -
-
-
-handleControls:
-;===============================================================================
-; handles controller input:
-;
-; being a separate routine, we can just return after processing a button press,
-; avoiding an additional jump outside of the switch block
-;-------------------------------------------------------------------------------
-        ; wait for a button press. this will halt the CPU
-        ; between vblanks until a new button is pressed
-        call    getButton
-
-        ; TODO: soft reset (A+B+SELECT+START)
-
-        bit     BUTTON_DOWN,    A       ; cursor down?
-        jp      nz,     cursorDown
-
-        bit     BUTTON_UP,      A       ; cursor up?
-        jp      nz,     cursorUp
-
-        bit     BUTTON_LEFT,    A       ; cursor left?
-        jp      nz,     cursorLeft
-
-        bit     BUTTON_RIGHT,   A       ; cursor right?
-        jp      nz,     cursorRight
-
-        bit     BUTTON_B,       A       ; B button?
-        jp      nz,     doAction
-
-        bit     BUTTON_A,       A       ; A button?
-        jp      nz,     doUndo
-
-        ret
-
-
 update:
 ;===============================================================================
 ; queue changes to the tableau to be drawn during v-blank:
@@ -1160,28 +1120,13 @@ cursorPosForCard:
         ret
 
 
-doAction:
+tapCard:
 ;===============================================================================
-; button pressed; pick up a pile / drop held cards
-; or auto-play, according to context:
-;
+; button pressed; pick up a pile / drop held cards:
 ;-------------------------------------------------------------------------------
-        ld      HL,     game_id         ; ID of game currently running
-        ld      C,      [HL]            ; (we will need to reuse HL & A)
-
-        ; retrieve the pile being pointed at (L)
-        ; and the card-index (A) in that pile
-        rst     rst_getPointPile
-
-        ; which game is currently running?
-        dec     C                       ; was it `1`?
-        jp      z,      acesup.tapCard
-
-        ;-----------------------------------------------------------------------
         ; is the cursor already holding any cards?
         ;
-        ; get the card-count of the cursor's pile
-        ld      L,      INDEX_CURSOR
+        ld      L,      INDEX_CURSOR    ; get card-count of the cursor's pile
         rst     piles.rst_pileCount
 
         ; retrieve current pile index (L) and the card index (A)
@@ -1197,24 +1142,6 @@ doAction:
         jp      pointToPile
 
 
-doUndo:
-;===============================================================================
-; undoes the last move:
-;
-;-------------------------------------------------------------------------------
-        call    undo.pop                ; retrieve the last move
-        ret     c                       ; return if buffer empty
-
-        call    undo.disable            ; don't add the move back
-        call    movePileUndo            ;  to the undo buffer!
-        call    undo.enable
-
-        call    undo.isChained          ; check if the next undo is "chained"
-        jr      nz,     doUndo          ; if so, also undo that
-
-        ret
-
-
 pickPile:
 ;===============================================================================
 ; pick up a pile:
@@ -1223,9 +1150,9 @@ pickPile:
 ; index, down to the top of the pile. the cards will be removed from the pile,
 ; converted into sprites, and placed in the cursor's pile
 ;
-; WARNING: this routine will not move the cursor after the cards have been
-;          removed from the pile, meaning the cursor will be pointing to an
-;          invalid index!
+; WARNING:      this routine will not move the cursor after the cards have been
+;               removed from the pile, meaning the cursor will be pointing to
+;               an invalid index!
 ;
 ; in:   L       index (`INDEX_*`) of the source pile
 ;       A       index of the card in the pile to start from (0-based)
@@ -1399,7 +1326,7 @@ dealCard:
 
         ; with the source pile implied,
         ; fall-through to move one card
-        ;
+        ; ...
 
 moveTopCard:
 ;===============================================================================
@@ -1414,7 +1341,7 @@ moveTopCard:
 
         ; with the index of the last card,
         ; fall through to move the card
-        ;
+        ; ...
 
 movePile:
 ;===============================================================================

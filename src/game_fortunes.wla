@@ -226,7 +226,7 @@ init:
         call    screenOn
 
         ; everything ready, set this as the current running game
-        ld      HL,     game_id
+        ld      HL,     game.id
         ld      [HL],   GAME_FORTUNES
 
         ; move the cursor to the card in the first depot pile
