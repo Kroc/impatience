@@ -102,24 +102,6 @@ init:
         jp      tableau.pointToPile
 
 
-deal:
-;===============================================================================
-; deals a card onto each pile:
-;
-;-------------------------------------------------------------------------------
-        ld      E,      INDEX_DEPOT1
-        call    tableau.dealCard
-        call    undo.chain
-        ld      E,      INDEX_DEPOT2
-        call    tableau.dealCard
-        call    undo.chain
-        ld      E,      INDEX_DEPOT3
-        call    tableau.dealCard
-        call    undo.chain
-        ld      E,      INDEX_DEPOT4
-        jp      tableau.dealCard
-
-
 tapCard:
 ;===============================================================================
 ; in:   L       index (`INDEX_*`) of pile pointed at
@@ -181,7 +163,7 @@ tapCard_depot:
         ; and lower in rank than another card on the tableau
         ;
         pop     HL                      ; retrieve the source pile again
-        jp      c,      tableau.discardCard
+        jp      c,      discardCard     ; remove card (and check win/loss)
 
         ; if no card matched, it might still be possible to move the card
         ; to an empty space; look for the next blank space, starting from
@@ -205,7 +187,7 @@ tapCard_depot:
         ld      E,      A               ; load this into E for the read
         ld      A,      [DE]            ; read the pile count
         and     A,      A               ; (set flags!)
-        jp      z,      tableau.moveTopCard
+        jp      z,      shiftCard
         ; pile + 2:
         ld      A,      H               ; retrieve that pile number
         inc     A                       ; move to next pile number
@@ -215,7 +197,7 @@ tapCard_depot:
         ld      E,      A               ; load this into E for the read
         ld      A,      [DE]            ; read the pile count
         and     A,      A               ; (set flags!)
-        jp      z,      tableau.moveTopCard
+        jp      z,      shiftCard
         ; pile + 3:
         ld      A,      H               ; retrieve that pile number
         inc     A                       ; move to next pile number
@@ -224,7 +206,7 @@ tapCard_depot:
         ld      E,      A               ; load this into E for the read
         ld      A,      [DE]            ; read the pile count
         and     A,      A               ; (set flags!)
-        jp      z,      tableau.moveTopCard
+        jp      z,      shiftCard
 
         ; TODO: if there is no match, do some kind of "not valid" animation
         ret
@@ -283,15 +265,58 @@ tapCard_deck:
         rst     piles.rst_pileCount
         ret     z
 
-        ; deal a card from the deck to each pile:
-        jp      deal
+        ; fallthrough
+        ; ...
 
+deal:
+;===============================================================================
+; deals a card onto each pile:
+;
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+        ld      E,      INDEX_DEPOT1
+        call    tableau.dealCard
+        call    undo.chain
+        ld      E,      INDEX_DEPOT2
+        call    tableau.dealCard
+        call    undo.chain
+        ld      E,      INDEX_DEPOT3
+        call    tableau.dealCard
+        call    undo.chain
+        ld      E,      INDEX_DEPOT4
+        call    tableau.dealCard
+        
+        jp      checkWinOrLose
+
+
+discardCard:
+;===============================================================================
+; move a depot card out of play:
+;
+; in:   L       source pile index
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+        ld      E,      INDEX_DISCARD
+
+        ; fallthrough
+        ; ...
+
+shiftCard:
+;===============================================================================
+; in:   L       source pile index
+;       E       destination pile index
+; out:  *       (clobbered)
+;-------------------------------------------------------------------------------
+        call    tableau.moveTopCard
+
+        ; fallthrough
+        ; ...
 
 checkWinOrLose:
 ;===============================================================================
 ; check the state of the game for a win or lose condition:
 ;
-; for Aces Up, a win occurs when each depot contains 1 ace each
+; for Aces Up, a win occurs when each depot contains 1 Ace each
 ; (with no other cards), and the deck has been exhausted
 ;
 ; a loss occurs when the deck is exhausted but there are no moves
