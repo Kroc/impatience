@@ -1,21 +1,21 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32 playfield.
-; for our purposes we place the menu on the left and the playfield next to it,
-; therefore the playfield begins at X = 12 and not the top-left (X = 0)
-.DEF    TABLEAU_TOP     0
-.DEF    TABLEAU_LEFT    MENU_WIDTH
+; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32 scrollable
+; region. since the tableu may need to scroll a bit, we place the menu above
+; the playfield, therefore the playfield does not begin at Y = 0!
+;
+.DEF    TABLEAU_TOP     MENU_HEIGHT
+.DEF    TABLEAU_LEFT    0
 .DEF    TABLEAU_ADDR    \
         tilemap.front_buffer + (TABLEAU_TOP * TILEMAP_WIDTH) + TABLEAU_LEFT
-.DEF    TABLEAU_WIDTH   TILEMAP_WIDTH - MENU_WIDTH
-.DEF    TABLEAU_HEIGHT  TILEMAP_HEIGHT
+.DEF    TABLEAU_WIDTH   TILEMAP_WIDTH
+.DEF    TABLEAU_HEIGHT  TILEMAP_HEIGHT-TABLEAU_TOP
 
 
 .RAMSECTION "Cursor"    RETURNORG
         ;-----------------------------------------------------------------------
-        ; the index of the Pile struct that the cursor is pointing to;
-        ; e.g. deck / depot
+        ; the pile index that the cursor is pointing to; e.g. deck / depot
         pile_point      BYTE
         ; the number of the card in the pile the cursor is pointing at.
         ; note that this is 0-based and not 1-based like the pile size!
@@ -66,25 +66,15 @@ clearTiles:
 ; clears the tableau area, i.e. where cards are played:
 ; NOTE: does *not* refresh the screen
 ;-------------------------------------------------------------------------------
-        ld      A,      TILE_TABLEAU_BG
         ; starting address of the tableau in the *front buffer*
         ld      HL,     TABLEAU_ADDR
-        ; (number of tiles to skip to next row)
-        ld      DE,     TILEMAP_WIDTH - SCREEN_WIDTH
+        ld      A,      TILE_TABLEAU_BG ; tile index to write
 
-        ld      C,      TABLEAU_HEIGHT
-@row:   ;-----------------------------------------------------------------------
-.REPEAT TABLEAU_WIDTH
-        ld      [HL+],  A               ; set cell to empty background tile
-.ENDR
-        ; we only clear 20 out of 32 columns (menu area is preserved),
-        ; so move to the next row by skipping ahead over the menu
-        add     HL,     DE
-
-        dec     C
-        jr      nz, @row
-
-        ret
+        ; TODO: 22 rows is 704 tiles, so call fill (256) twice, plus 192
+        ;       remainder. we should calculate this at assemble-time
+        call    fill
+        call    fill
+        jp      fill@x192
 
 
 allocateCursorPile:
@@ -203,7 +193,7 @@ drawPile:
         and     A,      A               ; (set flags!)
         ret     z                       ; if pile is unallocated, quit
 
-        call    piles.getPos            ; get pile row & col (BC)
+        call    piles.getPos            ; get pile row & col (B, C)
 
         ; is the pile empty?
         rst     piles.rst_pileCount     ; (get pile count, set flags)

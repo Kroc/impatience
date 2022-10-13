@@ -1,7 +1,22 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-.DEF    MENU_WIDTH      12
+; menu-items:
+;
+;       +--------------------+
+;       | ACES UP            | <- current game name
+;       |                    |
+;       |   CHANGE GAME      | <- change between games Aces Up, Klondike &c.
+;       |                    |
+;       |   RESTART GAME     | <- replay the game using the same cards
+;       |                    |
+;       |   OPTIONS          | < - configuration, about &c.
+;       |                    |
+;       +--------------------+
+;
+.DEF    MENU_WIDTH      TILEMAP_WIDTH
+.DEF    MENU_HEIGHT     10
+.DEF    MENU_ADDR       tilemap.front_buffer
 
 
 clear:
@@ -10,36 +25,52 @@ clear:
 ;
 ;-------------------------------------------------------------------------------
         ; (menu background tile)
-        ld      A,      $79
+        ld      A,      TILE_MENU_BG
         ; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32
-        ; scrollable region. for our purposes we place the menu on
-        ; the left of the playfield
+        ; scrollable region. since the tableu may need to scroll a bit,
+        ; we place the menu above the playfield
         ld      HL,     tilemap.front_buffer
-        ; number of tiles to skip to next row
-        ld      DE,     TILEMAP_WIDTH-MENU_WIDTH
 
-        ;-----------------------------------------------------------------------
-        ld      C,      TILEMAP_HEIGHT  ; 32 rows
-@row:   ld      B,      MENU_WIDTH      ; 12 columns
-@col:   ld      [HL+],  A               ; set cell to menu background tile
-        dec     B
-        jr      nz, @col
-        
-        ; we only clear 12 out of 32 tiles,
-        ; so move to the next row by skipping some
-        add     HL,     DE
-
-        dec     C
-        jr      nz, @row
+        ; even though the screen is 20 out of 32 tiles wide, we fill the whole
+        ; width to ensure the menu area remains white if the tableu scrolls
+        ;
+        ; TODO: 10 rows is 320 tiles, so call fill (256), plus 64 remainder.
+        ;       we should calculate this at assemble-time
+        call    fill
+        call    fill@x64
 
         ; print the title:
-        ld      HL,     tilemap.front_buffer + 32 + 1
+        ld      HL,     MENU_ADDR + (1 * TILEMAP_WIDTH) + 1
         ld      DE,     @impatience
         call    print_str
 
-        ; TODO: print the menu:
+        ; change game:
+        ld      HL,     MENU_ADDR + (3 * TILEMAP_WIDTH) + 3
+        ld      DE,     @change_game
+        call    print_str
 
+        ; restart game:
+        ld      HL,     MENU_ADDR + (5 * TILEMAP_WIDTH) + 3
+        ld      DE,     @restart_game
+        call    print_str
+
+        ; options:
+        ld      HL,     MENU_ADDR + (7 * TILEMAP_WIDTH) + 3
+        ld      DE,     @options
+        call    print_str
+
+        ; TODO: print the menu:
+        ;
         ret
 
+
+; strings:
+;===============================================================================
 @impatience:
         .str    "impatience"
+@change_game:
+        .str    "change game"
+@restart_game:
+        .str    "restart game"
+@options:
+        .str    "options"

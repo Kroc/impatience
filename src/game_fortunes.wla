@@ -25,12 +25,12 @@ piles.Begin
         ; pile-up,              pile-down
 piles.Define \
         fortunes_deck,          TYPE_DECK, 52, \
-        1,                      TABLEAU_LEFT + 1, \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 1, \
         INDEX_FOUNDATION4,      INDEX_DISCARD, \
         INDEX_DEPOT7,           INDEX_DEPOT1
 piles.Define \
         fortunes_discard,       TYPE_DISCARD, 52, \
-        1,                      TABLEAU_LEFT + 4, \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 4, \
         INDEX_DECK,             INDEX_FOUNDATION1, \
         INDEX_DEPOT8,           INDEX_DEPOT2
 ;
@@ -38,22 +38,22 @@ piles.Define \
 ;
 piles.Define \
         fortunes_foundation1,   TYPE_FOUNDATION | RULE_LOCKED, 13, \
-        1,                      TABLEAU_LEFT + 7, \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 7, \
         INDEX_DISCARD,          INDEX_FOUNDATION2, \
         INDEX_DEPOT9,           INDEX_DEPOT3
 piles.Define \
         fortunes_foundation2,   TYPE_FOUNDATION | RULE_LOCKED, 13, \
-        1,                      TABLEAU_LEFT + 10, \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 10, \
         INDEX_FOUNDATION1,      INDEX_FOUNDATION3, \
         INDEX_DEPOT10,          INDEX_DEPOT4
 piles.Define \
         fortunes_foundation3,   TYPE_FOUNDATION | RULE_LOCKED, 13, \
-        1,                      TABLEAU_LEFT + 13, \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 13, \
         INDEX_FOUNDATION2,      INDEX_FOUNDATION4, \
         INDEX_DEPOT11,          INDEX_DEPOT5
 piles.Define \
         fortunes_foundation4,   TYPE_FOUNDATION | RULE_LOCKED, 13, \
-        1,                      TABLEAU_LEFT + 16, \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 16, \
         INDEX_FOUNDATION3,      INDEX_DECK, \
         INDEX_DEPOT12,          INDEX_DEPOT6
 ;
@@ -61,32 +61,32 @@ piles.Define \
 ;
 piles.Define \
         fortunes_depot1,        PILE_DEPOT_FORTUNES, 1, \
-        7,                      TABLEAU_LEFT + 1, \
+        TABLEAU_TOP + 7,        TABLEAU_LEFT + 1, \
         INDEX_DEPOT6,           INDEX_DEPOT2, \
         INDEX_DECK,             INDEX_DEPOT7
 piles.Define \
         fortunes_depot2,        PILE_DEPOT_FORTUNES, 1, \
-        7,                      TABLEAU_LEFT + 4, \
+        TABLEAU_TOP + 7,        TABLEAU_LEFT + 4, \
         INDEX_DEPOT1,           INDEX_DEPOT3, \
         INDEX_DISCARD,          INDEX_DEPOT8
 piles.Define \
         fortunes_depot3,        PILE_DEPOT_FORTUNES, 1, \
-        7,                      TABLEAU_LEFT + 7, \
+        TABLEAU_TOP + 7,        TABLEAU_LEFT + 7, \
         INDEX_DEPOT2,           INDEX_DEPOT4, \
         INDEX_FOUNDATION1,      INDEX_DEPOT9
 piles.Define \
         fortunes_depot4,        PILE_DEPOT_FORTUNES, 1, \
-        7,                      TABLEAU_LEFT + 10, \
+        TABLEAU_TOP + 7,        TABLEAU_LEFT + 10, \
         INDEX_DEPOT3,           INDEX_DEPOT5, \
         INDEX_FOUNDATION2,      INDEX_DEPOT10
 piles.Define \
         fortunes_depot5,        PILE_DEPOT_FORTUNES, 1, \
-        7,                      TABLEAU_LEFT + 13, \
+        TABLEAU_TOP + 7,        TABLEAU_LEFT + 13, \
         INDEX_DEPOT4,           INDEX_DEPOT6, \
         INDEX_FOUNDATION3,      INDEX_DEPOT11
 piles.Define \
         fortunes_depot6,        PILE_DEPOT_FORTUNES, 1, \
-        7,                      TABLEAU_LEFT + 16, \
+        TABLEAU_TOP + 7,        TABLEAU_LEFT + 16, \
         INDEX_DEPOT5,           INDEX_DEPOT1, \
         INDEX_FOUNDATION4,      INDEX_DEPOT12
 ;
@@ -94,32 +94,32 @@ piles.Define \
 ;
 piles.Define \
         fortunes_depot7,        PILE_DEPOT_FORTUNES, 1, \
-        12,                     TABLEAU_LEFT + 1, \
+        TABLEAU_TOP + 12,       TABLEAU_LEFT + 1, \
         INDEX_DEPOT12,          INDEX_DEPOT8, \
         INDEX_DEPOT1,           INDEX_DECK
 piles.Define \
         fortunes_depot8,        PILE_DEPOT_FORTUNES, 1, \
-        12,                     TABLEAU_LEFT + 4, \
+        TABLEAU_TOP + 12,       TABLEAU_LEFT + 4, \
         INDEX_DEPOT7,           INDEX_DEPOT9, \
         INDEX_DEPOT2,           INDEX_DISCARD
 piles.Define \
         fortunes_depot9,        PILE_DEPOT_FORTUNES, 1, \
-        12,                     TABLEAU_LEFT + 7, \
+        TABLEAU_TOP + 12,       TABLEAU_LEFT + 7, \
         INDEX_DEPOT8,           INDEX_DEPOT10, \
         INDEX_DEPOT3,           INDEX_FOUNDATION1
 piles.Define \
         fortunes_depot10,       PILE_DEPOT_FORTUNES, 1, \
-        12,                     TABLEAU_LEFT + 10, \
+        TABLEAU_TOP + 12,       TABLEAU_LEFT + 10, \
         INDEX_DEPOT9,           INDEX_DEPOT11, \
         INDEX_DEPOT4,           INDEX_FOUNDATION2
 piles.Define \
         fortunes_depot11,       PILE_DEPOT_FORTUNES, 1, \
-        12,                     TABLEAU_LEFT + 13, \
+        TABLEAU_TOP + 12,       TABLEAU_LEFT + 13, \
         INDEX_DEPOT10,          INDEX_DEPOT12, \
         INDEX_DEPOT5,           INDEX_FOUNDATION3
 piles.Define \
         fortunes_depot12,       PILE_DEPOT_FORTUNES, 1, \
-        12,                     TABLEAU_LEFT + 16, \
+        TABLEAU_TOP + 12,       TABLEAU_LEFT + 16, \
         INDEX_DEPOT11,          INDEX_DEPOT7, \
         INDEX_DEPOT6,           INDEX_FOUNDATION4
 
@@ -129,10 +129,10 @@ init:
         call    waitVBlank
         
         ; temp: set scroll offset to move menu off-screen
-        ld      A,      MENU_WIDTH * 8
-        ldh     [<SCX], A
-        xor     A
+        ld      A,      8 * MENU_HEIGHT
         ldh     [<SCY], A
+        xor     A
+        ldh     [<SCX], A
 
         ; setup the tableau layout for the game
         ;-----------------------------------------------------------------------

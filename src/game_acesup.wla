@@ -21,32 +21,32 @@ piles.Begin
         ; pile-up,              pile-down
 piles.Define \
         acesup_deck,            TYPE_DECK, 52, \
-        1,                      TABLEAU_LEFT + 1, \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 1, \
         INDEX_DEPOT4,           INDEX_DEPOT1, \
         INDEX_DECK,             INDEX_DECK
 piles.Define \
         acesup_discard,         TYPE_DISCARD | RULE_LOCKED, 52, \
-        7,                      TABLEAU_LEFT + 1, \
+        TABLEAU_TOP + 7,        TABLEAU_LEFT + 1, \
         INDEX_DEPOT4,           INDEX_DEPOT1, \
         INDEX_DECK,             INDEX_DISCARD
 piles.Define \
         acesup_depot1,          TYPE_DEPOT_ACESUP, 13, \
-        1,                      TABLEAU_LEFT + 5, \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 5, \
         INDEX_DECK,             INDEX_DEPOT2, \
         INDEX_DEPOT1,           INDEX_DEPOT1
 piles.Define \
         acesup_depot2,          TYPE_DEPOT_ACESUP, 13, \
-        1,                      TABLEAU_LEFT + 8 \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 8 \
         INDEX_DEPOT1,           INDEX_DEPOT3, \
         INDEX_DEPOT2,           INDEX_DEPOT2
 piles.Define \
         acesup_depot3,          TYPE_DEPOT_ACESUP, 13, \
-        1,                      TABLEAU_LEFT + 11 \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 11 \
         INDEX_DEPOT2,           INDEX_DEPOT4, \
         INDEX_DEPOT3,           INDEX_DEPOT3
 piles.Define \
         acesup_depot4,          TYPE_DEPOT_ACESUP, 13, \
-        1,                      TABLEAU_LEFT + 14 \
+        TABLEAU_TOP + 1,        TABLEAU_LEFT + 14 \
         INDEX_DEPOT3,           INDEX_DECK, \
         INDEX_DEPOT4,           INDEX_DEPOT4
 
@@ -56,10 +56,10 @@ init:
         call    waitVBlank
 
         ; temp: set scroll offset to move menu off-screen
-        ld      A,      MENU_WIDTH * 8
-        ldh     [<SCX], A
-        xor     A
-        ldh     [<SCY], A
+        ;;ld      A,      8 * MENU_HEIGHT
+        ;;ldh     [<SCY], A
+        ;;xor     A
+        ;;ldh     [<SCX], A
 
         ; setup the tableau layout for the game
         ;-----------------------------------------------------------------------

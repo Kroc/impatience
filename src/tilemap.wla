@@ -74,6 +74,7 @@ tiles_main:
         MAP     "D"     = $7a           ; diamonds symbol
 .ENDA
 
+.DEF    TILE_MENU_BG            $79
 .DEF    TILE_TABLEAU_BG         $6f
 
 ; cards:
