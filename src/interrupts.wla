@@ -46,20 +46,29 @@
 ; these are the *logical* button constants for the game, not the ones used by
 ; the hardware, which are split across two bytes. these are `bit` numbers
 ;
-.DEF    BUTTON_RIGHT            0
-.DEF    BUTTON_LEFT             1
-.DEF    BUTTON_UP               2
-.DEF    BUTTON_DOWN             3
-.DEF    BUTTON_A                4
-.DEF    BUTTON_B                5
-.DEF    BUTTON_SELECT           6
-.DEF    BUTTON_START            7
+.DEF    BUTTON_RIGHT    0
+.DEF    BUTTON_LEFT     1
+.DEF    BUTTON_UP       2
+.DEF    BUTTON_DOWN     3
+.DEF    BUTTON_A        4
+.DEF    BUTTON_B        5
+.DEF    BUTTON_SELECT   6
+.DEF    BUTTON_START    7
 
 ; RAM for remembering joypad state:
 ;
 .RAMSECTION "Joypad"            RETURNORG
         ;-----------------------------------------------------------------------
-        joy_state               BYTE
+        ; which buttons have been *pressed* this frame
+        joy_state       BYTE
+        ; the current button held state: this is a bitmap of which buttons
+        ; are currently *held*. this is not the same thing as the press state
+        ; above that only indicates the initial press of a button and not the
+        ; contiunous held state, avoiding unwanted rapid-fire
+        joy_held        BYTE
+        ; button state from the previous frame: this is used to register
+        ; a button press, but prevent a button being held from rapid-firing
+        joy_prev        BYTE
 .ENDS
 
 ; overwrite the GameBoy v-blank interrupt entry-point:
@@ -128,11 +137,11 @@ irq_vblank:                                                                ;=34
         ; be the hi-byte of the address to copy from
         ld      A,      >sprites.attrs
 
-        ; whilst the DMA is occuring the CPU can only access HRAM,
-        ; therefore we must initialise the DMA and wait via a routine
-        ; running from HRAM. the routine has been copied into HRAM during
-        ; `init_interrupts`. B must be set to the number of loop iterations
-        ; to wait and C is set to the lo-byte of the DMA register
+        ; whilst the DMA is occuring the CPU can only access HRAM, therefore
+        ; we must initialise the DMA and wait via a routine running from HRAM.
+        ; the routine has been copied into HRAM during `init_interrupts`.
+        ; B must be set to the number of loop iterations to wait, and
+        ; C is set to the lo-byte of the DMA register
         ;
         ; despite using the information given here,
         ; <https://gbdev.io/pandocs/OAM_DMA_Transfer.html>,
@@ -171,7 +180,7 @@ irq_vblank:                                                                ;=34
         ldh     A,      [<JOYP]
         cpl     A
         and     A,      %00001111       ; mask out the other/unused bits
-        ld      [HL],   A               ; store the dpad state (lo-nybble)
+        ld      B,      A               ; retain the dpad state (lo-nybble)
 
         ; read button state:
         ;-----------------------------------------------------------------------
@@ -191,8 +200,29 @@ irq_vblank:                                                                ;=34
         cpl     A
         and     A,      %00001111       ; mask out the other/unused bits
         swap    A                       ; buttons go in the hi-nybble
-        or      A,      [HL]            ; combine with the lo-nybble,
-        ld      [HL],   A               ; and write back
+        or      A,      B               ; combine with the lo-nybble,
+        ld      B,      A
+
+        ; soft reset? a convenience feature in *many* games, and expected by
+        ; default nowadays in any homebrew; press A+B+SELECT+START to reboot
+        ; the game without having to power-cycle (or use the flash cart menu)
+        ;
+        cp      2^BUTTON_START | 2^BUTTON_SELECT | 2^BUTTON_A | 2^BUTTON_B
+        jp      z,      init
+
+        ld      [HL],   A
+
+        ; TODO: detect button changes:
+        ;-----------------------------------------------------------------------
+        ; truth table:
+        ;
+        ; prev: next:   new press?
+        ; 0     0       0 
+        ; 0     1       1 (pressed)
+        ; 1     1       0
+        ; 1     0       0 (released)
+        ;
+        ld      A,      [joy_prev]
 
         ;-----------------------------------------------------------------------
         ; no more work to be done,
@@ -266,8 +296,10 @@ init_interrupts:
         ldh     [<IRQ_ENABLE],   A      ; disallow each type of interrupt
         ldh     [<IRQ_FLAGS],    A      ; clear any 'pending' interrupts
 
-        ; clear interrupt handler work-RAM (note A = 0)
+        ; clear interrupt handler work-RAM
         ld      HL,     SECTIONSTART_Joypad
+        ld      [HL+],  A               ; (note A = 0)
+        ld      [HL+],  A
         ld      [HL+],  A
 
         ; write the DMA routine into HRAM:

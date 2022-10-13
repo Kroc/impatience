@@ -12,6 +12,18 @@
 .ENUMID GAME_KLONDIKE                   ; "Klondike"
 
 
+init:
+;===============================================================================
+        call    sprites.init
+        call    tilemap.init
+
+        call    acesup.init
+        ;;call    fortunes.init
+        ;;call    klondike.init
+
+        ; fallthrough
+        ; ...
+
 play:
 ;===============================================================================
 -       call    handleControls
@@ -25,12 +37,6 @@ handleControls:
 ; being a separate routine, we can just return after processing a button press,
 ; avoiding an additional jump outside of the switch block
 ;-------------------------------------------------------------------------------
-        ; soft reset? a convenience feature in *many* games, and expected by
-        ; default nowadays in any homebrew; press A+B+SELECT+START to reboot
-        ; the game without having to power-cycle (or use the flash cart menu)
-        ;
-        ; TODO: have to rework button reading to include half A-presses
-
         ; wait for a button press. this will halt the CPU
         ; between vblanks until a new button is pressed
         call    getButton
