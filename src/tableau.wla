@@ -12,8 +12,12 @@
 .DEF    TABLEAU_WIDTH   TILEMAP_WIDTH
 .DEF    TABLEAU_HEIGHT  TILEMAP_HEIGHT-TABLEAU_TOP
 
+.DEF    MODE_AUTO       0               ; cursor is under game control
+.DEF    MODE_USER       1               ; cursor is under user control
 
 .RAMSECTION "Cursor"    RETURNORG
+        ;-----------------------------------------------------------------------
+        mode            BYTE            ; to control different cursor behaviour
         ;-----------------------------------------------------------------------
         ; the pile index that the cursor is pointing to; e.g. deck / depot
         pile_point      BYTE
@@ -59,7 +63,7 @@ init:
         call    undo.clear
 
         ; next, clear the graphics
-        ;
+        ; ...
 
 clearTiles:
 ;===============================================================================
@@ -106,6 +110,51 @@ clearCursorCards:
         ld      HL,     hand_cards
         call    fill@x{_sizeof_hand_cards}
         jp      cursor.clearCards
+
+
+setCursorMode:
+;===============================================================================
+; set the cursor mode manually:
+;
+; in:   A       cursor mode constant, `MODE_*`
+; out:  A       (preserved)
+;-------------------------------------------------------------------------------
+        and     A,      A               ; (set flags)
+        jr      nz,     setCursorModeUser
+
+        ; fall through for auto-mode
+        ; ...
+
+setCursorModeAuto:
+;===============================================================================
+; out:  AF      (preserved)
+;-------------------------------------------------------------------------------
+        push    AF
+
+        ; hide the cursor, only the card(s) will be visible
+        ;
+        xor     A                       ; (set A to zero)
+        ld      [mode], A               ; record mode change
+        call    cursor.setSprite        ; change the cursor sprites
+
+        pop     AF
+        ret
+
+
+setCursorModeUser:
+;===============================================================================
+; out:  AF      (preserved)
+;-------------------------------------------------------------------------------
+        push    AF
+
+        ld      A,      MODE_USER
+        ld      [mode], A               ; record the mode change
+
+        ; reset the hand sprite to the default cursor
+        call    cursor.setSprite
+
+        pop     AF
+        ret
 
 
 update:
@@ -175,7 +224,7 @@ refresh:
         ld      L,      INDEX_DEPOT12
         
         ; just fall through to routine below
-        ;
+        ; ...
 
 drawPile:
 ;===============================================================================
@@ -309,7 +358,7 @@ drawPile:
 
         ; fall through to below to draw
         ; the singular face-up card!
-        ;
+        ; ...
 
 drawCard:
 ;===============================================================================
@@ -937,7 +986,7 @@ cursorPosForCard:
         ld      E,      A               ; save card-index for later comparison
         call    getCardPos              ; get the card's position in tiles
 
-        ld      A,      [cursor.mode]   ; check the cursor mode;
+        ld      A,      [mode]          ; check the cursor mode;
         and     A,      A               ; (set flags)
         jr      nz,     @user           ; diverge for user-mode
 
@@ -1168,7 +1217,7 @@ pickPile:
 
         ; build card sprites:
         ;=======================================================================
-        ld      A,      [cursor.mode]   ; check current cursor mode
+        ld      A,      [mode]          ; check current cursor mode
         and     A,      A               ; (set flags)
         jr      nz,     @user           ; user-mode?
 
@@ -1277,8 +1326,8 @@ dropPile:
         push    HL                      ; preserve destination pile index
         call    cursor.clearCards       ; remove cards in cursor's hand!
 
-        ld      A,      [cursor.mode]   ; for user-mode, restore the hand
-        call    cursor.setMode          ;  sprite to the no-cards default
+        ld      A,      [mode]          ; for user-mode, restore the hand
+        call    setCursorMode           ;  sprite to the no-cards default
 
 +       pop     DE                      ; retrieve destination pile into E
 
@@ -1362,7 +1411,7 @@ movePile:
         ; 2. card sprites will be built directly over the card(s) being moved
         ; 3. the move-destination (in px) will align to the pile
         ;
-        call    cursor.setModeAuto      ; (note: preserves A)
+        call    setCursorModeAuto       ; (note: preserves A)
         call    pickPile                ; pick up the card(s) in the pile
                                         ; (NOTE: all registers clobbered!)
 
@@ -1389,7 +1438,7 @@ movePile:
 
         ; the automatic move is complete,
         ; switch back to user-controlled cursor
-        call    cursor.setModeUser
+        call    setCursorModeUser
         ; get the cursor position for the user-controlled cursor
         call    cursorPosForCard
         ; manually set the cursor position to avoid movement

@@ -6,9 +6,6 @@
 .DEF    CURSOR_START_X  80
 .DEF    CURSOR_START_Y  72
 
-.DEF    MODE_AUTO       0               ; cursor is under game control
-.DEF    MODE_USER       1               ; cursor is under user control
-
 ; (musn't cross an 8-bit boundary for a micro-optimisation)
 ;
 .RAMSECTION "Cursor"    BITWINDOW 8     RETURNORG
@@ -18,8 +15,6 @@
         dest_y          BYTE            ; new Y-position to move cursor to
         ypos            BYTE            ; current cursor Y-position (px)
         moving          BYTE            ; flag to indicate cursor is moving
-        ;-----------------------------------------------------------------------
-        mode            BYTE            ; to control different cursor behaviour
 .ENDS
 
 .DEF    CURSOR_NONE     0               ; cursor is hidden
@@ -60,51 +55,6 @@ init:
 
         ; flag the sprite changes to be uploaded during vblank
         jp      sprites.update
-
-
-setMode:
-;===============================================================================
-; set the cursor mode manually:
-;
-; in:   A       cursor mode constant, `MODE_*`
-; out:  A       (preserved)
-;-------------------------------------------------------------------------------
-        and     A,      A               ; (set flags)
-        jr      nz,     setModeUser     ; handle user mode
-
-        ; fall through for auto-mode
-        ; ...
-
-setModeAuto:
-;===============================================================================
-; out:  AF      (preserved)
-;-------------------------------------------------------------------------------
-        push    AF
-
-        ; hide the cursor, only the card(s) will be visible
-        ;
-        xor     A                       ; (set A to zero)
-        ld      [mode], A               ; record mode change
-        call    setSprite               ; change the cursor sprites
-
-        pop     AF
-        ret
-
-
-setModeUser:
-;===============================================================================
-; out:  AF      (preserved)
-;-------------------------------------------------------------------------------
-        push    AF
-
-        ld      A,      MODE_USER
-        ld      [mode], A               ; record the mode change
-
-        ; reset the hand sprite to the default cursor
-        call    setSprite
-
-        pop     AF
-        ret
 
 
 setSprite:
