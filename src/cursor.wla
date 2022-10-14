@@ -6,8 +6,8 @@
 .DEF    CURSOR_START_X  80
 .DEF    CURSOR_START_Y  72
 
-.DEF    MODE_USER       0               ; cursor is under user control
-.DEF    MODE_AUTO       1               ; cursor is under game control
+.DEF    MODE_AUTO       0               ; cursor is under game control
+.DEF    MODE_USER       1               ; cursor is under user control
 
 ; (musn't cross an 8-bit boundary for a micro-optimisation)
 ;
@@ -21,6 +21,11 @@
         ;-----------------------------------------------------------------------
         mode            BYTE            ; to control different cursor behaviour
 .ENDS
+
+.DEF    CURSOR_NONE     0               ; cursor is hidden
+.DEF    CURSOR_UP       1               ; upward pointing hand
+.DEF    CURSOR_RIGHT    2               ; rightward pointing hand
+.DEF    CURSOR_HOLD     3               ; card-holding hand
 
 
 init:
@@ -65,39 +70,86 @@ setMode:
 ; out:  A       (preserved)
 ;-------------------------------------------------------------------------------
         and     A,      A               ; (set flags)
-        jr      nz,     setModeAuto     ; handle auto mode
+        jr      nz,     setModeUser     ; handle user mode
 
-        ; fall through for user-mode
-        ;
-
-setModeUser:
-;===============================================================================
-; out:  AF      (preserved)
-;-------------------------------------------------------------------------------
-        push    AF
-        ; reset the hand sprite to the default cursor
-        ld      A,      SPRITE_HAND_LHS
-        ld      [sprites.attrs.1.tile], A
-        ld      A,      SPRITE_HAND_RHS
-        ld      [sprites.attrs.2.tile], A
-        xor     A
-        ld      [mode], A
-        pop     AF
-        ret
-
+        ; fall through for auto-mode
+        ; ...
 
 setModeAuto:
 ;===============================================================================
 ; out:  AF      (preserved)
 ;-------------------------------------------------------------------------------
         push    AF
+
         ; hide the cursor, only the card(s) will be visible
-        xor     A                       ; set A to 0 = SPRITE_NONE
-        ld      [sprites.attrs.1.tile], A
-        ld      [sprites.attrs.2.tile], A
-        inc     A
-        ld      [mode], A
+        ;
+        xor     A                       ; (set A to zero)
+        ld      [mode], A               ; record mode change
+        call    setSprite               ; change the cursor sprites
+
         pop     AF
+        ret
+
+
+setModeUser:
+;===============================================================================
+; out:  AF      (preserved)
+;-------------------------------------------------------------------------------
+        push    AF
+
+        ld      A,      MODE_USER
+        ld      [mode], A               ; record the mode change
+
+        ; reset the hand sprite to the default cursor
+        call    setSprite
+
+        pop     AF
+        ret
+
+
+setSprite:
+;===============================================================================
+; selects which image to use for the cursor:
+;
+; NOTE: does *not* set the sprite update flag; it's assumed you'll be doing
+;       other tile/sprite changes you'll want to queue up first
+;
+; in:   A       a `CURSOR_*` constant
+; out:  BC|DE|HL(preserved)
+;       AF      (clobbered)
+;-------------------------------------------------------------------------------
+        and     A                       ; (set flags)
+        jr      z,      @none           ; 0 = hide cursor
+        dec     A
+        jr      z,      @up             ; 1 = upward pointing hand
+        dec     A
+        ret     nz                      ; exit for any value > 2
+
+        ; 2 = card-holding hand
+@hold:  ld      A,      SPRITE_HOLD_LHS
+        ld      [sprites.attrs.1.tile], A
+        ld      A,      SPRITE_HOLD_RHS
+        ld      [sprites.attrs.2.tile], A
+        ret
+
+        ; hide the cursor:
+        ; note that A is already zero
+@none:  ld      [sprites.attrs.1.tile], A
+        ld      [sprites.attrs.2.tile], A
+        ret
+
+        ; upward pointing hand:
+@up:    ld      A,      SPRITE_HAND_LHS
+        ld      [sprites.attrs.1.tile], A
+        ld      A,      SPRITE_HAND_RHS
+        ld      [sprites.attrs.2.tile], A
+        ret
+
+        ; rightward pointing hand:
+@right: ld      A,      SPRITE_MENU_LHS
+        ld      [sprites.attrs.1.tile], A
+        ld      A,      SPRITE_MENU_RHS
+        ld      [sprites.attrs.2.tile], A
         ret
 
 
@@ -255,13 +307,14 @@ moveToTile:
 
         ; offset the cursor a little so that it appears
         ; over the cards rather than on the outside edge
+        ; NOTE: assumes user mode!
         ld      A,      5
         add     A,      B
         ld      B,      A
         dec     C
 
         ; fall-through to set the cursor destination
-        ;
+        ; ...
 
 moveToScrXY:
 ;===============================================================================

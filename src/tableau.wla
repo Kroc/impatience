@@ -79,8 +79,8 @@ clearTiles:
 
 allocateCursorPile:
 ;===============================================================================
-        ; configure the pile for holding cards in the cursor hand
-        ;-----------------------------------------------------------------------
+; configure the pile for holding cards in the cursor hand:
+;-------------------------------------------------------------------------------
         ld      BC,     pile_template   ; the ROM template to copy from
         ld      L,      INDEX_CURSOR    ; which pile to allocate
         jp      piles.allocate
@@ -347,7 +347,7 @@ drawCard:
         ; card -- one that cannot be played. these are drawn in 'greyed-out'
         ; graphics. because the original mono GameBoy only has 1 background
         ; tile palette, we can't just recolour existing tiles and instead
-        ; have to provide a second disabled set of card tiles in VRAM
+        ; have to provide a second disabled set of card tiles in VRAM >:[
         ;
         ; I've arranged VRAM such that the enabled and disabled card tiles
         ; are exactly... $80 apart! in practice, this works in reverse because
@@ -363,23 +363,23 @@ drawCard:
         ; middle:
         ;-----------------------------------------------------------------------
         ld      A,      TILE_CARD_Y2X1
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ld      A,      TILE_CARD_Y2X2
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ld      A,      TILE_CARD_Y2X3
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
         call    drawCardEdgeTop@next    ; move to the next row
         ld      A,      TILE_CARD_Y3X1
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ld      A,      TILE_CARD_Y3X2
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ld      A,      TILE_CARD_Y3X3
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ;-----------------------------------------------------------------------
         ; bottom-left: suit
@@ -388,13 +388,13 @@ drawCard:
         ld      A,      D               ; retrieve card value once again
         and     MASK_SUIT               ; mask out the other bits
         add     TILE_CARD_Y4X1
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ;-----------------------------------------------------------------------
         ; bottom-middle:
         ;-----------------------------------------------------------------------
         ld      A,      TILE_CARD_Y4X2
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ;-----------------------------------------------------------------------
         ; bottom-right: ordinal
@@ -402,7 +402,7 @@ drawCard:
         ld      A,      D               ; retrieve ordinal from earlier
         and     MASK_RANK | MASK_COLOUR ; trim out the other bits
         add     TILE_CARD_Y4X3-1        ; offset the tile with the ordinal
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
 
         ret
@@ -440,7 +440,7 @@ drawCardEdgeTop:
         ; card -- one that cannot be played. these are drawn in 'greyed-out'
         ; graphics. because the original mono GameBoy only has 1 background
         ; tile palette, we can't just recolour existing tiles and instead
-        ; have to provide a second disabled set of card tiles in VRAM
+        ; have to provide a second disabled set of card tiles in VRAM >:[
         ;
         ; I've arranged VRAM such that the enabled and disabled card tiles
         ; are exactly... $80 apart! in practice, this works in reverse because
@@ -457,13 +457,13 @@ drawCardEdgeTop:
         ld      A,      D               ; return to the original card value
         and     MASK_RANK | MASK_COLOUR ; trim out the other bits
         add     TILE_CARD_Y1X1-1        ; offset the tile with the ordinal
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ;-----------------------------------------------------------------------
         ; top-middle:
         ;-----------------------------------------------------------------------
         ld      A,      TILE_CARD_Y1X2
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
         ;-----------------------------------------------------------------------
         ; top-right corner: suit
@@ -471,12 +471,12 @@ drawCardEdgeTop:
         ld      A,      D               ; return to the original card value
         and     MASK_SUIT               ; mask out the other bits
         add     TILE_CARD_Y1X3
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL+],  A               ; write the tile and advance
 
         ; fall through to automatically
         ; move to the next tilemap row
-        ;
+        ; ...
 
         ;=======================================================================
         ; move to the next tilemap row:
@@ -523,7 +523,7 @@ drawCardEdgeLeft:
         ; card -- one that cannot be played. these are drawn in 'greyed-out'
         ; graphics. because the original mono GameBoy only has 1 background
         ; tile palette, we can't just recolour existing tiles and instead
-        ; have to provide a second disabled set of card tiles in VRAM
+        ; have to provide a second disabled set of card tiles in VRAM >:[
         ;
         ; I've arranged VRAM such that the enabled and disabled card tiles
         ; are exactly... $80 apart! in practice, this works in reverse because
@@ -540,18 +540,18 @@ drawCardEdgeLeft:
         ld      A,      D               ; return to the original card value
         and     MASK_RANK | MASK_COLOUR ; trim out the other bits
         add     TILE_CARD_Y1X1-1        ; offset the tile with the ordinal
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL],   A               ; write the tile
         call    @next                   ; move to next tilemap row
         ;-----------------------------------------------------------------------
         ; middle-left:
         ;-----------------------------------------------------------------------
         ld      A,      TILE_CARD_Y2X1
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL],   A               ; write the tile
         call    @next                   ; move to next tilemap row
         ld      A,      TILE_CARD_Y3X1
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL],   A               ; write the tile
         call    @next                   ; move to next tilemap row
         ;-----------------------------------------------------------------------
@@ -560,7 +560,7 @@ drawCardEdgeLeft:
         ld      A,      D
         and     MASK_SUIT               ; mask out the other bits
         add     TILE_CARD_Y4X1
-        xor     E                       ; add the invalid bit, if present
+        xor     E                       ; add the disabled bit, if present
         ld      [HL],   A               ; write the tile
 
         ; move front-buffer address to the next column;
@@ -682,7 +682,7 @@ cursorLeft:
 
         ; card is disabled, move to
         ; the next pile instead
-        ;
+        ; ...
 
         ; move to the pile to the left:
         ;-----------------------------------------------------------------------
@@ -731,7 +731,7 @@ cursorRight:
 
         ; card is disabled, move to
         ; the next pile instead
-        ;
+        ; ...
 
         ; move to the pile to the right:
         ;-----------------------------------------------------------------------
@@ -777,7 +777,7 @@ cursorUp:
 
         ; card is disabled, move to
         ; the next pile instead
-        ;
+        ; ...
 
         ; move up to the next pile:
         ;-----------------------------------------------------------------------
@@ -839,7 +839,7 @@ cursorDown:
 
         ; fall through to below
         ; to point to the new pile!
-        ;
+        ; ...
 
 pointToPile:
 ;===============================================================================
@@ -858,7 +858,7 @@ pointToPile:
         dec     A                       ; (adjust to 0-based)
 
         ; fall through below
-        ;
+        ; ...
 
 pointToCard:
 ;===============================================================================
@@ -872,7 +872,7 @@ pointToCard:
 ;       A       (clobbered)
 ;       BC, DE  (clobbered)
 ;-------------------------------------------------------------------------------
-        ld      [card_point],   A       ; save card index to point to: (0-based)
+        ld      [card_point],   A       ; save card index to point to (0-based)
 
         ; calculate the exact X/Y position in pixels to move the cursor to,
         ; accounting for the specific card in the pile and the cursor mode
@@ -882,12 +882,14 @@ pointToCard:
         ld      A,              L
         ld      [pile_point],   A
 
+        ; move the cursor to these exact X/Y co-ords
         jp      cursor.moveToScrXY
 
 
 setPointPile:
 ;===============================================================================
-; sets which pile the cursor is pointing to (but doesn't move the cursor)
+; sets which pile the cursor is pointing to:
+; (but doesn't move the cursor)
 ;
 ; in:   L       index (`INDEX_*`) of the pile
 ; out:  A       index of the last card in the pile
@@ -898,7 +900,7 @@ setPointPile:
 
         ; fall through to below, using
         ; the last card index
-        ;
+        ; ...
 
 setPointCard:
 ;===============================================================================
@@ -936,8 +938,8 @@ cursorPosForCard:
         call    getCardPos              ; get the card's position in tiles
 
         ld      A,      [cursor.mode]   ; check the cursor mode;
-        and     A,      A
-        jr      z,      @user
+        and     A,      A               ; (set flags)
+        jr      nz,     @user           ; diverge for user-mode
 
         ;=======================================================================
         ; cursor auto-mode:
@@ -1056,7 +1058,7 @@ cursorPosForCard:
 +       call    sprites.tilePosToScrXY
 
         ; offset the cursor a little so that it appears
-        ; over the card's rather than on the outside edge
+        ; over the cards rather than on the outside edge
         inc     B                       ; 1px down
         dec     C                       ; 1px left
         ;-----------------------------------------------------------------------
@@ -1167,8 +1169,8 @@ pickPile:
         ; build card sprites:
         ;=======================================================================
         ld      A,      [cursor.mode]   ; check current cursor mode
-        and     A,      A               
-        jr      z,      @user           ; user-mode?
+        and     A,      A               ; (set flags)
+        jr      nz,     @user           ; user-mode?
 
         ; auto-mode:
         ;-----------------------------------------------------------------------
@@ -1186,10 +1188,8 @@ pickPile:
         ; user-mode:
         ;-----------------------------------------------------------------------
         ; change to the cursor hand sprite for holding cards
-@user:  ld      A,      SPRITE_HOLD_LHS
-        ld      [sprites.attrs.1.tile], A
-        ld      A,      SPRITE_HOLD_RHS
-        ld      [sprites.attrs.2.tile], A
+@user:  ld      A,      CURSOR_HOLD
+        call    cursor.setSprite
 
         ; set our starting X/Y position
         ; for building card sprites:

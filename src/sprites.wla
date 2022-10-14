@@ -10,14 +10,13 @@
         ;-----------------------------------------------------------------------
         attrs           INSTANCEOF Sprite 40            ; (160 bytes)
         ;-----------------------------------------------------------------------
-        card            BYTE            ; card value whilst building sprites
 .ENDS
 
 .SECTION "TilesSprites" ALIGN 16        RETURNORG
 ;###############################################################################
 
 .DEF    SPRITE_PALLETE1 %11001100       ; red suits
-.DEF    SPRITE_PALLETE2 %01001100       ; hand cursor, black suits
+.DEF    SPRITE_PALLETE2 %01001100       ; black suits, hand cursor
 
 tiles_sprites:
 ;-------------------------------------------------------------------------------
@@ -30,6 +29,8 @@ tiles_sprites:
 .DEF    SPRITE_HAND_RHS         $08+2
 .DEF    SPRITE_HOLD_LHS         $00+4
 .DEF    SPRITE_HOLD_RHS         $08+4
+.DEF    SPRITE_MENU_LHS         $00+6
+.DEF    SPRITE_MENU_RHS         $08+6
 
 ; card back rows 1 & 2, column 1 (left)
 .DEF    SPRITE_BACK_12X1        $60+4
