@@ -126,14 +126,6 @@ piles.Define \
 
 init:
 ;===============================================================================
-        call    waitVBlank
-        
-        ; temp: set scroll offset to move menu off-screen
-        ld      A,      8 * MENU_HEIGHT
-        ldh     [<SCY], A
-        xor     A
-        ldh     [<SCX], A
-
         ; setup the tableau layout for the game
         ;-----------------------------------------------------------------------
         ; completely clear the table of cards, both the piles and the storage

@@ -27,6 +27,9 @@
         flags           BYTE
 .ENDST
 
+; this is the maximum number of tiles that can be updated during v-blank
+; without overrunning the VRAM access window. technically this can be increased
+; to 40 but there might not be time for the sprite DMA afterwards
 .DEF    QUEUE_SIZE      32
 
 ; (NOTE: we rely on this starting at an $xx00 address for optimisation)
@@ -246,6 +249,9 @@ waitVBlank:
         ld      A,      [IRQ_ENABLE]
         or      A,      IE.vblank
         ld      [IRQ_ENABLE],   A
+
+        ; fallthrough
+        ; ...
 
 haltVBlank:
 ;===============================================================================

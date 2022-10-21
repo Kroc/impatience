@@ -3,8 +3,8 @@
 ;
 .RAMSECTION "Buffers"   ALIGN 256       RETURNORG
         ;-----------------------------------------------------------------------
-        front_buffer    DSB TILEMAP_WIDTH*TILEMAP_HEIGHT
-        back_buffer     DSB TILEMAP_WIDTH*TILEMAP_HEIGHT
+        front_buffer    DSB TILEMAP_WIDTH * TILEMAP_HEIGHT
+        back_buffer     DSB TILEMAP_WIDTH * TILEMAP_HEIGHT
 .ENDS
 
 ; include the tile graphics and map the various pieces of the card graphics
@@ -225,7 +225,6 @@ tilemap_deck:
 @row3:  .BYTE   TILE_DECK_Y3X1, TILE_DECK_Y3X2, TILE_DECK_Y3X3
 @row4:  .BYTE   TILE_DECK_Y4X1, TILE_DECK_Y4X2, TILE_DECK_Y4X3
 
-
 tilemap_back:
         ;-----------------------------------------------------------------------
         ; the back of a card
@@ -278,6 +277,9 @@ copyMainTileset:
         ; number of tiles to copy, 0-based
         ; (each tile is 16-bytes)
         ld      B,      (tiles_main__size / 16) - 1
+
+        ; fallthrough
+        ; ...
 
 copyTiles:
 ;===============================================================================
@@ -380,7 +382,7 @@ writeTiles:
 
         ; fall through to automatically
         ; move to the next tilemap row
-        ;
+        ; ...
 
         ;=======================================================================
         ; move to the next tilemap row:
@@ -450,7 +452,7 @@ refresh:
 ; forces a full update of the background tilemap:
 ;
 ; SCREEN MUST BE OFF WHEN CALLING THIS ROUTINE!
-; (use `rst rst_screenOff`)
+; (use `call screenOff`)
 ;
 ; normally updates to the tilemap are done partially -- only the tiles that
 ; have changed between the front & back buffers are written during vblank
@@ -503,6 +505,11 @@ update:
 ;===============================================================================
 ; compares the differences between the front & back buffers and generates
 ; the list of VRAM changes (tile queue) to make during vblank:
+;
+; TODO: pushing to the update queue could be made faster by using PUSH in much
+;       the same way POP is used during v-blank to write the tiles. this would
+;       necessitate disabling interrupts whilst updating the queue, which could
+;       conflict with any h-blank effects we might use
 ;
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
@@ -561,6 +568,8 @@ update:
         ; queue is ready, allow tile updates from vblank
         dec     A                       ; (set A to $FF)
         ldh     [<update_tiles],A
+
+        ; <- interrupt could happen here, writing the tiles to VRAM!
         ret
 
         ; queue the tile update:

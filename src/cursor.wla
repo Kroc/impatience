@@ -73,9 +73,11 @@ setSprite:
         dec     A
         jr      z,      @up             ; 1 = upward pointing hand
         dec     A
+        jr      z,      @right          ; 2 = rightward pointing hand
+        dec     A
         ret     nz                      ; exit for any value > 2
 
-        ; 2 = card-holding hand
+        ; 3 = card-holding hand
 @hold:  ld      A,      SPRITE_HOLD_LHS
         ld      [sprites.attrs.1.tile], A
         ld      A,      SPRITE_HOLD_RHS

@@ -11,7 +11,7 @@
 .ENDM
 
 
-print_str:
+printStr:
 ;===============================================================================
 ; print a length-prefixed string:
 ;

@@ -17,6 +17,8 @@ init:
         call    sprites.init
         call    tilemap.init
 
+        call    menu.hide
+
         call    acesup.init
         ;;call    fortunes.init
         ;;call    klondike.init
@@ -59,7 +61,21 @@ handleControls:
         bit     BUTTON_A,       A       ; A button?
         jp      nz,     doUndo
 
+        bit     BUTTON_START,   A       ; START button?
+        jr      nz,     @menu
+
         ret
+
+        ; show in-game menu:
+        ;-----------------------------------------------------------------------
+        ; TODO: when cards are in hand, these must be hidden
+        ;       and then restored when the menu is closed
+        ;
+@menu:  call    menu.show
+
+        call    tableau.resetCursorMode
+        rst     tableau.rst_getPointPile
+        jp      tableau.pointToPile
 
 
 doAction

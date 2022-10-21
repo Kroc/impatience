@@ -23,6 +23,10 @@ clear:
 ;===============================================================================
 ; clears the menu, setting it back to its default display:
 ;
+; NOTE: does not refresh the screen; this routine only clears and redraws
+;       the menu on the back-buffer. call `tilemap.update` to send the
+;       changes to VRAM during the next v-blank
+;
 ;-------------------------------------------------------------------------------
         ; (menu background tile)
         ld      A,      TILE_MENU_BG
@@ -42,28 +46,27 @@ clear:
         ; print the title:
         ld      HL,     MENU_ADDR + (1 * TILEMAP_WIDTH) + 1
         ld      DE,     @impatience
-        call    print_str
+        call    printStr
 
         ; change game:
         ld      HL,     MENU_ADDR + (3 * TILEMAP_WIDTH) + 3
         ld      DE,     @change_game
-        call    print_str
+        call    printStr
 
         ; restart game:
         ld      HL,     MENU_ADDR + (5 * TILEMAP_WIDTH) + 3
         ld      DE,     @restart_game
-        call    print_str
+        call    printStr
 
         ; options:
         ld      HL,     MENU_ADDR + (7 * TILEMAP_WIDTH) + 3
         ld      DE,     @options
-        call    print_str
+        call    printStr
 
         ret
 
-
 ; strings:
-;===============================================================================
+;-------------------------------------------------------------------------------
 @impatience:
         .str    "impatience"
 @change_game:
@@ -72,3 +75,61 @@ clear:
         .str    "restart game"
 @options:
         .str    "options"
+
+
+show:
+;===============================================================================
+; switches control to the menu:
+;-------------------------------------------------------------------------------
+        ; wait for v-blank to change the screen scroll:
+        ; TODO: shadow registers should be used for scrolling
+        ;
+        call    waitVBlank
+
+        ; scroll to the top of the tilemap to reveal the menu
+        ;
+        xor     A                       ; set A to zero
+        ldh     [<SCY], A
+        ldh     [<SCX], A
+
+        ; move the cursor to the menu item
+        ;
+        ld      A,      CURSOR_RIGHT
+        call    cursor.setSprite
+        ld      BC,     (3 << 8) | 1
+        call    sprites.tilePosToScrXY
+        dec     B
+        dec     B
+        call    cursor.moveToScrXY
+
+        ; fallthrough
+        ; ...
+
+handleControls:
+;===============================================================================
+        ; wait for a button press. this will halt the CPU
+        ; between vblanks until a new button is pressed
+        call    getButton
+
+        bit     BUTTON_START,   A
+        jp      nz,     hide
+
+        jr      handleControls
+
+
+hide:
+;===============================================================================
+; relinquishes control of the menu, returning to the tableau:
+;===============================================================================
+        ; wait for v-blank to change the screen scroll:
+        ; TODO: shadow registers should be used for scrolling
+        ;
+        call    waitVBlank
+
+        ; scroll to the top of the tableau to hide the menu
+        ld      A,      8 * MENU_HEIGHT
+        ldh     [<SCY], A
+        xor     A
+        ldh     [<SCX], A
+
+        ret

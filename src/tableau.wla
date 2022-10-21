@@ -112,6 +112,13 @@ clearCursorCards:
         jp      cursor.clearCards
 
 
+resetCursorMode:
+;===============================================================================
+        ld      A,      [mode]
+
+        ; fallthrough
+        ; ...
+
 setCursorMode:
 ;===============================================================================
 ; set the cursor mode manually:
@@ -1203,17 +1210,17 @@ pickPile:
         ; (we have to do this before we clobber A)
         rst     piles.rst_cardAddr
 
+        ld      H,              A       ; put aside card index
+        ld      A,              L       ; to undo this move, the source pile
+        ld      [undo.tmp_dst], A       ;  becomes the destination
+
         ; if we read the card value we can tell if the pile is empty
         ; (using `rst_pileCount` would clobber H & A)
         ;
-        ld      H,      A               ; put aside card index
         ld      A,      [DE]            ; read card value (A)
         and     A,      A               ; (set flags!)
         jp      z,      @err            ; if pile is empty, exit
         push    HL                      ; preserve pile (L) & card index (H)
-
-        ld      A,              L       ; to undo this move, the source pile
-        ld      [undo.tmp_dst], A       ;  becomes the destination
 
         ; build card sprites:
         ;=======================================================================
@@ -1280,6 +1287,9 @@ pickPile:
         ld      A,      [DE]            ; re-read the last card value
         call    sprites.createCard_Bottom
 
+        ; TODO: move cards first, then build the sprites from the cursor's pile
+        ;       -- this allows for restoring the sprites after hiding the menu
+        ; 
         ; move cards to cursor's pile:
         ;=======================================================================
         ; move all the cards in the source pile, from
