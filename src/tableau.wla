@@ -987,9 +987,10 @@ cursorPosForCard:
 ; out:  B       screen Y-position, in px, the cursor would point to
 ;       C       screen X-position, in px, the cursor would point to
 ;       L, A    (preserved)
+;       DE      (preserved)
 ;       H       (clobbered) -- select another field before using HL!
-;       DE      (clobbered)
 ;-------------------------------------------------------------------------------
+        push    DE                      ; (preserve DE)
         ld      E,      A               ; save card-index for later comparison
         call    getCardPos              ; get the card's position in tiles
 
@@ -1020,7 +1021,8 @@ cursorPosForCard:
         dec     B
         dec     B
         ;-----------------------------------------------------------------------
-+       ld      A,      E               ; restore card-index
++       ld      A,      E               ; return card-index
+        pop     DE                      ; (restore DE)
         ret
 
         ;=======================================================================
@@ -1070,7 +1072,8 @@ cursorPosForCard:
         ; over the cards rather than on the outside edge
         inc     B
         ;-----------------------------------------------------------------------
-        ld      A,      E               ; restore card-index
+        ld      A,      E               ; return card-index
+        pop     DE                      ; (restore DE)
         ret
 
         ;-----------------------------------------------------------------------
@@ -1086,7 +1089,8 @@ cursorPosForCard:
         add     A,      B
         ld      B,      A
         ;-----------------------------------------------------------------------
-        ld      A,      E               ; restore card-index
+        ld      A,      E               ; return card-index
+        pop     DE                      ; (restore DE)
         ret
 
         ;=======================================================================
@@ -1118,7 +1122,8 @@ cursorPosForCard:
         inc     B                       ; 1px down
         dec     C                       ; 1px left
         ;-----------------------------------------------------------------------
-        ld      A,      E               ; restore card-index
+        ld      A,      E               ; return card-index
+        pop     DE                      ; (restore DE)
         ret
 
         ;=======================================================================
@@ -1144,7 +1149,8 @@ cursorPosForCard:
         dec     C
         dec     C
         ;-----------------------------------------------------------------------
-        ld      A,      E               ; restore card-index
+        ld      A,      E               ; return card-index
+        pop     DE                      ; (restore DE)
         ret
 
         ;=======================================================================
@@ -1164,7 +1170,8 @@ cursorPosForCard:
         ld      B,      A
         dec     C
         ;-----------------------------------------------------------------------
-        ld      A,      E               ; restore card-index
+        ld      A,      E               ; return card-index
+        pop     DE                      ; (restore DE)
         ret
 
 
@@ -1196,50 +1203,64 @@ pickPile:
 ;
 ; this will pick up all the cards in the specified pile, from the specified
 ; index, down to the top of the pile. the cards will be removed from the pile,
-; converted into sprites, and placed in the cursor's pile
+; converted into sprites, and placed in the cursor's hand
 ;
-; WARNING:      this routine will not move the cursor after the cards have been
-;               removed from the pile, meaning the cursor will be pointing to
-;               an invalid index!
+; WARNING:      this routine will *not* move the cursor after the cards have
+;               been removed from the pile, meaning the cursor will be pointing
+;               at an invalid index!
 ;
 ; in:   L       index (`INDEX_*`) of the source pile
 ;       A       index of the card in the pile to start from (0-based)
 ; out:  *       (clobbered)
 ;-------------------------------------------------------------------------------
-        ; get the address (DE) of the card index (A) we're starting with
-        ; (we have to do this before we clobber A)
-        rst     piles.rst_cardAddr
-
-        ld      H,              A       ; put aside card index
+        ; preserve source pile and card-index as these will be lost
+        ; after moving the piles in RAM (destination is returned)
+        ;
+        ld      H,              A       ; preserve card-index in source pile
         ld      A,              L       ; to undo this move, the source pile
         ld      [undo.tmp_dst], A       ;  becomes the destination
+        push    HL
 
-        ; if we read the card value we can tell if the pile is empty
-        ; (using `rst_pileCount` would clobber H & A)
+        ; move the cards in the source pile, from the
+        ; index card downward, to the cursor's pile
         ;
-        ld      A,      [DE]            ; read card value (A)
-        and     A,      A               ; (set flags!)
-        jp      z,      @err            ; if pile is empty, exit
-        push    HL                      ; preserve pile (L) & card index (H)
+        ld      A,      H               ; (restore card-index)
+        ld      E,      INDEX_CURSOR    ; destination pile = cursor's hand
+        call    piles.move              ; NOTE: returns L = destination pile
 
         ; build card sprites:
         ;=======================================================================
-        ld      A,      [mode]          ; check current cursor mode
-        and     A,      A               ; (set flags)
-        jr      nz,     @user           ; user-mode?
+        ; get the card pool address for the cursor's pile; i.e. the starting
+        ; point in the cursor's pile to begin building card sprites from
+        ; (note that L = destination pile after move, the cursor's pile)
+        ;
+        rst     piles.rst_poolAddr
 
-        ; auto-mode:
-        ;-----------------------------------------------------------------------
-@auto:  ld      A,      H               ; get screen position of the card
-        push    DE
-        call    cursorPosForCard        ; (NOTE: A & L preserved)
-        pop     DE
+        ; restore source pile (L) and card-index (H)
+        pop     HL
+
+        ; ensure that the cursor is positioned correctly for where the card
+        ; sprites will be built; this will differ if the cursor sprite
+        ; is visible or not:
+        ;
+        ; `cursorPosForCard` will account for user/auto mode and return
+        ; the X/Y co-ords where the cursor should be
+        ;
+        ld      A,      H               ; restore card-index
+        call    cursorPosForCard        ; (NOTE: A, L & DE preserved)
 
         ; place the current cursor in this position so that the destination
         ; check will be based upon the card-position, not the old position
         ; of the hand sprite
+        ;
         call    cursor.setPos
-        jr      @build
+
+        ; next, for user-mode the cards will be offset to the side
+        ; so that they look like they are held by the cursor's hand
+        ;
+        ld      A,      [mode]          ; check current cursor mode
+        and     A,      A               ; (set flags)
+        jr      z,      @build          ; for auto-mode, skip over
 
         ; user-mode:
         ;-----------------------------------------------------------------------
@@ -1267,7 +1288,7 @@ pickPile:
         ; ensure the card is face-up! this is so that dealing from the deck
         ; will always flip the cards face-up. the updated card has to be
         ; written back to the pile so that the change reflects both in
-        ; the sprite building and when `piles.move` is called later
+        ; the sprite building and when the screen is refreshed
         and     ~CARD_BACK
         ld      [DE],   A
 
@@ -1287,19 +1308,6 @@ pickPile:
         ld      A,      [DE]            ; re-read the last card value
         call    sprites.createCard_Bottom
 
-        ; TODO: move cards first, then build the sprites from the cursor's pile
-        ;       -- this allows for restoring the sprites after hiding the menu
-        ; 
-        ; move cards to cursor's pile:
-        ;=======================================================================
-        ; move all the cards in the source pile, from
-        ; the index card down, to the cursor's pile:
-        ;
-        pop     HL                      ; pop source pile (L) & card-index (H)
-        ld      A,      H               ; card index to start from
-        ld      E,      INDEX_CURSOR    ; destination pile
-        call    piles.move
-
         ; move complete, refresh screen
         ;-----------------------------------------------------------------------
         call    sprites.update          ; update the sprites
@@ -1308,7 +1316,7 @@ pickPile:
         ; cannot pick this pile:
         ;=======================================================================
         ; TODO: we should implement a sound / cursor shake
-@err:   ret
+@era:   ret
 
 
 dropPile:
