@@ -6,17 +6,38 @@
 ;       +--------------------+
 ;       | IMPATIENCE         | <- current game name
 ;       |                    |
-;       |   CHANGE GAME      | <- change between games Aces Up, Klondike &c.
+;       | @ CHANGE GAME      | <- change between games: Aces Up, Klondike &c.
 ;       |                    |
-;       |   RESTART GAME     | <- replay the game using the same cards
+;       | @ RESTART          | <- replay the game using the same cards
 ;       |                    |
-;       |   OPTIONS          | < - configuration, about &c.
+;       | @ OPTIONS          | < - configuration, about &c.
+;       |                    |
+;       +--------------------+
+;
+;       +--------------------+
+;       |      GAME OVER     |
+;       |                    |
+;       | @ PLAY             |
+;       |                    |
+;       | @ RETRY            |
+;       |                    |
+;       | @ CHANGE GAME      |
 ;       |                    |
 ;       +--------------------+
 ;
 .DEF    MENU_WIDTH      TILEMAP_WIDTH
 .DEF    MENU_HEIGHT     10
 .DEF    MENU_ADDR       tilemap.front_buffer
+
+.DEF    MENU_ITEM0_POS  (3 << 8) | 1    ; row & column of first menu item
+
+
+.RAMSECTION "Menu"      RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        selected        BYTE            ; which menu item is currently selected
+        items           BYTE            ; number of menu items (0-based)
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+.ENDS
 
 
 clear:
@@ -28,6 +49,12 @@ clear:
 ;       changes to VRAM during the next v-blank
 ;
 ;-------------------------------------------------------------------------------
+        ; rest menu state
+        ld      A,              2       ; number of menu items
+        ld      [items],        A
+        xor     A                       ; set A to zero
+        ld      [selected],     A       ; select first menu item by default
+
         ; (menu background tile)
         ld      A,      TILE_MENU_BG
         ; the GameBoy screen is 20x18 tiles, but VRAM contains a 32x32
@@ -92,29 +119,74 @@ show:
         ldh     [<SCY], A
         ldh     [<SCX], A
 
-        ; move the cursor to the menu item
+        ; move the cursor to the first menu item
         ;
-        ld      A,      CURSOR_RIGHT
-        call    cursor.setSprite
-        ld      BC,     (3 << 8) | 1
-        call    sprites.tilePosToScrXY
+        xor     A
+        call    pointToItem
+
+        ; wait for a button press. this will halt the CPU
+        ; between vblanks until a new button is pressed
+@wait:  call    getButton
+
+        ; pressing START or A will close the menu
+        ;
+        bit     BUTTON_START,   A
+        jr      nz,     hide
+        bit     BUTTON_A,       A
+        jr      nz,     hide
+
+        ; handle cursor movement control
+        call    handleControls
+        jr      @wait
+
+
+handleControls:
+;===============================================================================
+        ; d-pad up:
+        ;-----------------------------------------------------------------------
+        bit     BUTTON_UP,      A
+        jr      z,      ++
+
+        ld      A,      [selected]      ; currently selected menu item
+        and     A                       ; set flags; =0?
+        jr      nz,     +
+        ld      A,      3               ; loop back to the last menu item
++       dec     A                       ; move to previous menu item
+        jr      pointToItem             ;  and point to that
+
+        ; d-pad down:
+        ;-----------------------------------------------------------------------
+++      bit     BUTTON_DOWN,    A
+        ret     z
+
+        ld      A,      [selected]      ; currently selected menu item
+        inc     A                       ; move to next
+        cp      3                       ; reached the end?
+        jr      c,      pointToItem     ; if not, use the new index
+        xor     A                       ; loop back to first menu item (0)
+        
+        ; and point to that
+        ; (fallthrough)
+        ; ...
+
+pointToItem:
+;===============================================================================
+; in:   A       index of menu item to point to, 0 is first
+;-------------------------------------------------------------------------------
+        ld      [selected],     A       ; retain menu index
+
+        ld      BC,     MENU_ITEM0_POS  ; start with first menu item X/Y
+        sla     A                       ; 2 rows per menu item
+        add     B                       ; add to row number
+        ld      B,      A
+        call    sprites.tilePosToScrXY  ; convert row/column to px
         dec     B
         dec     B
         call    cursor.moveToScrXY
 
-        ; fallthrough
-        ; ...
-
-handleControls:
-;===============================================================================
-        ; wait for a button press. this will halt the CPU
-        ; between vblanks until a new button is pressed
-        call    getButton
-
-        bit     BUTTON_START,   A
-        jp      nz,     hide
-
-        jr      handleControls
+        ld      A,      CURSOR_RIGHT
+        call    cursor.setSprite
+        jp      sprites.update
 
 
 hide:

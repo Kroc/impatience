@@ -16,7 +16,7 @@
 .DEF    MODE_USER       1               ; cursor is under user control
 
 .RAMSECTION "Cursor"    RETURNORG
-        ;-----------------------------------------------------------------------
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         mode            BYTE            ; to control different cursor behaviour
         ;-----------------------------------------------------------------------
         ; the pile index that the cursor is pointing to; e.g. deck / depot
@@ -34,6 +34,7 @@
         ; TODO: is 13 cards enough? what's the largest pile
         ;       (note sprites limit us to 12 cards!)
         hand_cards      DSB 13+1         ; +1 for zero-terminator!
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 ; the pile used to hold cards in the cursor's hand needs a template;
@@ -49,6 +50,27 @@ piles.Define \
         TILEMAP_HEIGHT-4,       TABLEAU_LEFT + 1, \
         0,                      0, \
         0,                      0
+
+
+.SECTION "RSTPointPile" SIZE 8  RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+rst_getPointPile:                                                       ;$30
+;===============================================================================
+; returns the index of the Pile struct the cursor is pointing to:
+;
+; out:  L       index of the pile the cursor is pointing at
+;       A       card index being pointed to, 0-based
+;       BC, DE  (preserved)
+;       H       (clobbered) -- select a field before using HL!
+;-------------------------------------------------------------------------------
+        ; retrieve index of pile being pointed at
+        ld      HL,     pile_point
+        ld      L,      [HL]
+        ; retrieve card number being pointed to
+        ld      A,      [card_point]
+        ret
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+.ENDS
 
 
 init:
@@ -230,7 +252,8 @@ refresh:
         call    drawPile
         ld      L,      INDEX_DEPOT12
         
-        ; just fall through to routine below
+        ; just fall through to `drawPile`
+        ; below for the last pile
         ; ...
 
 drawPile:
@@ -642,7 +665,7 @@ drawCardEdgeLeft:
         ret
 
 
-getCardPos:
+getCardTilePos:
 ;===============================================================================
 ; retrieve the row & column tile co-ordinates of a specific card in a pile:
 ; this position varies depending on the type of pile and its properties,
@@ -685,27 +708,6 @@ getCardPos:
         ld      C,      A
         ld      A,      H               ; (restore card index)
         ret
-
-
-.SECTION "RSTPointPile" SIZE 8  RETURNORG
-;###############################################################################
-rst_getPointPile:                                                       ;$30
-;===============================================================================
-; returns the index of the Pile struct the cursor is pointing to:
-;
-; out:  L       index of the pile the cursor is pointing at
-;       A       card index being pointed to, 0-based
-;       BC, DE  (preserved)
-;       H       (clobbered) -- select a field before using HL!
-;-------------------------------------------------------------------------------
-        ; retrieve index of pile being pointed at
-        ld      HL,     pile_point
-        ld      L,      [HL]
-        ; retrieve card number being pointed to
-        ld      A,      [card_point]
-        ret
-;###############################################################################
-.ENDS
 
 
 cursorLeft:
@@ -913,7 +915,7 @@ pointToPile:
         ; we point to the last card by default
         dec     A                       ; (adjust to 0-based)
 
-        ; fall through below
+        ; fallthrough
         ; ...
 
 pointToCard:
@@ -931,8 +933,9 @@ pointToCard:
         ld      [card_point],   A       ; save card index to point to (0-based)
 
         ; calculate the exact X/Y position in pixels to move the cursor to,
-        ; accounting for the specific card in the pile and the cursor mode
-        call    cursorPosForCard
+        ; accounting for the specific card in the pile and cursor visibility
+        ;
+        call    cursorPosForCard        ; (note: preserves L)
 
         ; save the index of the pile to point to:
         ld      A,              L
@@ -992,7 +995,7 @@ cursorPosForCard:
 ;-------------------------------------------------------------------------------
         push    DE                      ; (preserve DE)
         ld      E,      A               ; save card-index for later comparison
-        call    getCardPos              ; get the card's position in tiles
+        call    getCardTilePos          ; get the card's position in tiles
 
         ld      A,      [mode]          ; check the cursor mode;
         and     A,      A               ; (set flags)

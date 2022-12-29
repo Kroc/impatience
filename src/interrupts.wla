@@ -15,7 +15,9 @@
 
 ; a few bytes in HRAM need to be reserved to hold a wait loop
 .RAMSECTION "DoDMA"     SLOT "HRAM"     RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         doDMA           DSB 5
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 ; since we cannot modify VRAM during the display period,
@@ -33,17 +35,21 @@
 .DEF    QUEUE_SIZE      32
 
 ; (NOTE: we rely on this starting at an $xx00 address for optimisation)
+;
 .RAMSECTION "Queue"     ALIGN 256       RETURNORG
-        ;-----------------------------------------------------------------------
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         tile_queue      INSTANCEOF TileUpdate QUEUE_SIZE
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 .RAMSECTION "QReady"    SLOT "HRAM"     RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         ; a flag to indicate that tiles are waiting to be processed
         update_tiles    BYTE
         ; a flag to mark when sprite changes are ready to be uploaded,
         ; to avoid a partial-change when vblank interrupts work
         update_sprites  BYTE
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 ; these are the *logical* button constants for the game, not the ones used by
@@ -61,7 +67,7 @@
 ; RAM for remembering joypad state:
 ;
 .RAMSECTION "Joypad"            RETURNORG
-        ;-----------------------------------------------------------------------
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         ; which buttons have been *pressed* this frame
         joy_state       BYTE
         ; the current button held state: this is a bitmap of which buttons
@@ -72,6 +78,7 @@
         ; button state from the previous frame: this is used to register
         ; a button press, but prevent a button being held from rapid-firing
         joy_prev        BYTE
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 ; overwrite the GameBoy v-blank interrupt entry-point:
@@ -79,11 +86,11 @@
 ; so we only have room to jump to a bigger routine
 ;
 .SECTION "irq_vblank"                   RETURNORG
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         ; various documentation says that an IRQ takes 20 cycles        ;+20=20
         ; (note the relative jump to save 4 cycles over JP)
         jr      irq_vblank                                              ;+12=34
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 ; we place the IRQ handler as low down as possible to allow

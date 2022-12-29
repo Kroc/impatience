@@ -6,21 +6,23 @@
 .DEF    CURSOR_START_X  80
 .DEF    CURSOR_START_Y  72
 
+.DEF    CURSOR_NONE     0               ; cursor is hidden
+.DEF    CURSOR_UP       1               ; upward pointing hand
+.DEF    CURSOR_RIGHT    2               ; rightward pointing hand
+.DEF    CURSOR_HOLD     3               ; card-holding hand
+
 ; (musn't cross an 8-bit boundary for a micro-optimisation)
 ;
 .RAMSECTION "Cursor"    BITWINDOW 8     RETURNORG
-        ;-----------------------------------------------------------------------
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         dest_x          BYTE            ; new X-position to move cursor to
         xpos            BYTE            ; current cursor X-position (px)
         dest_y          BYTE            ; new Y-position to move cursor to
         ypos            BYTE            ; current cursor Y-position (px)
         moving          BYTE            ; flag to indicate cursor is moving
+        sprite          BYTE            ; which CURSOR_* sprite is being used
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
-
-.DEF    CURSOR_NONE     0               ; cursor is hidden
-.DEF    CURSOR_UP       1               ; upward pointing hand
-.DEF    CURSOR_RIGHT    2               ; rightward pointing hand
-.DEF    CURSOR_HOLD     3               ; card-holding hand
 
 
 init:
@@ -68,6 +70,10 @@ setSprite:
 ; out:  BC|DE|HL(preserved)
 ;       AF      (clobbered)
 ;-------------------------------------------------------------------------------
+        ld      [sprite],       A
+
+        ; which sprite to use?
+        ;
         and     A                       ; (set flags)
         jr      z,      @none           ; 0 = hide cursor
         dec     A
@@ -162,7 +168,7 @@ update:
 ; and this is automatically synced with OAM during vblank
 ;
 ; out:  DE      (preserved) -- MUST be preserved during vblank usage
-;       HL/BC/A (clobbered)
+;       HL|BC|A (clobbered)
 ;-------------------------------------------------------------------------------
         ; calculate the X & Y speed to move the cursor:
         ;

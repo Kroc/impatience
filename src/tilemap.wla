@@ -2,9 +2,10 @@
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
 .RAMSECTION "Buffers"   ALIGN 256       RETURNORG
-        ;-----------------------------------------------------------------------
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         front_buffer    DSB TILEMAP_WIDTH * TILEMAP_HEIGHT
         back_buffer     DSB TILEMAP_WIDTH * TILEMAP_HEIGHT
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 ; include the tile graphics and map the various pieces of the card graphics
@@ -13,7 +14,7 @@
 ; tile-copying micro-optimisations
 ;
 .SECTION "TilesCards"   ALIGN 16        RETURNORG
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .DEF    TILE_PALETTE    %11011000
 
 tiles_main:
@@ -240,7 +241,7 @@ tilemap_back_left:
         ;
         .BYTE   TILE_BACK_Y1X1, TILE_BACK_Y2X1, TILE_BACK_Y3X1, TILE_BACK_Y4X1
 
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 

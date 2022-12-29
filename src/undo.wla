@@ -8,7 +8,7 @@
 ; the actions that were taken by the player!
 ;
 .RAMSECTION "Undo"      RETURNORG
-        ;-----------------------------------------------------------------------
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         ; we only want to record the card movements between piles, not the
         ; moves to/from the cursor's hand, so we need somewhere to remember
         ; the details after picking up cards until the cards have been dropped
@@ -17,12 +17,15 @@
         tmp_idx         BYTE
 
         disabled        BYTE            ; flag to ignore adding undo moves
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 .RAMSECTION "UndoBuff"  ALIGN 256 RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         undo_src        DSB 256
         undo_dst        DSB 256
         undo_idx        DSB 256
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 

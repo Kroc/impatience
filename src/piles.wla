@@ -222,67 +222,89 @@
 ;
 .RAMSECTION "PileType"  \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         type            DSB PILE_COUNT  ; the type of the pile
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_TYPE      >piles.type     ; e.g. `ld h, FIELD_TYPE`
 
 .RAMSECTION "PileCount" \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         count           DSB PILE_COUNT  ; the number of cards in the pile
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_COUNT     >piles.count    ; e.g. `ld h, FIELD_COUNT`
 
 .RAMSECTION "PileCapacity" \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         capacity        DSB PILE_COUNT  ; the maximum size of the pile
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_CAPACITY  >piles.capacity ; e.g. `ld h, FIELD_CAPACITY`
 
 .RAMSECTION "PilePoolLo" \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         pool_lo         DSB PILE_COUNT  ; the address in the card pool, lo-byte
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_POOL_LO   >piles.pool_lo  ; e.g. `ld h, FIELD_POOL_LO`
 
 .RAMSECTION "PilePoolHi" \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         pool_hi         DSB PILE_COUNT  ; the address in the card pool, hi-byte
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_POOL_HI   >piles.pool_hi  ; e.g. `ld h, FIELD_POOL_HI`
 
 .RAMSECTION "PileRow" \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         row             DSB PILE_COUNT  ; screen row of pile
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_ROW       >piles.row      ; e.g. `ld h, FIELD_ROW`
 
 .RAMSECTION "PileCol" \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         col             DSB PILE_COUNT  ; screen column of pile
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_COL       >piles.col      ; e.g. `ld h, FIELD_COL`
 
 .RAMSECTION "PileLeft" \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         left            DSB PILE_COUNT  ; index of pile to the left
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_LEFT      >piles.left     ; e.g. `ld h, FIELD_LEFT`
 
 .RAMSECTION "PileRight" \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         right           DSB PILE_COUNT  ; index of pile to the right
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_RIGHT     >piles.right    ; e.g. `ld h, FIELD_RIGHT`
 
 .RAMSECTION "PileUp" \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         up              DSB PILE_COUNT  ; index of pile above
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_UP        >piles.up       ; e.g. `ld h, FIELD_UP`
 
 .RAMSECTION "PileDown" \
         ALIGN 256       RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         down            DSB PILE_COUNT  ; index of pile below
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_DOWN      >piles.down     ; e.g. `ld h, FIELD_DOWN`
 
@@ -291,8 +313,9 @@
 ; zero-terminated to minimise the need for counting registers
 ;
 .RAMSECTION "Storage"   SIZE 512        RETURNORG
-        ;-----------------------------------------------------------------------
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         storage         DSB 512
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 .DEF    __pool_addr     piles.storage
@@ -301,7 +324,6 @@
 ; this struct is used to store (most) fields linearly
 ;
 .STRUCT PileROM
-        ;-----------------------------------------------------------------------
         type            BYTE    ; type of pile, i.e. deck, hand, foundation &c.
         pool            WORD    ; address of storage for card pile
         capacity        BYTE    ; max.number of cards allowed in pile, 1-based!
@@ -348,7 +370,7 @@
 
 
 .SECTION "RSTPileCount" SIZE 8  RETURNORG
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 rst_pileCount:                                                          ;$08
 ;===============================================================================
 ; get the number of cards in a pile:
@@ -361,11 +383,11 @@ rst_pileCount:                                                          ;$08
         ld      A,      [HL]            ; card count for the pile
         and     A,      A               ; set flags!
         ret
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 .SECTION "RSTLastIndex" SIZE 8  RETURNORG
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 rst_lastCardIndex:                                                       ;$10
 ;===============================================================================
 ; get the index of the last card in a pile:
@@ -379,11 +401,11 @@ rst_lastCardIndex:                                                       ;$10
         ret     z                       ; empty piles return 0, not $FF!
         dec     A                       ; change count to 0-based
         ret
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 .SECTION "RSTPoolAddr"  SIZE 8  RETURNORG
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 rst_poolAddr:                                                           ;$18
 ;===============================================================================
 ; given a pile index, returns the address in the
@@ -399,11 +421,11 @@ rst_poolAddr:                                                           ;$18
         ld      H,      FIELD_POOL_HI   ; switch field to `pool_hi`
         ld      D,      [HL]            ; read pool-addr hi-byte
         ret
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 .SECTION "RSTCardAddr"  SIZE 16 RETURNORG
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 rst_lastCardAddr:                                                       ;$20
 ;===============================================================================
 ; get the address of the last card in a pile:
@@ -425,6 +447,9 @@ rst_lastCardAddr:                                                       ;$20
         dec     A                       ; change count to 0-based
 +       nop                             ; (MUST be 8-bytes!)
 
+        ; fallthrough
+        ; ...
+
 rst_cardAddr:                                                           ;$28
 ;===============================================================================
 ; gets the address of a specific card in a pile:
@@ -444,7 +469,7 @@ rst_cardAddr:                                                           ;$28
         ret     nc                      ; if E didn't overflow, exit
         inc     D                       ; ripple carry to output hi-byte
         ret
-;###############################################################################
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 
