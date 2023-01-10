@@ -72,9 +72,18 @@ handleControls:
         ;-----------------------------------------------------------------------
         ; TODO: when cards are in hand, these must be hidden
         ;       and then restored when the menu is closed
+        ; TODO: also, handle if mid-animation when this happens!
+        ;       (wait until move is complete?)
         ;
-@menu:  call    menu.show
+@menu:  call    menu.setGameOverMenu
+        call    tilemap.update
+        call    waitVBlank
 
+        ; enter the menu; execution will hold there until the menu is cancelled
+        ; or an option is selected in which case execution might never return!
+        call    menu.show
+
+        ; restore the card the cursor was pointing to
         call    tableau.resetCursorMode
         rst     tableau.rst_getPointPile
         jp      tableau.pointToPile

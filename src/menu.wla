@@ -1,7 +1,7 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2022:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-; menu-items:
+; in-game menu:
 ;
 ;       +--------------------+
 ;       | IMPATIENCE         | <- current game name
@@ -10,18 +10,20 @@
 ;       |                    |
 ;       | @ RESTART          | <- replay the game using the same cards
 ;       |                    |
-;       | @ OPTIONS          | < - configuration, about &c.
+;       | @ OPTIONS          | <- configuration, about &c.
 ;       |                    |
 ;       +--------------------+
+;
+; game-over menu:
 ;
 ;       +--------------------+
 ;       |      GAME OVER     |
 ;       |                    |
-;       | @ PLAY             |
+;       | @ DEAL NEW         | <- start a new deal of the same game
 ;       |                    |
-;       | @ RETRY            |
+;       | @ RETRY SAME       | <- play the same deal (seed) again
 ;       |                    |
-;       | @ CHANGE GAME      |
+;       | @ CHANGE GAME      | <- change to a different card game
 ;       |                    |
 ;       +--------------------+
 ;
@@ -31,26 +33,50 @@
 
 .DEF    MENU_ITEM0_POS  (3 << 8) | 1    ; row & column of first menu item
 
+.ENUMID 0
+.ENUMID MENU_MAIN                       ; the main menu
+.ENUMID MENU_GAMEOVER                   ; the game-over menu
 
 .RAMSECTION "Menu"      RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        menu            BYTE            ; which menu is in use
         selected        BYTE            ; which menu item is currently selected
-        items           BYTE            ; number of menu items (0-based)
+        items           BYTE            ; number of menu items (1-based)
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 
+_strings:
+;-------------------------------------------------------------------------------
+; padding spaces are used to overwrite any previous string
+; without leaving trailing garbage
+@impatience:
+        .str    "impatience  "
+@change_game:
+        .str    "change game "
+@restart_game:
+        .str    "restart game"
+@options:
+        .str    "options     "
+@game_over:
+        .str    "game over   "
+@deal:
+        .str    "deal new    "
+@retry:
+        .str    "retry same  "
+
+
 clear:
 ;===============================================================================
-; clears the menu, setting it back to its default display:
+; erase the menu area, leaving it blank:
 ;
 ; NOTE: does not refresh the screen; this routine only clears and redraws
 ;       the menu on the back-buffer. call `tilemap.update` to send the
 ;       changes to VRAM during the next v-blank
 ;
 ;-------------------------------------------------------------------------------
-        ; rest menu state
-        ld      A,              2       ; number of menu items
+        ; reset menu state
+        ld      A,              3       ; number of menu items, 1-based
         ld      [items],        A
         xor     A                       ; set A to zero
         ld      [selected],     A       ; select first menu item by default
@@ -68,40 +94,74 @@ clear:
         ; TODO: 10 rows is 320 tiles, so call fill (256), plus 64 remainder.
         ;       we should calculate this at assemble-time
         call    fill
-        call    fill@x64
+        jp      fill@x64
 
+
+setMainMenu:
+;===============================================================================
+; write the menu options for the main menu screen:
+;-------------------------------------------------------------------------------
+        call    clear
+
+        ; record that we are using the main menu
+        ;;ld      A,      MENU_MAIN
+        xor     A                       ; (MENU_MAIN = 0)
+        ld      [menu], A
+
+        ; TODO: tilemap updates
+        ;
         ; print the title:
         ld      HL,     MENU_ADDR + (1 * TILEMAP_WIDTH) + 1
-        ld      DE,     @impatience
+        ld      DE,     _strings@impatience
         call    printStr
 
         ; change game:
         ld      HL,     MENU_ADDR + (3 * TILEMAP_WIDTH) + 3
-        ld      DE,     @change_game
+        ld      DE,     _strings@change_game
         call    printStr
 
         ; restart game:
         ld      HL,     MENU_ADDR + (5 * TILEMAP_WIDTH) + 3
-        ld      DE,     @restart_game
+        ld      DE,     _strings@restart_game
         call    printStr
 
         ; options:
         ld      HL,     MENU_ADDR + (7 * TILEMAP_WIDTH) + 3
-        ld      DE,     @options
+        ld      DE,     _strings@options
+        jp      printStr
+
+
+setGameOverMenu:
+;===============================================================================
+; write the menu options for the game-over menu screen:
+;-------------------------------------------------------------------------------
+        call    clear
+
+        ; record that we are using the game-over menu
+        ld      A,      MENU_GAMEOVER
+        ld      [menu], A
+
+        ; TODO: tilemap updates
+        ;
+        ; print the title:
+        ld      HL,     MENU_ADDR + (1 * TILEMAP_WIDTH) + 1
+        ld      DE,     _strings@game_over
         call    printStr
 
-        ret
+        ; deal new:
+        ld      HL,     MENU_ADDR + (3 * TILEMAP_WIDTH) + 3
+        ld      DE,     _strings@deal
+        call    printStr
 
-; strings:
-;-------------------------------------------------------------------------------
-@impatience:
-        .str    "impatience"
-@change_game:
-        .str    "change game"
-@restart_game:
-        .str    "restart game"
-@options:
-        .str    "options"
+        ; retry same:
+        ld      HL,     MENU_ADDR + (5 * TILEMAP_WIDTH) + 3
+        ld      DE,     _strings@retry
+        call    printStr
+
+        ; change game:
+        ld      HL,     MENU_ADDR + (7 * TILEMAP_WIDTH) + 3
+        ld      DE,     _strings@change_game
+        jp      printStr
 
 
 show:
@@ -124,6 +184,7 @@ show:
         xor     A
         call    pointToItem
 
+        ;-----------------------------------------------------------------------
         ; wait for a button press. this will halt the CPU
         ; between vblanks until a new button is pressed
 @wait:  call    getButton
@@ -141,7 +202,7 @@ show:
 
 
 handleControls:
-;===============================================================================
+        ;=======================================================================
         ; d-pad up:
         ;-----------------------------------------------------------------------
         bit     BUTTON_UP,      A
@@ -191,7 +252,7 @@ pointToItem:
 
 hide:
 ;===============================================================================
-; relinquishes control of the menu, returning to the tableau:
+; relinquish control of the menu, returning to the tableau:
 ;===============================================================================
         ; wait for v-blank to change the screen scroll:
         ; TODO: shadow registers should be used for scrolling

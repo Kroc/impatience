@@ -25,8 +25,8 @@
 ;
 .STRUCT TileUpdate
         vram_addr       WORD
-        tile            BYTE
         flags           BYTE
+        tile            BYTE
 .ENDST
 
 ; this is the maximum number of tiles that can be updated during v-blank
@@ -129,7 +129,7 @@ irq_vblank:                                                                ;=34
         ;-----------------------------------------------------------------------
 
         ; mark the queue as done (don't process the same tile-queue twice)
-        ; note that A is already zero by nature of the loop exit condition!
+        xor     A                       ; (set A to zero)
         ldh     [<update_tiles],        A
 
         ; DMA the sprite attributes from work RAM into OAM:
@@ -220,6 +220,7 @@ irq_vblank:                                                                ;=34
         cp      2^BUTTON_START | 2^BUTTON_SELECT | 2^BUTTON_A | 2^BUTTON_B
         jp      z,      init
 
+        ; write logical joystick bits to RAM for game-logic to handle
         ld      [HL],   A
 
         ; TODO: detect button changes:

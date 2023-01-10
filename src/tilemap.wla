@@ -256,7 +256,8 @@ init:
         call    copyMainTileset         ; copy main tileset from ROM to VRAM
 
         call    tableau.clearTiles      ; clear the tableau (playing space)
-        call    menu.clear              ; clear and draw the menu
+        call    menu.clear              ; clear the menu space
+        call    menu.setMainMenu        ; write out the default menu
         call    refresh                 ; do a full screen refresh
 
         ; set palette:
@@ -346,17 +347,29 @@ writeTiles_5rows:
 ;===============================================================================
         call    writeTiles
 
+        ; fallthrough
+        ; ...
+
 writeTiles_4rows:
 ;===============================================================================
         call    writeTiles
+
+        ; fallthrough
+        ; ...
 
 writeTiles_3rows:
 ;===============================================================================
         call    writeTiles
 
+        ; fallthrough
+        ; ...
+
 writeTiles_2rows:
 ;===============================================================================
         call    writeTiles
+
+        ; fallthrough
+        ; ...
 
 writeTiles_1row:
 ;===============================================================================
@@ -507,6 +520,12 @@ update:
 ; compares the differences between the front & back buffers and generates
 ; the list of VRAM changes (tile queue) to make during vblank:
 ;
+; the number of tiles that can be written during v-blank is limited to 32
+; (VRAM is only accessible outside of screen display, i.e. vblank/hblank)
+; so if more than 32 tile changes are encountered, the routine will wait
+; for vblank, allowing the tile-queue to be cleared, before continuing
+; with the remainder
+;
 ; TODO: pushing to the update queue could be made faster by using PUSH in much
 ;       the same way POP is used during v-blank to write the tiles. this would
 ;       necessitate disabling interrupts whilst updating the queue, which could
@@ -516,10 +535,11 @@ update:
 ;-------------------------------------------------------------------------------
         xor     A                       ; (set A to 0)
         ldh     [<update_tiles],A       ; disable tile updates during vblank
-        ld      HL,     back_buffer
-        ld      DE,     front_buffer
-        ld      BC,     tile_queue
+        ld      HL,     back_buffer     ; comparing the back buffer...
+        ld      DE,     front_buffer    ; ...against the front buffer
+        ld      BC,     tile_queue      ; differences are written here
 
+        ; 4 tiles are checked at a time to partially unroll the loop
         ;-----------------------------------------------------------------------
         ; #1:
 @loop:  ld      A,      [DE]            ; read tile from front-buffer
@@ -563,7 +583,7 @@ update:
         ;-----------------------------------------------------------------------
 @exit:  xor     A                       ; (set A to zero)
         dec     C                       ; move past tile,
-        dec     C                       ; to cpu flags
+        dec     C                       ;  to cpu flags
         ld      [BC],   A               ; write a zero to mark the end
 
         ; queue is ready, allow tile updates from vblank
@@ -573,7 +593,7 @@ update:
         ; <- interrupt could happen here, writing the tiles to VRAM!
         ret
 
-        ; queue the tile update:
+        ; queue a tile update:
         ;=======================================================================
         ; there's a difference! update the back-buffer
         ; to match the front (for future comparisions)
@@ -610,10 +630,15 @@ update:
         ld      [BC],   A               ; write tile to draw
         inc     C
 
-        bit     7,      C
-        ret     z
+        ; NOTE: each tile queue entry is 4 bytes and with 32 queue spaces
+        ;       the queue is 128 bytes long. if the address lo-byte reaches
+        ;       128 ($80) then the queue is full!
+        ;
+        bit     7,      C               ; check bit 7 (=128)
+        ret     z                       ; no overflow? return
 
-        ld      B,B
-
-        ; TODO: is the queue full?
-        ret
+        ; the tile update queue is full!
+        ;-----------------------------------------------------------------------
+        call    @exit                   ; terminate the queue
+        ld      BC,     tile_queue      ; reset the queue position for adding
+        jp      waitVBlank              ; flush the current queue to screen
