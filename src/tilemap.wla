@@ -1,7 +1,7 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2023:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-.RAMSECTION "Buffers"   ALIGN 256       RETURNORG
+.RAMSECTION "Buffers"                   ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         front_buffer    DSB TILEMAP_WIDTH * TILEMAP_HEIGHT
         back_buffer     DSB TILEMAP_WIDTH * TILEMAP_HEIGHT
@@ -13,7 +13,7 @@
 ; the code-base. we want this aligned to one-tile (16-bytes) for some
 ; tile-copying micro-optimisations
 ;
-.SECTION "TilesCards"   ALIGN 16        RETURNORG
+.SECTION "TilesCards"                   ALIGN 16 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .DEF    TILE_PALETTE    %11011000
 
@@ -252,6 +252,11 @@ init:
         or      LCDC.bg_display         ; turn background on
         ldh     [<LCDC],        A
 
+        ; set 'colour' palette for the tilemap:
+        ; (sprite palletes are set in "sprites.wla")
+        ld      A,      TILE_PALETTE
+        ldh     [<BGP], A
+
         call    clearQueue              ; clear the tile update queue
         call    copyMainTileset         ; copy main tileset from ROM to VRAM
 
@@ -260,9 +265,7 @@ init:
         call    menu.setMainMenu        ; write out the default menu
         call    refresh                 ; do a full screen refresh
 
-        ; set palette:
-        ld      A,      TILE_PALETTE
-        ldh     [<BGP], A
+        
 
         jp      screenOn
 

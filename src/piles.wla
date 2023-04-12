@@ -60,15 +60,15 @@
 ;-------------------------------------------------------------------------------
 .ENUMID 0 EXPORT
 .ENUMID INDEX_NONE                      ; (to indicate no pile)
-.ENUMID INDEX_DECK                      ; where cards are drawn from
-.ENUMID INDEX_DISCARD                   ; where cards are thrown away
-.ENUMID INDEX_HAND                      ; a working set of drawn cards
-.ENUMID INDEX_FOUNDATION1               ; up to four foundation piles,
-.ENUMID INDEX_FOUNDATION2               ;  where cards are stacked in order
+.ENUMID INDEX_DECK                      ; - where cards are drawn from
+.ENUMID INDEX_DISCARD                   ; - where cards are thrown away
+.ENUMID INDEX_HAND                      ; - a working set of drawn cards
+.ENUMID INDEX_FOUNDATION1               ; - up to four foundation piles,
+.ENUMID INDEX_FOUNDATION2               ;   where cards are stacked in order
 .ENUMID INDEX_FOUNDATION3
 .ENUMID INDEX_FOUNDATION4
-.ENUMID INDEX_DEPOT1                    ; up to twelve depot piles,
-.ENUMID INDEX_DEPOT2                    ; where cards are sorted
+.ENUMID INDEX_DEPOT1                    ; - up to twelve depot piles,
+.ENUMID INDEX_DEPOT2                    ;   where cards are sorted
 .ENUMID INDEX_DEPOT3
 .ENUMID INDEX_DEPOT4
 .ENUMID INDEX_DEPOT5
@@ -220,88 +220,77 @@
 ;
 ;      H = field -> [HL] <- L = pile index!
 ;
-.RAMSECTION "PileType"  \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PileType"                  ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         type            DSB PILE_COUNT  ; the type of the pile
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_TYPE      >piles.type     ; e.g. `ld h, FIELD_TYPE`
 
-.RAMSECTION "PileCount" \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PileCount"                 ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         count           DSB PILE_COUNT  ; the number of cards in the pile
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_COUNT     >piles.count    ; e.g. `ld h, FIELD_COUNT`
 
-.RAMSECTION "PileCapacity" \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PileCapacity"              ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         capacity        DSB PILE_COUNT  ; the maximum size of the pile
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_CAPACITY  >piles.capacity ; e.g. `ld h, FIELD_CAPACITY`
 
-.RAMSECTION "PilePoolLo" \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PilePoolLo"                ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         pool_lo         DSB PILE_COUNT  ; the address in the card pool, lo-byte
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_POOL_LO   >piles.pool_lo  ; e.g. `ld h, FIELD_POOL_LO`
 
-.RAMSECTION "PilePoolHi" \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PilePoolHi"                ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         pool_hi         DSB PILE_COUNT  ; the address in the card pool, hi-byte
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_POOL_HI   >piles.pool_hi  ; e.g. `ld h, FIELD_POOL_HI`
 
-.RAMSECTION "PileRow" \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PileRow"                   ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         row             DSB PILE_COUNT  ; screen row of pile
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_ROW       >piles.row      ; e.g. `ld h, FIELD_ROW`
 
-.RAMSECTION "PileCol" \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PileCol"                   ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         col             DSB PILE_COUNT  ; screen column of pile
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_COL       >piles.col      ; e.g. `ld h, FIELD_COL`
 
-.RAMSECTION "PileLeft" \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PileLeft"                  ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         left            DSB PILE_COUNT  ; index of pile to the left
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_LEFT      >piles.left     ; e.g. `ld h, FIELD_LEFT`
 
-.RAMSECTION "PileRight" \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PileRight"                 ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         right           DSB PILE_COUNT  ; index of pile to the right
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_RIGHT     >piles.right    ; e.g. `ld h, FIELD_RIGHT`
 
-.RAMSECTION "PileUp" \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PileUp"                    ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         up              DSB PILE_COUNT  ; index of pile above
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 .DEF    FIELD_UP        >piles.up       ; e.g. `ld h, FIELD_UP`
 
-.RAMSECTION "PileDown" \
-        ALIGN 256       RETURNORG
+.RAMSECTION "PileDown"                  ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         down            DSB PILE_COUNT  ; index of pile below
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -312,7 +301,7 @@
 ; an address in the pool. the end of each card list in the pool is
 ; zero-terminated to minimise the need for counting registers
 ;
-.RAMSECTION "Storage"   SIZE 512        RETURNORG
+.RAMSECTION "Storage"                   SIZE 512 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         storage         DSB 512
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -369,7 +358,7 @@
 .ENDM
 
 
-.SECTION "RSTPileCount" SIZE 8  RETURNORG
+.SECTION "RSTPileCount"                 SIZE 8 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 rst_pileCount:                                                          ;$08
 ;===============================================================================
@@ -386,7 +375,7 @@ rst_pileCount:                                                          ;$08
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
-.SECTION "RSTLastIndex" SIZE 8  RETURNORG
+.SECTION "RSTLastIndex"                 SIZE 8 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 rst_lastCardIndex:                                                       ;$10
 ;===============================================================================
@@ -404,7 +393,7 @@ rst_lastCardIndex:                                                       ;$10
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
-.SECTION "RSTPoolAddr"  SIZE 8  RETURNORG
+.SECTION "RSTPoolAddr"                  SIZE 8 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 rst_poolAddr:                                                           ;$18
 ;===============================================================================
@@ -424,7 +413,7 @@ rst_poolAddr:                                                           ;$18
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
-.SECTION "RSTCardAddr"  SIZE 16 RETURNORG
+.SECTION "RSTCardAddr"                  SIZE 16 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 rst_lastCardAddr:                                                       ;$20
 ;===============================================================================

@@ -67,8 +67,13 @@ init:
 
         ei
 
+        call    sprites.init            ; initialise sprite hardware
+        call    cursor.init             ; initialise the cursor
+        call    tilemap.init
+
         ; begin initialising the game:
         ;
+        ld      A,      GAME_ACESUP
         jp      game.init
 
 
@@ -130,7 +135,7 @@ zero:
         ret
 
 
-.SECTION "Fill256"      ALIGN 256       RETURNORG
+.SECTION "Fill256"                      ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 fill:
 ;===============================================================================
@@ -156,7 +161,7 @@ fill:
 .ENDS
 
 
-.RAMSECTION "RNG"       SLOT "HRAM" BITWINDOW 8 RETURNORG
+.RAMSECTION "RNG"       SLOT "HRAM"     BITWINDOW 8 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         seed            WORD            ; random number seed
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -198,16 +203,13 @@ rnd:
 
 
 ;===============================================================================
-.INC    "strings.wla"           ; string & text routines
-.INC    "tilemap.wla"           NAMESPACE "tilemap"
-.INC    "menu.wla"              NAMESPACE "menu"
-.INC    "piles.wla"             NAMESPACE "piles"
-.INC    "undo.wla"              NAMESPACE "undo"
-.INC    "tableau.wla"           NAMESPACE "tableau"
-.INC    "sprites.wla"           NAMESPACE "sprites"
-.INC    "cursor.wla"            NAMESPACE "cursor"
+.INC    "strings.wla"                   ; string & text routines
+.INC    "tilemap.wla"                   NAMESPACE "tilemap"
+.INC    "menu.wla"                      NAMESPACE "menu"
+.INC    "piles.wla"                     NAMESPACE "piles"
+.INC    "undo.wla"                      NAMESPACE "undo"
+.INC    "tableau.wla"                   NAMESPACE "tableau"
+.INC    "sprites.wla"                   NAMESPACE "sprites"
+.INC    "cursor.wla"                    NAMESPACE "cursor"
 
-.INC    "game.wla"              NAMESPACE "game"
-.INC    "game_acesup.wla"       NAMESPACE "acesup"
-.INC    "game_fortunes.wla"     NAMESPACE "fortunes"
-.INC    "game_klondike.wla"     NAMESPACE "klondike"
+.INC    "game.wla"                      NAMESPACE "game"

@@ -6,13 +6,13 @@
 ; this table has to be aligned to an 8-bit boundary because the DMA
 ; register only accepts a hi-byte and assumes $00 for the lo-byte
 ;
-.RAMSECTION "Attrs"     ALIGN 256       RETURNORG
+.RAMSECTION "Attrs"                     ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         attrs           INSTANCEOF Sprite 40            ; (160 bytes)
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
-.SECTION "TilesSprites" ALIGN 16        RETURNORG
+.SECTION "TilesSprites"                 ALIGN 16 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 .DEF    SPRITE_PALLETE1 %11001100       ; red suits
@@ -98,17 +98,16 @@ tiles_sprites:
 
 init:
 ;===============================================================================
+; initialise GameBoy sprite hardare:
+;-------------------------------------------------------------------------------
         ; load sprite tiles to VRAM:
         ;-----------------------------------------------------------------------
         ld      HL,     tiles_sprites   ; set source address
         ld      DE,     VRAM_TILES1     ; set destination VRAM position
-        ; number of tiles to copy, 0-based
-        ; (each tile is 16-bytes)
+        
+        ; number of tiles to copy, 0-based (each tile is 16-bytes)
         ld      B,      (tiles_sprites__size / 16) - 1
         call    tilemap.copyTiles
-
-        call    clearAttrs              ; clear all sprite attributes
-        call    cursor.init             ; configure the cursor
 
         ; set sprite palettes:
         ;-----------------------------------------------------------------------
@@ -123,8 +122,8 @@ init:
         set     2,      [HL]            ; enable 8x16 sprites
         set     1,      [HL]            ; switch sprites on
 
-        ret
-
+        ; fallthrough
+        ; ...
 
 clearAttrs:
 ;===============================================================================

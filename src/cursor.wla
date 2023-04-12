@@ -13,7 +13,7 @@
 
 ; (musn't cross an 8-bit boundary for a micro-optimisation)
 ;
-.RAMSECTION "Cursor"    BITWINDOW 8     RETURNORG
+.RAMSECTION "Cursor"                    BITWINDOW 8 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         dest_x          BYTE            ; new X-position to move cursor to
         xpos            BYTE            ; current cursor X-position (px)
@@ -27,7 +27,7 @@
 
 init:
 ;===============================================================================
-        ; clear variables:
+        ; clear local variables:
         xor     A                       ; (set A to zero)
         ld      HL,     SECTIONSTART_cursor.Cursor
         call    fill@x{SECTIONEND_cursor.Cursor-SECTIONSTART_cursor.Cursor}

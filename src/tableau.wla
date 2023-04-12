@@ -15,7 +15,7 @@
 .DEF    MODE_AUTO       0               ; cursor is under game control
 .DEF    MODE_USER       1               ; cursor is under user control
 
-.RAMSECTION "Cursor"    RETURNORG
+.RAMSECTION "Cursor"                    BITWINDOW 8 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         mode            BYTE            ; to control different cursor behaviour
         ;-----------------------------------------------------------------------
@@ -52,7 +52,7 @@ piles.Define \
         0,                      0
 
 
-.SECTION "RSTPointPile" SIZE 8  RETURNORG
+.SECTION "RSTPointPile"                 SIZE 8 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 rst_getPointPile:                                                       ;$30
 ;===============================================================================
@@ -78,6 +78,11 @@ init:
 ; clear the tableau of cards and tiles:
 ; NOTE: does *not* refresh the screen
 ;-------------------------------------------------------------------------------
+        ; clear the local variables:
+        xor     A                       ; (set A to zero)
+        ld      HL,     SECTIONSTART_tableau.Cursor
+        call    fill@x{SECTIONEND_tableau.Cursor-SECTIONSTART_tableau.Cursor}
+
         ; remove all piles and cards in memory
         call    piles.clear
         ; the undo data will no longer be valid,
@@ -204,6 +209,8 @@ update:
 refresh:
 ;===============================================================================
 ; redraw the tableau:
+;
+; this redraws all piles on the back-buffer; changes are *not* sent to VRAM
 ;-------------------------------------------------------------------------------
         ; we're going to redraw all piles,
         ; so clear the tabelau of tiles first

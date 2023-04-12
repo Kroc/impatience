@@ -1,29 +1,61 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2023:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-.ENUMID 0
-.ENUMID GAME_NONE
-.ENUMID GAME_ACESUP                     ; "Aces Up"
-.ENUMID GAME_FORTUNES                   ; "Fortune's Favour"
-.ENUMID GAME_KLONDIKE                   ; "Klondike"
+.DEF    GAME_NONE       0
+
+.DEF    __game_id       1
+.DEF    __game_priority 1000
+
 
 .RAMSECTION "Game"                      RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         id              BYTE            ; index of current game being played
+;;      start_seed      WORD            ; starting random seed of current game
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
+
+; each game defines an address to call to start the game;
+; this table will be appended to by each game included
+;
+.SECTION "AddrInit"                     RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+addr_init:
+;===============================================================================
+        .ADDR           $0000           ;=GAME_NONE
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+.ENDS
+
+; include the games:
+; the order of these includes determines their IDs!
+;
+.INC    "game_acesup.wla"       NAMESPACE "acesup"
+.INC    "game_fortunes.wla"     NAMESPACE "fortunes"
+.INC    "game_klondike.wla"     NAMESPACE "klondike"
 
 
 init:
 ;===============================================================================
-        call    sprites.init
-        call    tilemap.init
+; start a game:
+; 
+; in:   A       ID of game to start (`GAME_*`)
+;-------------------------------------------------------------------------------
+        ld      [id],   A               ; set the game ID
 
+        ; completely clear the table of cards, both the piles and the storage
+        ; pool of all cards on the table. this will also clear the undo buffer
+        call    tableau.init
+        ; when the piles are cleared,
+        ; the cursor's pile must be reallocated
+        call    tableau.allocateCursorPile
+        ; move the menu off-screen
         call    menu.hide
 
-        call    acesup.init
-        ;;call    fortunes.init
-        ;;call    klondike.init
+        ; start the specific game based on game ID:
+        ;
+        ld      A,      [id]
+        ld      C,      A
+        ld      HL,     addr_init
+        rst     rst_jumpTable
 
         ; fallthrough
         ; ...

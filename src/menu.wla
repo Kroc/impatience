@@ -37,7 +37,7 @@
 .ENUMID MENU_MAIN                       ; the main menu
 .ENUMID MENU_GAMEOVER                   ; the game-over menu
 
-.RAMSECTION "Menu"      RETURNORG
+.RAMSECTION "Menu"                      RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         menu            BYTE            ; which menu is in use
         selected        BYTE            ; which menu item is currently selected

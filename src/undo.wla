@@ -7,7 +7,7 @@
 ; taken -- therefore the undo buffer is a list of pile moves to do that reverse
 ; the actions that were taken by the player!
 ;
-.RAMSECTION "Undo"      RETURNORG
+.RAMSECTION "Undo"                      RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         ; we only want to record the card movements between piles, not the
         ; moves to/from the cursor's hand, so we need somewhere to remember
@@ -20,7 +20,7 @@
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
-.RAMSECTION "UndoBuff"  ALIGN 256 RETURNORG
+.RAMSECTION "UndoBuff"                  ALIGN 256 RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         undo_src        DSB 256
         undo_dst        DSB 256
@@ -42,9 +42,9 @@ clear:
         ld      [disabled],     A       ; clear disabled flag
 
         ld      HL,     SECTIONSTART_undo.UndoBuff
-        call    fill                    ; clear undo moves source piles
-        call    fill                    ; clear undo moves dest. piles
-        jp      fill                    ; clear undo moves card indices
+        call    fill                    ; clear undo moves, source piles
+        call    fill                    ; clear undo moves, dest. piles
+        jp      fill                    ; clear undo moves, card indices
 
 
 enable:
