@@ -111,7 +111,6 @@ addr_init_klondike:
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
-
 init:
 ;===============================================================================
 ; start a game of Klondike:
@@ -235,6 +234,23 @@ init:
         ; begin the game by pointing at the deck
         ld      L,      INDEX_DECK
         jp      tableau.pointToPile
+
+
+; add the game's action address to the table
+; used for when a player taps on a card (see "game.wla")
+;
+.SECTION "AddrAction_Klondike"          APPENDTO "*:game.AddrAction" RETURNORG
+                                        PRIORITY __game_priority
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+addr_action_klondike:
+;-------------------------------------------------------------------------------
+        .ADDR           tapCard
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+.ENDS
+
+tapCard:
+;===============================================================================
+        ret
 
 
 checkPile:

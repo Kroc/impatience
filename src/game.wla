@@ -25,6 +25,23 @@ addr_init:
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
+; each game defines an address to call when the player taps on a card
+; this table will be appended to by each game included
+;
+; each game defines an address to call to start the game;
+; this table will be appended to by each game included
+;
+; #FIXME: `SEMIFREE` here is a workaround for a bug
+; where this section is being assigned to $0001!
+;
+.SECTION "AddrAction"                   SEMIFREE RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+addr_action:
+;===============================================================================
+        .ADDR           $0000           ;=GAME_NONE
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+.ENDS
+
 ; include the games:
 ; the order of these includes determines their IDs!
 ;
@@ -53,7 +70,6 @@ init:
         ; start the specific game based on game ID:
         ;
         ld      A,      [id]
-        ld      C,      A
         ld      HL,     addr_init
         rst     rst_jumpTable
 
@@ -121,22 +137,21 @@ handleControls:
         jp      tableau.pointToPile
 
 
-doAction
+doAction:
 ;===============================================================================
 ; action button pressed; defer action to the specific game:
 ;-------------------------------------------------------------------------------
-        ld      HL,     id              ; ID of game currently running
-        ld      C,      [HL]            ; (we will need to reuse HL & A)
-
         ; retrieve the pile being pointed at (L)
         ; and the card-index (A) in that pile
         rst     tableau.rst_getPointPile
-
-        ; which game is currently running?
-        dec     C                       ; was it `1`?
-        jp      z,      acesup.tapCard
-
-        jp      tableau.tapCard
+        ; parameters will be passed to the game via DE
+        ld      D,      A               ; D = card-index (A)
+        ld      E,      L               ; E = pile-index (L)
+        ld      HL,     addr_action     ; table of game's `do_action` routines
+        ld      A,      [id]            ; ID of currently running game
+        ; (instead of using an RST instruction,
+        ;  JP is used to do a tail-call)
+        jp      rst_jumpTable           ; call game's `do_action` routine
 
 
 doUndo:

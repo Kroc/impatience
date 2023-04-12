@@ -15,12 +15,13 @@ rst_jumpTable:                                                          ;$00
 ; 
 ; in:   HL      the address of a table of addresses
 ;               WARNING: the first entry in the table *must* be $0000!
-;       C       an index number of which routine to call; not a byte-offset!
+;       A       an index number of which routine to call; not a byte-offset!
 ;               even though the jump table is a list of ordered WORDs,
 ;               the index is numerical and will be doubled internally
-; out:  *       (clobbered) -- no guarantee of return!
+; out:  A,BC,HL (clobbered) -- clobbered doing the jump
 ;-------------------------------------------------------------------------------
-        sla     C                       ; double the index for WORD lookup
+        rlca                            ; double the index for WORD lookup
+        ld      C,      A               ; load C with the offset
         ld      B,      [HL]            ; load B with 0 from table start!
         add     HL,     BC              ; add the offset to the table
         ld      A,      [HL+]           ; read lo-byte and move to next byte

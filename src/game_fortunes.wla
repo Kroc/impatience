@@ -140,7 +140,6 @@ addr_init_fortunes:
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
-
 init:
 ;===============================================================================
 ; start a game of Fortune's Favour:
@@ -232,6 +231,23 @@ init:
         ; move the cursor to the card in the first depot pile
         ld      L,      INDEX_DEPOT1
         jp      tableau.pointToPile
+
+
+; add the game's action address to the table
+; used for when a player taps on a card (see "game.wla")
+;
+.SECTION "AddrAction_Fortunes"          APPENDTO "*:game.AddrAction" RETURNORG
+                                        PRIORITY __game_priority
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+addr_action_fortunes:
+;-------------------------------------------------------------------------------
+        .ADDR           tapCard
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+.ENDS
+
+tapCard:
+;===============================================================================
+        ret
 
 
 validatePile:

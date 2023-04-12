@@ -67,7 +67,6 @@ addr_init_acesup:
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
-
 init:
 ;===============================================================================
 ; start a game of Aces Up:
@@ -102,6 +101,28 @@ init:
         jp      tableau.pointToPile
 
 
+; add the game's action address to the table
+; used for when a player taps on a card (see "game.wla")
+;
+.SECTION "AddrAction_AcesUp"            APPENDTO "*:game.AddrAction" RETURNORG
+                                        PRIORITY __game_priority
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+addr_action_acesup:
+;-------------------------------------------------------------------------------
+        .ADDR           do_action
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+.ENDS
+
+do_action:
+;===============================================================================
+; a card was tapped on -- retrieve the parameters:
+;-------------------------------------------------------------------------------
+        ld      L,      E               ; pile-index
+        ld      A,      D               ; card-index
+
+        ; fallthrough
+        ; ...
+
 tapCard:
 ;===============================================================================
 ; in:   L       index (`INDEX_*`) of pile pointed at
@@ -116,9 +137,8 @@ tapCard:
         bit     BIT_SQUARE,     [HL]
         jr      nz,     tapCard_deck
 
-        ; fall through to below for
-        ; handling depots
-        ;
+        ; fall through to handle depots
+        ; ...
 
 tapCard_depot:
 ;===============================================================================
