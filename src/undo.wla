@@ -262,11 +262,12 @@ pop:
         ;       bottom that are chained together
         ;
         ld      HL,     SECTIONEND_undo.UndoBuff-1
-        ld      [HL],   0
+        xor     A                       ; (set A to zero)
+        ld      [HL],   A
         dec     H
-        ld      [HL],   0
+        ld      [HL],   A
         dec     H
-        ld      [HL],   0
+        ld      [HL],   A
 
         pop     HL                      ; return source pile index 
         pop     DE                      ; return dest. pile index & chain flag

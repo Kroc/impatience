@@ -167,6 +167,10 @@ setGameOverMenu:
 show:
 ;===============================================================================
 ; switches control to the menu:
+;
+; note that execution remains here until the menu is quit
+;
+; out:  A       0 for menu cancelled, 1, 2, 3... for selected menu item
 ;-------------------------------------------------------------------------------
         ; wait for v-blank to change the screen scroll:
         ; TODO: shadow registers should be used for scrolling
@@ -190,11 +194,16 @@ show:
 @wait:  call    getButton
 
         ; pressing START or A will close the menu
+        ; without activating a menu item
         ;
         bit     BUTTON_START,   A
-        jr      nz,     hide
+        jr      nz,     cancel
         bit     BUTTON_A,       A
-        jr      nz,     hide
+        jr      nz,     cancel
+
+        ; only pressing B will activate a menu item
+        bit     BUTTON_B,       A
+        jr      nz,     action
 
         ; handle cursor movement control
         call    handleControls
@@ -205,8 +214,8 @@ handleControls:
         ;=======================================================================
         ; d-pad up:
         ;-----------------------------------------------------------------------
-        bit     BUTTON_UP,      A
-        jr      z,      ++
+@up:    bit     BUTTON_UP,      A
+        jr      z,      @dn
 
         ld      A,      [selected]      ; currently selected menu item
         and     A                       ; set flags; =0?
@@ -217,7 +226,7 @@ handleControls:
 
         ; d-pad down:
         ;-----------------------------------------------------------------------
-++      bit     BUTTON_DOWN,    A
+@dn:    bit     BUTTON_DOWN,    A
         ret     z
 
         ld      A,      [selected]      ; currently selected menu item
@@ -237,7 +246,7 @@ pointToItem:
         ld      [selected],     A       ; retain menu index
 
         ld      BC,     MENU_ITEM0_POS  ; start with first menu item X/Y
-        sla     A                       ; 2 rows per menu item
+        rlca                            ; 2 rows per menu item
         add     B                       ; add to row number
         ld      B,      A
         call    sprites.tilePosToScrXY  ; convert row/column to px
@@ -248,6 +257,26 @@ pointToItem:
         ld      A,      CURSOR_RIGHT
         call    cursor.setSprite
         jp      sprites.update
+
+
+action:
+;===============================================================================
+; menu item activated! return the menu selection
+; -- it's up to the caller to do the work!
+;-------------------------------------------------------------------------------
+        call    hide                    ; hide menu
+        ld      A,      [selected]      ; return the menu item index,
+        inc     A                       ;  plus one,
+        ret                             ;  because 0 is used for "cancel"
+
+
+cancel:
+;===============================================================================
+; cancel the menu -- hide it and return 'no action':
+;-------------------------------------------------------------------------------
+        call    hide                    ; hide menu
+        xor     A                       ; return 0 for no-action
+        ret
 
 
 hide:

@@ -71,9 +71,7 @@ init:
         call    cursor.init             ; initialise the cursor
         call    tilemap.init
 
-        ; begin initialising the game:
-        ;
-        ld      A,      GAME_ACESUP
+        ; begin initialising the game
         jp      game.init
 
 

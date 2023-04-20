@@ -82,7 +82,7 @@ rst_jumpTable:                                                          ;$00
 .ENDS
 
 ; these are the *logical* button constants for the game, not the ones used by
-; the hardware, which are split across two bytes. these are `bit` numbers
+; the hardware, which are split across two bytes. these are `bit` numbers:
 ;
 .DEF    BUTTON_RIGHT    0
 .DEF    BUTTON_LEFT     1

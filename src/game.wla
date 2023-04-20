@@ -10,7 +10,7 @@
 .RAMSECTION "Game"                      RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         id              BYTE            ; index of current game being played
-;;      start_seed      WORD            ; starting random seed of current game
+        start_seed      WORD            ; starting random seed of current game
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
@@ -31,10 +31,7 @@ addr_init:
 ; each game defines an address to call to start the game;
 ; this table will be appended to by each game included
 ;
-; #FIXME: `SEMIFREE` here is a workaround for a bug
-; where this section is being assigned to $0001!
-;
-.SECTION "AddrAction"                   SEMIFREE RETURNORG
+.SECTION "AddrAction"                   RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 addr_action:
 ;===============================================================================
@@ -52,11 +49,32 @@ addr_action:
 
 init:
 ;===============================================================================
+; first time initialisation of the game loop:
+;-------------------------------------------------------------------------------
+        ld      A,      GAME_ACESUP
+        call    start
+        jp      play
+
+
+start:
+;===============================================================================
 ; start a game:
-; 
+;
+; WARNING: THIS ROUTINE WILL RETURN!
+; this is so that changing the game from the menu can start a new game
+; and return to the input loop without inflating the stack (or having
+; to manually reset it)
+;
 ; in:   A       ID of game to start (`GAME_*`)
 ;-------------------------------------------------------------------------------
         ld      [id],   A               ; set the game ID
+
+        ; when starting a game, remember the current RNG seed
+        ; -- this will be reused to replay the game with the same cards
+        ldh     A,      [<seed+LO]
+        ld      [start_seed+LO], A
+        ldh     A,      [<seed+HI]
+        ld      [start_seed+HI], A
 
         ; completely clear the table of cards, both the piles and the storage
         ; pool of all cards on the table. this will also clear the undo buffer
@@ -71,10 +89,9 @@ init:
         ;
         ld      A,      [id]
         ld      HL,     addr_init
-        rst     rst_jumpTable
+        ; JP is used instead of RST to do a tail-call
+        jp      rst_jumpTable
 
-        ; fallthrough
-        ; ...
 
 play:
 ;===============================================================================
@@ -95,26 +112,19 @@ handleControls:
 
         bit     BUTTON_DOWN,    A       ; cursor down?
         jp      nz,     tableau.cursorDown
-
         bit     BUTTON_UP,      A       ; cursor up?
         jp      nz,     tableau.cursorUp
 
         bit     BUTTON_LEFT,    A       ; cursor left?
         jp      nz,     tableau.cursorLeft
-
         bit     BUTTON_RIGHT,   A       ; cursor right?
         jp      nz,     tableau.cursorRight
-
         bit     BUTTON_B,       A       ; B button?
         jp      nz,     doAction
-
         bit     BUTTON_A,       A       ; A button?
         jp      nz,     doUndo
-
-        bit     BUTTON_START,   A       ; START button?
-        jr      nz,     @menu
-
-        ret
++       bit     BUTTON_START,   A       ; START button?
+        ret     z
 
         ; show in-game menu:
         ;-----------------------------------------------------------------------
@@ -123,16 +133,40 @@ handleControls:
         ; TODO: also, handle if mid-animation when this happens!
         ;       (wait until move is complete?)
         ;
-@menu:  call    menu.setGameOverMenu
-        call    tilemap.update
-        call    waitVBlank
+@menu:  call    menu.setMainMenu        ; (standard menu)
+        call    tilemap.update          ; queue up tile changes
+        call    waitVBlank              ; wait for vblank for the redraw
 
-        ; enter the menu; execution will hold there until the menu is cancelled
-        ; or an option is selected in which case execution might never return!
+        ; enter the menu; execution will hold there until
+        ; the menu is cancelled or an option is selected
         call    menu.show
 
+        ; check menu return value:
+        ; 0 = menu was cancelled...
+        and     A,      A               ; (set flags!)
+        jr      z,      @cancel         ; =0? return to the game in progress
+
+        ; menu item activated:
+        ;
+        dec     A                       ; menu item 1?
+        jr      z,      @menu1
+        dec     A                       ; menu item 2?
+        jr      z,      @menu2
+        dec     A                       ; menu item 3?
+        jr      z,      @menu3
+
+        ; a menu item selected we don't have code for!
+        ld      B,B
+-       jr      -
+
+@menu1:
+@menu2:
+@menu3:
+
+        ; menu cancelled:
+        ;-----------------------------------------------------------------------
         ; restore the card the cursor was pointing to
-        call    tableau.resetCursorMode
+@cancel:call    tableau.resetCursorMode
         rst     tableau.rst_getPointPile
         jp      tableau.pointToPile
 
