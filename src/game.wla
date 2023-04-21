@@ -42,9 +42,9 @@ addr_action:
 ; include the games:
 ; the order of these includes determines their IDs!
 ;
-.INC    "game_acesup.wla"       NAMESPACE "acesup"
-.INC    "game_fortunes.wla"     NAMESPACE "fortunes"
-.INC    "game_klondike.wla"     NAMESPACE "klondike"
+.INC    "game_acesup.wla"               NAMESPACE "acesup"
+.INC    "game_fortunes.wla"             NAMESPACE "fortunes"
+.INC    "game_klondike.wla"             NAMESPACE "klondike"
 
 
 boot:

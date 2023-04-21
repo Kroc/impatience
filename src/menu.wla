@@ -17,9 +17,12 @@
 
 .DEF    MENU_ITEM0_POS  (3 << 8) | 1    ; row & column of first menu item
 
+.DEF    MENU_ITEMS      4               ; 1-based count of menu items
+
 .ENUMID 0
 .ENUMID MENU_MAIN                       ; the main menu
 .ENUMID MENU_GAMEOVER                   ; the game-over menu
+
 
 .RAMSECTION "Menu"                      RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -59,7 +62,7 @@ clear:
 ;
 ;-------------------------------------------------------------------------------
         ; reset menu state
-        ld      A,              4       ; number of menu items, 1-based
+        ld      A,      MENU_ITEMS      ; number of menu items, 1-based
         ld      [items],        A
         xor     A                       ; set A to zero
         ld      [selected],     A       ; select first menu item by default
@@ -201,7 +204,7 @@ handleControls:
         ld      A,      [selected]      ; currently selected menu item
         and     A                       ; set flags; =0?
         jr      nz,     +
-        ld      A,      3               ; loop back to the last menu item
+        ld      A,      MENU_ITEMS      ; loop back to the last menu item
 +       dec     A                       ; move to previous menu item
         jr      pointToItem             ;  and point to that
 
@@ -212,7 +215,7 @@ handleControls:
 
         ld      A,      [selected]      ; currently selected menu item
         inc     A                       ; move to next
-        cp      3                       ; reached the end?
+        cp      MENU_ITEMS              ; reached the end?
         jr      c,      pointToItem     ; if not, use the new index
         xor     A                       ; loop back to first menu item (0)
         
@@ -227,7 +230,6 @@ pointToItem:
         ld      [selected],     A       ; retain menu index
 
         ld      BC,     MENU_ITEM0_POS  ; start with first menu item X/Y
-        ;;rlca                            ; 2 rows per menu item
         add     B                       ; add to row number
         ld      B,      A
         call    sprites.tilePosToScrXY  ; convert row/column to px
