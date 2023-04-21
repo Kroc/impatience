@@ -47,18 +47,46 @@ addr_action:
 .INC    "game_klondike.wla"     NAMESPACE "klondike"
 
 
-init:
+boot:
 ;===============================================================================
 ; first time initialisation of the game loop:
+; 
+; this routine is only called once after power-on; it's intended to handle
+; either the first time the ROM is played or to restore state from SRAM
 ;-------------------------------------------------------------------------------
         ld      A,      GAME_ACESUP
-        call    start
+        call    start_new
         jp      play
 
 
-start:
+start_new:
 ;===============================================================================
-; start a game:
+; start a game with a new random seed:
+;
+; WARNING: THIS ROUTINE WILL RETURN! this is so that changing the game
+; from the menu can start a new game and return to the input loop without
+; inflating the stack (or having to manually reset it)
+;
+; in:   A       ID of game to start (`GAME_*`)
+;-------------------------------------------------------------------------------
+        ld      [id],   A               ; set game ID (Klondike, AcesUp &c.)
+
+        call    rnd                     ; randomise once
+
+        ; when starting a game, remember the current RNG seed
+        ; -- this will be reused to replay the game with the same cards
+        ldh     A,      [<seed+LO]
+        ld      [start_seed+LO], A
+        ldh     A,      [<seed+HI]
+        ld      [start_seed+HI], A
+
+        ; fallthrough
+        ; ...
+        ld      A,      [id]
+
+start_old:
+;===============================================================================
+; start a game with the same random seed:
 ;
 ; WARNING: THIS ROUTINE WILL RETURN!
 ; this is so that changing the game from the menu can start a new game
@@ -69,13 +97,20 @@ start:
 ;-------------------------------------------------------------------------------
         ld      [id],   A               ; set the game ID
 
-        ; when starting a game, remember the current RNG seed
-        ; -- this will be reused to replay the game with the same cards
-        ldh     A,      [<seed+LO]
-        ld      [start_seed+LO], A
-        ldh     A,      [<seed+HI]
-        ld      [start_seed+HI], A
+        ; restore the random seed from the backup
+        ; made when starting the game the first time
+        ld      A,      [start_seed+LO]
+        ldh     [<seed+LO],     A
+        ld      A,      [start_seed+HI]
+        ldh     [<seed+HI],     A
 
+        ; fallthrough
+        ; ...
+
+init:
+;===============================================================================
+; initialise gameplay:
+;-------------------------------------------------------------------------------
         ; completely clear the table of cards, both the piles and the storage
         ; pool of all cards on the table. this will also clear the undo buffer
         call    tableau.init
@@ -86,7 +121,6 @@ start:
         call    menu.hide
 
         ; start the specific game based on game ID:
-        ;
         ld      A,      [id]
         ld      HL,     addr_init
         ; JP is used instead of RST to do a tail-call
@@ -123,7 +157,7 @@ handleControls:
         jp      nz,     doAction
         bit     BUTTON_A,       A       ; A button?
         jp      nz,     doUndo
-+       bit     BUTTON_START,   A       ; START button?
+        bit     BUTTON_START,   A       ; START button?
         ret     z
 
         ; show in-game menu:
@@ -154,18 +188,30 @@ handleControls:
         jr      z,      @menu2
         dec     A                       ; menu item 3?
         jr      z,      @menu3
+        dec     A                       ; menu item 4?
+        jr      z,      @menu4
 
         ; a menu item selected we don't have code for!
-        ld      B,B
+        ld      B,B                     ; (break in emulator)
 -       jr      -
 
-@menu1:
-@menu2:
+        ; deal new:
+        ;-----------------------------------------------------------------------
+@menu1: ld      A,      [id]            ; type of current game
+        jp      start_new               ; deal a new game
+
+        ; retry same:
+        ;-----------------------------------------------------------------------
+@menu2: ld      A,      [id]            ; type of current game
+        jp      start_old               ; retry same deal
+
 @menu3:
+@menu4:
 
         ; menu cancelled:
         ;-----------------------------------------------------------------------
-        ; restore the card the cursor was pointing to
+        ; restore the cursor to where it was before opening the menu
+        ;
 @cancel:call    tableau.resetCursorMode
         rst     tableau.rst_getPointPile
         jp      tableau.pointToPile

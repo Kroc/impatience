@@ -1,29 +1,13 @@
 ; impatience <github.com/kroc/impatience> copyright (c) Kroc Camen 2020-2023:
 ; creative commons attribution (cc-by) 4.0, see LICENSE.txt
 ;
-; in-game menu:
-;
 ;       +--------------------+
 ;       | IMPATIENCE         | <- current game name
 ;       |                    |
-;       | @ CHANGE GAME      | <- change between games: Aces Up, Klondike &c.
-;       |                    |
-;       | @ RESTART          | <- replay the game using the same cards
-;       |                    |
-;       | @ OPTIONS          | <- configuration, about &c.
-;       |                    |
-;       +--------------------+
-;
-; game-over menu:
-;
-;       +--------------------+
-;       |      GAME OVER     |
-;       |                    |
 ;       | @ DEAL NEW         | <- start a new deal of the same game
-;       |                    |
 ;       | @ RETRY SAME       | <- play the same deal (seed) again
-;       |                    |
-;       | @ CHANGE GAME      | <- change to a different card game
+;       | @ CHANGE GAME      | <- change between games: Aces Up, Klondike &c.
+;       | @ OPTIONS          | <- configuration, about &c.
 ;       |                    |
 ;       +--------------------+
 ;
@@ -40,30 +24,29 @@
 .RAMSECTION "Menu"                      RETURNORG
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         menu            BYTE            ; which menu is in use
-        selected        BYTE            ; which menu item is currently selected
-        items           BYTE            ; number of menu items (1-based)
+        selected        BYTE            ; selected menu-item (0-based)
+        items           BYTE            ; number of menu-items (1-based)
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
 
 _strings:
 ;-------------------------------------------------------------------------------
-; padding spaces are used to overwrite any previous string
-; without leaving trailing garbage
+; padding spaces are used to overwrite any previous
+; string without leaving trailing garbage
+;
 @impatience:
         .str    "impatience  "
-@change_game:
-        .str    "change game "
-@restart_game:
-        .str    "restart game"
-@options:
-        .str    "options     "
 @game_over:
         .str    "game over   "
 @deal:
         .str    "deal new    "
 @retry:
         .str    "retry same  "
+@change_game:
+        .str    "change game "
+@options:
+        .str    "options     "
 
 
 clear:
@@ -76,7 +59,7 @@ clear:
 ;
 ;-------------------------------------------------------------------------------
         ; reset menu state
-        ld      A,              3       ; number of menu items, 1-based
+        ld      A,              4       ; number of menu items, 1-based
         ld      [items],        A
         xor     A                       ; set A to zero
         ld      [selected],     A       ; select first menu item by default
@@ -89,7 +72,7 @@ clear:
         ld      HL,     tilemap.front_buffer
 
         ; even though the screen is 20 out of 32 tiles wide, we fill the whole
-        ; width to ensure the menu area remains white if the tableu scrolls
+        ; width to ensure the menu area remains white if the tableau scrolls
         ;
         ; TODO: 10 rows is 320 tiles, so call fill (256), plus 64 remainder.
         ;       we should calculate this at assemble-time
@@ -115,18 +98,17 @@ setMainMenu:
         ld      DE,     _strings@impatience
         call    printStr
 
-        ; change game:
+        ; menu items:
         ld      HL,     MENU_ADDR + (3 * TILEMAP_WIDTH) + 3
+        ld      DE,     _strings@deal
+        call    printStr
+        ld      HL,     MENU_ADDR + (4 * TILEMAP_WIDTH) + 3
+        ld      DE,     _strings@retry
+        call    printStr
+        ld      HL,     MENU_ADDR + (5 * TILEMAP_WIDTH) + 3
         ld      DE,     _strings@change_game
         call    printStr
-
-        ; restart game:
-        ld      HL,     MENU_ADDR + (5 * TILEMAP_WIDTH) + 3
-        ld      DE,     _strings@restart_game
-        call    printStr
-
-        ; options:
-        ld      HL,     MENU_ADDR + (7 * TILEMAP_WIDTH) + 3
+        ld      HL,     MENU_ADDR + (6 * TILEMAP_WIDTH) + 3
         ld      DE,     _strings@options
         jp      printStr
 
@@ -148,19 +130,18 @@ setGameOverMenu:
         ld      DE,     _strings@game_over
         call    printStr
 
-        ; deal new:
+        ; menu items:
         ld      HL,     MENU_ADDR + (3 * TILEMAP_WIDTH) + 3
         ld      DE,     _strings@deal
         call    printStr
-
-        ; retry same:
-        ld      HL,     MENU_ADDR + (5 * TILEMAP_WIDTH) + 3
+        ld      HL,     MENU_ADDR + (4 * TILEMAP_WIDTH) + 3
         ld      DE,     _strings@retry
         call    printStr
-
-        ; change game:
-        ld      HL,     MENU_ADDR + (7 * TILEMAP_WIDTH) + 3
+        ld      HL,     MENU_ADDR + (5 * TILEMAP_WIDTH) + 3
         ld      DE,     _strings@change_game
+        call    printStr
+        ld      HL,     MENU_ADDR + (6 * TILEMAP_WIDTH) + 3
+        ld      DE,     _strings@options
         jp      printStr
 
 
@@ -246,7 +227,7 @@ pointToItem:
         ld      [selected],     A       ; retain menu index
 
         ld      BC,     MENU_ITEM0_POS  ; start with first menu item X/Y
-        rlca                            ; 2 rows per menu item
+        ;;rlca                            ; 2 rows per menu item
         add     B                       ; add to row number
         ld      B,      A
         call    sprites.tilePosToScrXY  ; convert row/column to px

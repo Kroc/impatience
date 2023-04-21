@@ -47,5 +47,6 @@
         "wla-dx-asm": {
             "parser": "code"
         }
-    }
+    },
+    "cSpell.enabled": true
 }

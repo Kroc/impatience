@@ -247,7 +247,7 @@ irq_vblank:                                                                ;=34
         ; the game without having to power-cycle (or use the flash cart menu)
         ;
         cp      2^BUTTON_START | 2^BUTTON_SELECT | 2^BUTTON_A | 2^BUTTON_B
-        jp      z,      init
+        jp      z,      boot
 
         ; write logical joystick bits to RAM for game-logic to handle
         ld      [HL],   A

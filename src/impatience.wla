@@ -7,7 +7,7 @@
 .INC    "interrupts.wla"
 
 
-init:
+boot:
 ;===============================================================================
         di                              ; disable interrupts
         ld      SP,     $dff0           ; locate the stack
@@ -71,8 +71,8 @@ init:
         call    cursor.init             ; initialise the cursor
         call    tilemap.init
 
-        ; begin initialising the game
-        jp      game.init
+        ; start / restore the game
+        jp      game.boot
 
 
 zero:
