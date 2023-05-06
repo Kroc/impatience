@@ -24,77 +24,127 @@
 .BANK   0       SLOT "ROMLO"
 .ORG    $00
 
-rst_00:
-        ret
-
-.ORG    $08
-
-rst_08:
-        ret
-
-.ORG    $10
-
-rst_10:
-        ret
-
-.ORG    $18
-
-rst_18:
-        ret
-
-.ORG    $20
-
-rst_20:
-        ret
-
-.ORG    $28
-
-rst_28:
-        ret
-
-.ORG    $30
-
-rst_30:
-        ret
-
-.ORG    $38
-
-rst_38:
-        ret
+rst_00: ret                                                             ;$00
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+rst_08: ret                                                             ;$08
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+rst_10: ret                                                             ;$10
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+rst_18: ret                                                             ;$18
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+rst_20: ret                                                             ;$20
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+rst_28: ret                                                             ;$28
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+rst_30: ret                                                             ;$30
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+rst_38: ret                                                             ;$38
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
 
 ; interrupts:
 ;===============================================================================
-
-.ORG    $40
-
-irq_vblank:
+irq_vblank:                                                             ;$40
         ;-----------------------------------------------------------------------
         reti
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
 
-.ORG    $48
-
-irq_lcdstat:
+irq_lcdstat:                                                            ;$48
         ;-----------------------------------------------------------------------
         reti
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
 
-.ORG    $50
-
-irq_timer:
+irq_timer:                                                              ;$50
         ;-----------------------------------------------------------------------
         reti
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
 
-.ORG    $58
-
-irq_serial:
+irq_serial:                                                             ;$58
         ;-----------------------------------------------------------------------
         reti
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
 
-.ORG    $60
-
-irq_joypad:
+irq_joypad:                                                             ;$60
         ;-----------------------------------------------------------------------
         reti
-
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
 
 ; GameBoy reset vector:
 ;===============================================================================
