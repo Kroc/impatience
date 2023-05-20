@@ -14,6 +14,20 @@
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 .ENDS
 
+; each game provides a name string for printing;
+; this table will be appended to by each game included
+;
+; the first entry points to the name of the ROM
+name:   .str    "impatience"
+
+.SECTION "AddrName"                     RETURNORG
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+addr_name:
+;===============================================================================
+        .ADDR           name
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+.ENDS
+
 ; each game defines an address to call to start the game;
 ; this table will be appended to by each game included
 ;
@@ -80,10 +94,11 @@ start_new:
         ldh     A,      [<seed+HI]
         ld      [start_seed+HI], A
 
-        ; fallthrough
-        ; ...
         ld      A,      [id]
 
+        ; fallthrough
+        ; ...
+        
 start_old:
 ;===============================================================================
 ; start a game with the same random seed:

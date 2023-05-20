@@ -5,6 +5,19 @@
 .REDEF  __game_id       __game_id+1
 .REDEF  __game_priority __game_priority-1
 
+; the name of the game (for use on the menus)
+name:   .str    "klondike"
+
+; add the game's name address to the table
+; used for printing game names
+;
+.SECTION "AddrName_Klondike"            APPENDTO "*:game.AddrName" RETURNORG
+                                        PRIORITY __game_priority
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        .ADDR           name
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+.ENDS
+
 ; create template card piles for the intial setup of the game:
 ;
 ;       .---. .---.       .---. .---. .---. .---.

@@ -94,12 +94,23 @@ setMainMenu:
         xor     A                       ; (MENU_MAIN = 0)
         ld      [menu], A
 
-        ; TODO: tilemap updates
+        ; print the game title:
         ;
-        ; print the title:
+        ld      HL,     game.addr_name  ; game name lookup table
+        ld      A,      [game.id]       ; current game
+        rlca                            ; double for WORD lookup
+        ld      B,      0
+        ld      C,      A
+        add     HL,     BC              ; offset into the table
+        ld      E,      [HL]            ; name string addr lo-byte
+        inc     HL
+        ld      D,      [HL]            ; name string addr hi-byte
         ld      HL,     MENU_ADDR + (1 * TILEMAP_WIDTH) + 1
-        ld      DE,     _strings@impatience
         call    printStr
+
+;;        ld      HL,     MENU_ADDR + (1 * TILEMAP_WIDTH) + 1
+;;        ld      DE,     _strings@impatience
+;;        call    printStr
 
         ; menu items:
         ld      HL,     MENU_ADDR + (3 * TILEMAP_WIDTH) + 3

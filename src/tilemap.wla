@@ -262,7 +262,7 @@ init:
 
         call    tableau.clearTiles      ; clear the tableau (playing space)
         call    menu.clear              ; clear the menu space
-        call    menu.setMainMenu        ; write out the default menu
+;;        call    menu.setMainMenu        ; write out the default menu
         call    refresh                 ; do a full screen refresh
 
         
